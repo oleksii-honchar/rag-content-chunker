@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { ErrorWithDetails } from '../../utils/error-with-details';
 import { Result } from '../../utils/result';
 import { Chunker } from './chunker.interface';
 import { CHUNKING_STRATEGIES, ChunkingStrategy } from './chunking-strategies';
@@ -10,12 +9,23 @@ import { TextChunker } from './text-chunker.service';
 
 @Injectable()
 export class StrategyFactory {
+  private readonly strategyMap: Record<ChunkingStrategy, () => Chunker>;
+
   constructor(
     private readonly markdownChunker: MarkdownChunker,
     private readonly codeChunker: CodeChunker,
     private readonly textChunker: TextChunker,
     private readonly configChunker: ConfigChunker,
-  ) {}
+  ) {
+    this.strategyMap = {
+      [CHUNKING_STRATEGIES.MARKDOWN]: () => this.markdownChunker,
+      [CHUNKING_STRATEGIES.RECURSIVE]: () => this.codeChunker,
+      [CHUNKING_STRATEGIES.SENTENCE]: () => this.textChunker,
+      [CHUNKING_STRATEGIES.FALLBACK]: () => this.textChunker,
+      [CHUNKING_STRATEGIES.CONFIG]: () => this.configChunker,
+      [CHUNKING_STRATEGIES.SINGLE]: () => this.configChunker,
+    };
+  }
 
   /**
    * Determine chunking strategy based on file path and extension.
@@ -57,20 +67,11 @@ export class StrategyFactory {
    * Get chunker instance for the given strategy.
    */
   createChunker(strategy: ChunkingStrategy): Result<Chunker> {
-    switch (strategy) {
-      case CHUNKING_STRATEGIES.MARKDOWN:
-        return Result.ok(this.markdownChunker);
-      case CHUNKING_STRATEGIES.RECURSIVE:
-        return Result.ok(this.codeChunker);
-      case CHUNKING_STRATEGIES.SENTENCE:
-      case CHUNKING_STRATEGIES.FALLBACK:
-        return Result.ok(this.textChunker);
-      case CHUNKING_STRATEGIES.CONFIG:
-      case CHUNKING_STRATEGIES.SINGLE:
-        return Result.ok(this.configChunker);
-      default:
-        return Result.ko(new ErrorWithDetails(`Unknown chunking strategy: ${strategy}`, 'UnknownStrategy'));
+    const factory = this.strategyMap[strategy];
+    if (!factory) {
+      return Result.ko(new Error(`Unknown chunking strategy: ${strategy}`));
     }
+    return Result.ok(factory());
   }
 
   private getExtension(filePath: string): string {

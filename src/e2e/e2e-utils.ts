@@ -3,6 +3,16 @@ import * as os from 'os';
 import * as path from 'path';
 
 /**
+ * Absolute paths to e2e fixture files.
+ */
+export const FIXTURES_DIR = path.resolve(__dirname, 'fixtures');
+export const FIXTURE_MARKDOWN = path.join(FIXTURES_DIR, 'sample.md');
+export const FIXTURE_TYPESCRIPT = path.join(FIXTURES_DIR, 'sample.ts');
+export const FIXTURE_JSON = path.join(FIXTURES_DIR, 'sample.json');
+export const FIXTURE_YAML = path.join(FIXTURES_DIR, 'sample.yaml');
+export const FIXTURE_TEXT = path.join(FIXTURES_DIR, 'sample.txt');
+
+/**
  * Creates a temporary directory for e2e test files.
  * Directory is NOT auto-cleaned — call cleanupTempDir when done.
  */
@@ -31,81 +41,43 @@ export async function createSampleFile(dirPath: string, fileName: string, conten
 }
 
 /**
- * Creates sample markdown content for testing.
+ * Reads content from a fixture file.
  */
-export function sampleMarkdownContent(): string {
-  return `# Project Overview
-
-## Introduction
-
-This is a sample markdown document for testing the RAG content chunker.
-
-## Features
-
-- Feature 1: File watching
-- Feature 2: Content chunking
-- Feature 3: MCP integration
-
-## Configuration
-
-Configure the chunker via \`~/.config/rag-content-chunker.yaml\`.
-
-## Getting Started
-
-Run \`npx rag-content-chunker\` to start the service.
-`;
+export async function readFixture(fixturePath: string): Promise<string> {
+  return fs.readFile(fixturePath, 'utf-8');
 }
 
 /**
- * Creates sample TypeScript code for testing.
+ * Reads sample markdown content from fixture.
  */
-export function sampleCodeContent(): string {
-  return `import { Injectable } from '@nestjs/common';
-
-@Injectable()
-export class ExampleService {
-  async processData(input: string): Promise<string> {
-    const result = input.toUpperCase();
-    return result;
-  }
-
-  private validate(input: string): boolean {
-    return input.length > 0;
-  }
-}
-`;
+export async function sampleMarkdownContent(): Promise<string> {
+  return readFixture(FIXTURE_MARKDOWN);
 }
 
 /**
- * Creates sample JSON config for testing.
+ * Reads sample TypeScript code from fixture.
  */
-export function sampleConfigContent(): string {
-  return `{
-  "database": {
-    "host": "localhost",
-    "port": 5432,
-    "name": "testdb"
-  },
-  "cache": {
-    "enabled": true,
-    "ttl": 3600
-  },
-  "logging": {
-    "level": "info",
-    "format": "json"
-  }
-}`;
+export async function sampleCodeContent(): Promise<string> {
+  return readFixture(FIXTURE_TYPESCRIPT);
 }
 
 /**
- * Creates sample plain text content for testing.
+ * Reads sample JSON config from fixture.
  */
-export function sampleTextContent(): string {
-  return `This is a sample plain text document for testing purposes.
+export async function sampleConfigContent(): Promise<string> {
+  return readFixture(FIXTURE_JSON);
+}
 
-It contains multiple paragraphs separated by blank lines.
+/**
+ * Reads sample YAML config from fixture.
+ */
+export async function sampleYamlContent(): Promise<string> {
+  return readFixture(FIXTURE_YAML);
+}
 
-The chunker should handle this content appropriately by splitting on paragraph boundaries.
-
-Each paragraph represents a logical unit of information that can be processed independently.`;
+/**
+ * Reads sample plain text content from fixture.
+ */
+export async function sampleTextContent(): Promise<string> {
+  return readFixture(FIXTURE_TEXT);
 }

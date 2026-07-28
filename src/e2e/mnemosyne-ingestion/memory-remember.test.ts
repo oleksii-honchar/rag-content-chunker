@@ -16,15 +16,21 @@
 
 import { ConfigModule } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
-import * as fs from 'fs/promises';
 import { PinoLogger } from 'nestjs-pino';
-import { DomainModule } from '../domain/domain.module';
-import { ConfigurationModule } from '../infrastructure/config/configuration.module';
-import { FileProcessingQueue } from '../infrastructure/file-processing-queue.service';
-import { BasePinoLogger } from '../infrastructure/logging/base-pino-logger';
-import { MnemosyneClient } from '../infrastructure/mnemosyne-client.service';
-import { ChunkContentUseCase } from '../use-cases/chunk-content.use-case';
-import { IngestChunkUseCase } from '../use-cases/ingest-chunk.use-case';
+import { ForceReprocessService } from '../../application/force-reprocess.service';
+import { CodeChunker } from '../../application/strategies/code-chunker.service';
+import { ConfigChunker } from '../../application/strategies/config-chunker.service';
+import { MarkdownChunker } from '../../application/strategies/markdown-chunker.service';
+import { StrategyFactory } from '../../application/strategies/strategy-factory.service';
+import { TextChunker } from '../../application/strategies/text-chunker.service';
+import { DomainModule } from '../../domain/domain.module';
+import { ConfigurationModule } from '../../infrastructure/config/configuration.module';
+import { FileProcessingQueue } from '../../infrastructure/file-processing-queue.service';
+import { BasePinoLogger } from '../../infrastructure/logging/base-pino-logger';
+import { MnemosyneClient } from '../../infrastructure/mnemosyne-client.service';
+import { ChunkContentUseCase } from '../../use-cases/chunk-content.use-case';
+import { IngestChunkUseCase } from '../../use-cases/ingest-chunk.use-case';
+import { ProcessFileUseCase } from '../../use-cases/process-file.use-case';
 import {
   cleanupTempDir,
   createSampleFile,
@@ -33,7 +39,7 @@ import {
   sampleConfigContent,
   sampleMarkdownContent,
   sampleTextContent,
-} from './e2e-utils';
+} from '../e2e-utils';
 
 /**
  * Simple no-op logger for e2e tests to avoid Pino initialization complexity.
@@ -82,7 +88,7 @@ describe('Mnemosyne E2E Pipeline', () => {
     tempDir = await createTempDir('rag-e2e-mnemosyne-');
 
     // Set test config path via env before module compilation
-    process.env.RAG_CONTENT_CHUNKER_CONFIG = './src/e2e/test-config.yaml';
+    process.env.RAG_CONTENT_CHUNKER_CONFIG = '../src/e2e/test-config.yaml';
     process.env.NODE_ENV = 'test';
     process.env.HOME = process.env.HOME || '/tmp';
 
@@ -95,7 +101,19 @@ describe('Mnemosyne E2E Pipeline', () => {
         ConfigurationModule,
         DomainModule,
       ],
-      providers: [FileProcessingQueue, ChunkContentUseCase, IngestChunkUseCase, MnemosyneClient],
+      providers: [
+        FileProcessingQueue,
+        MnemosyneClient,
+        ChunkContentUseCase,
+        ProcessFileUseCase,
+        IngestChunkUseCase,
+        StrategyFactory,
+        MarkdownChunker,
+        CodeChunker,
+        TextChunker,
+        ConfigChunker,
+        ForceReprocessService,
+      ],
     })
       .overrideProvider(PinoLogger)
       .useClass(MockPinoLogger as unknown as typeof PinoLogger)
@@ -114,8 +132,8 @@ describe('Mnemosyne E2E Pipeline', () => {
 
   describe('Chunking Pipeline', () => {
     it('should chunk markdown content and create valid chunks', async () => {
-      const filePath = await createSampleFile(tempDir, 'test.md', sampleMarkdownContent());
-      const content = await fs.readFile(filePath, 'utf-8');
+      const content = await sampleMarkdownContent();
+      const filePath = await createSampleFile(tempDir, 'test.md', content);
 
       const result = await chunkContentUseCase.execute({
         content,
@@ -148,8 +166,8 @@ describe('Mnemosyne E2E Pipeline', () => {
     });
 
     it('should chunk TypeScript code content', async () => {
-      const filePath = await createSampleFile(tempDir, 'test.ts', sampleCodeContent());
-      const content = await fs.readFile(filePath, 'utf-8');
+      const content = await sampleCodeContent();
+      const filePath = await createSampleFile(tempDir, 'test.ts', content);
 
       const result = await chunkContentUseCase.execute({
         content,
@@ -169,8 +187,8 @@ describe('Mnemosyne E2E Pipeline', () => {
     });
 
     it('should chunk JSON config content', async () => {
-      const filePath = await createSampleFile(tempDir, 'config.json', sampleConfigContent());
-      const content = await fs.readFile(filePath, 'utf-8');
+      const content = await sampleConfigContent();
+      const filePath = await createSampleFile(tempDir, 'config.json', content);
 
       const result = await chunkContentUseCase.execute({
         content,
@@ -189,8 +207,8 @@ describe('Mnemosyne E2E Pipeline', () => {
     });
 
     it('should chunk plain text content', async () => {
-      const filePath = await createSampleFile(tempDir, 'test.txt', sampleTextContent());
-      const content = await fs.readFile(filePath, 'utf-8');
+      const content = await sampleTextContent();
+      const filePath = await createSampleFile(tempDir, 'test.txt', content);
 
       const result = await chunkContentUseCase.execute({
         content,
@@ -231,8 +249,8 @@ describe('Mnemosyne E2E Pipeline', () => {
       }
 
       // MCP is available — run ingestion tests
-      const filePath = await createSampleFile(tempDir, 'ingest-test.md', sampleMarkdownContent());
-      const content = await fs.readFile(filePath, 'utf-8');
+      const content = await sampleMarkdownContent();
+      const filePath = await createSampleFile(tempDir, 'ingest-test.md', content);
 
       const chunkResult = await chunkContentUseCase.execute({
         content,

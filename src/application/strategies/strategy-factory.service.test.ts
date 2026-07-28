@@ -176,7 +176,7 @@ describe('StrategyFactory', () => {
     it('should return Result.ko for unknown strategy', () => {
       const result = factory.createChunker('unknown' as any);
       expect(result.isKo()).toBe(true);
-      expect(result.getError().code).toBe('UnknownStrategy');
+      expect(result.getError().message).toContain('Unknown chunking strategy');
     });
   });
 });
