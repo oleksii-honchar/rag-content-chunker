@@ -2,7 +2,7 @@
  * E2E integration tests for chunking and Mnemosyne ingestion flow.
  *
  * Tests the full flow: file on disk → ProcessFileUseCase → chunking → Mnemosyne ingestion.
- * Mnemosyne MCP server is started/stopped by this test suite.
+ * Uses a local HTTP mock server that implements the Mnemosyne MCP memory_remember tool.
  */
 
 import { INestApplication } from '@nestjs/common';
@@ -14,7 +14,11 @@ import { ChunkContentUseCase } from '../../use-cases/chunk-content.use-case';
 import { ProcessFileUseCase } from '../../use-cases/process-file.use-case';
 import { cleanupTempDir, createTempDir, readFixture } from '../e2e-utils';
 import { createTestApplication } from '../main.test-application';
-import { getMnemosyneUrl, startMnemosyne, stopMnemosyne } from '../mnemosyne-setup';
+import {
+  clearIngestedChunks,
+  getIngestedChunks,
+  stopMnemosyne,
+} from '../mnemosyne-setup';
 
 describe('[E2E] Chunking and Mnemosyne Ingestion Flow', () => {
   let app: INestApplication;
@@ -27,10 +31,6 @@ describe('[E2E] Chunking and Mnemosyne Ingestion Flow', () => {
   const TEST_SOURCE_ID = 'e2e-test-source';
 
   beforeAll(async () => {
-    // Start Mnemosyne MCP server
-    await startMnemosyne();
-
-    // Create and init real app
     app = await createTestApplication();
     await app.init();
 
@@ -45,7 +45,11 @@ describe('[E2E] Chunking and Mnemosyne Ingestion Flow', () => {
     await app.close();
     await stopMnemosyne();
     await cleanupTempDir(tempDir);
-  }, 10000);
+  }, 5000);
+
+  beforeEach(() => {
+    clearIngestedChunks();
+  });
 
   it('should process markdown file and ingest chunks to Mnemosyne', async () => {
     const content = await readFixture('sample.md');
@@ -60,7 +64,11 @@ describe('[E2E] Chunking and Mnemosyne Ingestion Flow', () => {
 
     expect(result.isOk()).toBe(true);
     await processingQueue.waitForEmpty();
-  });
+
+    const chunks = getIngestedChunks();
+    expect(chunks.length).toBeGreaterThan(0);
+    expect(chunks[0].text.length).toBeGreaterThan(0);
+  }, 10000);
 
   it('should process TypeScript code file and ingest chunks', async () => {
     const content = await readFixture('sample.ts');
@@ -75,7 +83,10 @@ describe('[E2E] Chunking and Mnemosyne Ingestion Flow', () => {
 
     expect(result.isOk()).toBe(true);
     await processingQueue.waitForEmpty();
-  });
+
+    const chunks = getIngestedChunks();
+    expect(chunks.length).toBeGreaterThan(0);
+  }, 10000);
 
   it('should process JSON config file and ingest chunks', async () => {
     const content = await readFixture('sample.json');
@@ -90,31 +101,14 @@ describe('[E2E] Chunking and Mnemosyne Ingestion Flow', () => {
 
     expect(result.isOk()).toBe(true);
     await processingQueue.waitForEmpty();
-  }, 30000);
+
+    const chunks = getIngestedChunks();
+    expect(chunks.length).toBeGreaterThan(0);
+  }, 10000);
 
   it('should verify Mnemosyne MCP connectivity via health check', async () => {
     const healthResult = await mnemosyneClient.healthCheck();
-
-    if (healthResult.isKo()) {
-      console.warn(
-        '[E2E] Mnemosyne MCP health check failed (expected if SSE transport differs from JSON-RPC ping)',
-        healthResult.getError().message,
-      );
-      // Don't fail the test — ingestion tests above already prove connectivity
-      return;
-    }
-
-    const isHealthy = healthResult.getValue();
-    if (isHealthy) {
-      console.log('[E2E] Mnemosyne MCP health check passed');
-    }
-  }, 15000);
-
-  it('should verify Mnemosyne MCP is reachable via HTTP', async () => {
-    const url = getMnemosyneUrl();
-    const response = await fetch(url);
-    // SSE endpoint returns 200 with text/event-stream
-    expect(response.status).toBe(200);
-    expect(response.headers.get('content-type')).toContain('text/event-stream');
-  }, 15000);
+    expect(healthResult.isOk()).toBe(true);
+    expect(healthResult.getValue()).toBe(true);
+  }, 5000);
 });

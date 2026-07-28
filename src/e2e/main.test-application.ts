@@ -1,9 +1,12 @@
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, ValueProvider } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import * as path from 'path';
 import { AppModule } from '../app.module';
 import { BasePinoLogger } from '../infrastructure/logging/base-pino-logger';
+import { MnemosyneClient } from '../infrastructure/mnemosyne-client.service';
+import { ConfigurationService } from '../infrastructure/config/configuration.service';
 import { createE2ePinoLogger } from './e2e-pino-logger';
+import { startMnemosyne } from './mnemosyne-setup';
 
 export interface TestApplicationOptions {
   /**
@@ -16,7 +19,7 @@ export interface TestApplicationOptions {
  * Creates a NestJS test application instance for e2e tests.
  * Uses the real AppModule with e2e test configuration.
  * BasePinoLogger is overridden with E2ePinoLogger (real pino, quiet JSON output).
- * MnemosyneClient is REAL — connects to local Mnemosyne MCP started by mnemosyne-setup.ts.
+ * MnemosyneClient is REAL — connects to local MCP mock started by mnemosyne-setup.ts.
  */
 export const createTestApplication = async (
   options: TestApplicationOptions = {},
@@ -26,9 +29,39 @@ export const createTestApplication = async (
   process.env.NODE_ENV = 'test';
 
   const e2eLogger = createE2ePinoLogger();
+  const mcpUrl = await startMnemosyne();
+
+  // Create a MnemosyneClient instance wired to the mock server
+  const mockMnemosyneClient = new (class extends MnemosyneClient {
+    constructor(configService: ConfigurationService, logger: BasePinoLogger) {
+      super(configService, logger);
+    }
+
+    getUrl(): string {
+      return mcpUrl;
+    }
+  })(
+    {} as ConfigurationService,
+    e2eLogger,
+  );
+
+  // Override private url property via prototype descriptor hack
+  const urlDescriptor = Object.getOwnPropertyDescriptor(
+    Object.getPrototypeOf(mockMnemosyneClient),
+    'url',
+  );
+  if (urlDescriptor != null && 'value' in urlDescriptor) {
+    urlDescriptor.value = mcpUrl;
+  }
+
+  const mnemosyneProvider: ValueProvider = {
+    provide: MnemosyneClient,
+    useValue: mockMnemosyneClient,
+  };
 
   const moduleBuilder = Test.createTestingModule({
     imports: [AppModule],
+    providers: [mnemosyneProvider],
   })
     .overrideProvider(BasePinoLogger)
     .useValue(e2eLogger);
