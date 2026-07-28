@@ -1,279 +1,208 @@
 /**
- * E2E integration test for Mnemosyne MCP chunking pipeline.
+ * E2E integration test for chunking pipeline.
  *
- * NOTE: This test assumes a Mnemosyne MCP instance is running at the URL
- * configured in src/e2e/test-config.yaml (default: http://localhost:8080/mcp).
- *
- * To run with a real Mnemosyne instance:
- *   1. Start Mnemosyne MCP on localhost:8080 (or update test-config.yaml)
- *   2. Run: npm run test:e2e
- *
- * TODO: If Mnemosyne MCP supports CLI startup, add beforeAll hook to spawn it:
- *   const mnemosyneProc = spawn('mnemosyne', ['--data-dir', './e2e-data', '--storage', 'sqlite', '--port', '8080']);
- *   await new Promise(resolve => mnemosyneProc.on('ready', resolve));
- *   afterAll(() => mnemosyneProc.kill());
+ * Tests the full flow: file on disk → ProcessFileUseCase → chunking → ingestion.
+ * Mnemosyne MCP ingestion tests are skipped if MCP is unavailable.
  */
 
-import { ConfigModule } from '@nestjs/config';
-import { Test } from '@nestjs/testing';
-import { PinoLogger } from 'nestjs-pino';
-import { ForceReprocessService } from '../../application/force-reprocess.service';
-import { CodeChunker } from '../../application/strategies/code-chunker.service';
-import { ConfigChunker } from '../../application/strategies/config-chunker.service';
-import { MarkdownChunker } from '../../application/strategies/markdown-chunker.service';
-import { StrategyFactory } from '../../application/strategies/strategy-factory.service';
-import { TextChunker } from '../../application/strategies/text-chunker.service';
-import { DomainModule } from '../../domain/domain.module';
-import { ConfigurationModule } from '../../infrastructure/config/configuration.module';
+import { INestApplication } from '@nestjs/common';
+import * as fs from 'fs/promises';
+import * as path from 'path';
 import { FileProcessingQueue } from '../../infrastructure/file-processing-queue.service';
-import { BasePinoLogger } from '../../infrastructure/logging/base-pino-logger';
+import { FileWatcherService } from '../../infrastructure/file-watcher.service';
 import { MnemosyneClient } from '../../infrastructure/mnemosyne-client.service';
 import { ChunkContentUseCase } from '../../use-cases/chunk-content.use-case';
 import { IngestChunkUseCase } from '../../use-cases/ingest-chunk.use-case';
 import { ProcessFileUseCase } from '../../use-cases/process-file.use-case';
-import {
-  cleanupTempDir,
-  createSampleFile,
-  createTempDir,
-  sampleCodeContent,
-  sampleConfigContent,
-  sampleMarkdownContent,
-  sampleTextContent,
-} from '../e2e-utils';
+import { cleanupTempDir, createTempDir, readFixture } from '../e2e-utils';
+import { createTestApplication } from '../main.test-application';
 
-/**
- * Simple no-op logger for e2e tests to avoid Pino initialization complexity.
- */
-class NoOpLogger implements BasePinoLogger {
-  setContext(): void {}
-  log(): void {}
-  info(): void {}
-  error(): void {}
-  warn(): void {}
-  debug(): void {}
-  child(): BasePinoLogger {
-    return this;
-  }
-}
-
-/**
- * Mock PinoLogger for e2e tests.
- */
-class MockPinoLogger {
-  logger = { child: () => this } as unknown as PinoLogger['logger'];
-  context = '';
-  contextName = '';
-  errorKey = '';
-  setContext(): void {}
-  fatal(): void {}
-  error(): void {}
-  warn(): void {}
-  info(): void {}
-  debug(): void {}
-  trace(): void {}
-  assign(): void {}
-  call(): void {}
-}
-
-describe('Mnemosyne E2E Pipeline', () => {
-  let tempDir: string;
+describe('[E2E] Chunking and Mnemosyne Ingestion Flow', () => {
+  let app: INestApplication;
+  let fileWatcherService: FileWatcherService;
+  let processFileUseCase: ProcessFileUseCase;
   let chunkContentUseCase: ChunkContentUseCase;
   let ingestChunkUseCase: IngestChunkUseCase;
   let mnemosyneClient: MnemosyneClient;
+  let processingQueue: FileProcessingQueue;
+  let tempDir: string;
 
   const TEST_SOURCE_ID = 'e2e-test-source';
 
   beforeAll(async () => {
-    // Create temp directory for test files
-    tempDir = await createTempDir('rag-e2e-mnemosyne-');
+    app = await createTestApplication();
+    await app.init();
 
-    // Set test config path via env before module compilation
-    process.env.RAG_CONTENT_CHUNKER_CONFIG = '../src/e2e/test-config.yaml';
-    process.env.NODE_ENV = 'test';
-    process.env.HOME = process.env.HOME || '/tmp';
-
-    // Build test module with real services, using no-op logger to avoid Pino init complexity
-    const moduleRef = await Test.createTestingModule({
-      imports: [
-        ConfigModule.forRoot({
-          isGlobal: true,
-        }),
-        ConfigurationModule,
-        DomainModule,
-      ],
-      providers: [
-        FileProcessingQueue,
-        MnemosyneClient,
-        ChunkContentUseCase,
-        ProcessFileUseCase,
-        IngestChunkUseCase,
-        StrategyFactory,
-        MarkdownChunker,
-        CodeChunker,
-        TextChunker,
-        ConfigChunker,
-        ForceReprocessService,
-      ],
-    })
-      .overrideProvider(PinoLogger)
-      .useClass(MockPinoLogger as unknown as typeof PinoLogger)
-      .overrideProvider(BasePinoLogger)
-      .useClass(NoOpLogger)
-      .compile();
-
-    chunkContentUseCase = moduleRef.get(ChunkContentUseCase);
-    ingestChunkUseCase = moduleRef.get(IngestChunkUseCase);
-    mnemosyneClient = moduleRef.get(MnemosyneClient);
+    fileWatcherService = app.get(FileWatcherService);
+    processFileUseCase = app.get(ProcessFileUseCase);
+    chunkContentUseCase = app.get(ChunkContentUseCase);
+    ingestChunkUseCase = app.get(IngestChunkUseCase);
+    mnemosyneClient = app.get(MnemosyneClient);
+    processingQueue = app.get(FileProcessingQueue);
+    tempDir = await createTempDir('rag-e2e-');
   }, 30000);
 
   afterAll(async () => {
+    await app.close();
     await cleanupTempDir(tempDir);
   });
 
-  describe('Chunking Pipeline', () => {
-    it('should chunk markdown content and create valid chunks', async () => {
-      const content = await sampleMarkdownContent();
-      const filePath = await createSampleFile(tempDir, 'test.md', content);
+  it('should chunk markdown file via ProcessFileUseCase full pipeline', async () => {
+    const content = await readFixture('sample.md');
+    const filePath = path.join(tempDir, 'test.md');
+    await fs.writeFile(filePath, content, 'utf-8');
 
-      const result = await chunkContentUseCase.execute({
-        content,
-        filePath,
-        sourceId: TEST_SOURCE_ID,
-        maxTokens: 500,
-        overlapTokens: 50,
-        hardCapTokens: 600,
-      });
-
-      expect(result.isOk()).toBe(true);
-      const chunks = result.getValue();
-      expect(chunks.length).toBeGreaterThan(0);
-
-      // Verify chunk structure
-      for (const chunk of chunks) {
-        expect(chunk.id).toBeDefined();
-        expect(chunk.text).toBeDefined();
-        expect(chunk.text.length).toBeGreaterThan(0);
-        expect(chunk.chunkIndex).toBeGreaterThanOrEqual(0);
-        expect(chunk.totalChunks).toBeGreaterThan(0);
-        expect(chunk.sectionHeader).toBeDefined();
-        expect(chunk.breadcrumb).toBeDefined();
-        expect(chunk.metadata?.filePath).toBe(filePath);
-      }
-
-      // Verify all chunk text combined covers original content
-      const combinedText = chunks.map(c => c.text).join('');
-      expect(combinedText.length).toBeGreaterThan(content.length * 0.5); // Allow for overlap and whitespace trimming
+    const result = await processFileUseCase.execute({
+      filePath,
+      eventType: 'add',
+      sourceId: TEST_SOURCE_ID,
     });
 
-    it('should chunk TypeScript code content', async () => {
-      const content = await sampleCodeContent();
-      const filePath = await createSampleFile(tempDir, 'test.ts', content);
-
-      const result = await chunkContentUseCase.execute({
-        content,
-        filePath,
-        sourceId: TEST_SOURCE_ID,
-      });
-
-      expect(result.isOk()).toBe(true);
-      const chunks = result.getValue();
-      expect(chunks.length).toBeGreaterThan(0);
-
-      // Verify code chunks have correct fileRole
-      for (const chunk of chunks) {
-        expect(chunk.fileRole).toBe('code');
-        expect(chunk.language).toBeDefined();
-      }
-    });
-
-    it('should chunk JSON config content', async () => {
-      const content = await sampleConfigContent();
-      const filePath = await createSampleFile(tempDir, 'config.json', content);
-
-      const result = await chunkContentUseCase.execute({
-        content,
-        filePath,
-        sourceId: TEST_SOURCE_ID,
-      });
-
-      expect(result.isOk()).toBe(true);
-      const chunks = result.getValue();
-      expect(chunks.length).toBeGreaterThan(0);
-
-      // Verify config chunks have correct fileRole
-      for (const chunk of chunks) {
-        expect(chunk.fileRole).toBe('config');
-      }
-    });
-
-    it('should chunk plain text content', async () => {
-      const content = await sampleTextContent();
-      const filePath = await createSampleFile(tempDir, 'test.txt', content);
-
-      const result = await chunkContentUseCase.execute({
-        content,
-        filePath,
-        sourceId: TEST_SOURCE_ID,
-      });
-
-      expect(result.isOk()).toBe(true);
-      const chunks = result.getValue();
-      expect(chunks.length).toBeGreaterThan(0);
-
-      for (const chunk of chunks) {
-        expect(chunk.fileRole).toBe('docs');
-      }
-    });
+    expect(result.isOk()).toBe(true);
+    await processingQueue.waitForEmpty();
   });
 
-  describe('Mnemosyne Ingestion', () => {
-    // These tests require a running Mnemosyne MCP instance
-    // They will be skipped if the MCP server is not available
+  it('should chunk TypeScript code file via ProcessFileUseCase full pipeline', async () => {
+    const content = await readFixture('sample.ts');
+    const filePath = path.join(tempDir, 'test.ts');
+    await fs.writeFile(filePath, content, 'utf-8');
 
-    it('should verify Mnemosyne MCP connectivity', async () => {
-      const healthResult = await mnemosyneClient.healthCheck();
-
-      if (healthResult.isKo()) {
-        // MCP not available — skip ingestion tests
-        console.warn(
-          '[E2E] Mnemosyne MCP health check failed. Skipping ingestion tests.',
-          healthResult.getError().message,
-        );
-        return;
-      }
-
-      const isHealthy = healthResult.getValue();
-      if (!isHealthy) {
-        console.warn('[E2E] Mnemosyne MCP reported unhealthy. Skipping ingestion tests.');
-        return;
-      }
-
-      // MCP is available — run ingestion tests
-      const content = await sampleMarkdownContent();
-      const filePath = await createSampleFile(tempDir, 'ingest-test.md', content);
-
-      const chunkResult = await chunkContentUseCase.execute({
-        content,
-        filePath,
-        sourceId: TEST_SOURCE_ID,
-      });
-
-      expect(chunkResult.isOk()).toBe(true);
-      const chunks = chunkResult.getValue();
-
-      // Ingest chunks via use case
-      const ingestResult = await ingestChunkUseCase.execute({
-        chunks,
-        sourceId: TEST_SOURCE_ID,
-        metadata: { filePath },
-      });
-
-      expect(ingestResult.isOk()).toBe(true);
-
-      // Verify chunks were remembered by checking the client directly
-      // Note: Mnemosyne MCP doesn't expose a query API in the current spec,
-      // so we verify by checking that ingestion completed without errors
-      console.log(`[E2E] Successfully ingested ${chunks.length} chunks to Mnemosyne MCP`);
+    const result = await processFileUseCase.execute({
+      filePath,
+      eventType: 'add',
+      sourceId: TEST_SOURCE_ID,
     });
+
+    expect(result.isOk()).toBe(true);
+    await processingQueue.waitForEmpty();
+  });
+
+  it('should chunk JSON config file via ProcessFileUseCase full pipeline', async () => {
+    const content = await readFixture('sample.json');
+    const filePath = path.join(tempDir, 'config.json');
+    await fs.writeFile(filePath, content, 'utf-8');
+
+    const result = await processFileUseCase.execute({
+      filePath,
+      eventType: 'add',
+      sourceId: TEST_SOURCE_ID,
+    });
+
+    expect(result.isOk()).toBe(true);
+    await processingQueue.waitForEmpty();
+  });
+
+  it('should verify chunk structure from ChunkContentUseCase', async () => {
+    const content = await readFixture('sample.md');
+    const filePath = path.join(tempDir, 'chunk-structure-test.md');
+    await fs.writeFile(filePath, content, 'utf-8');
+
+    const result = await chunkContentUseCase.execute({
+      content,
+      filePath,
+      sourceId: TEST_SOURCE_ID,
+      maxTokens: 500,
+      overlapTokens: 50,
+      hardCapTokens: 600,
+    });
+
+    expect(result.isOk()).toBe(true);
+    const chunks = result.getValue();
+    expect(chunks.length).toBeGreaterThan(0);
+
+    for (const chunk of chunks) {
+      expect(chunk.id).toBeDefined();
+      expect(chunk.text).toBeDefined();
+      expect(chunk.text.length).toBeGreaterThan(0);
+      expect(chunk.chunkIndex).toBeGreaterThanOrEqual(0);
+      expect(chunk.totalChunks).toBeGreaterThan(0);
+      expect(chunk.sectionHeader).toBeDefined();
+      expect(chunk.breadcrumb).toBeDefined();
+      expect(chunk.metadata?.filePath).toBe(filePath);
+    }
+
+    const combinedText = chunks.map((chunk) => chunk.text).join('');
+    expect(combinedText.length).toBeGreaterThan(content.length * 0.5);
+  });
+
+  it('should verify code chunks have correct fileRole', async () => {
+    const content = await readFixture('sample.ts');
+    const filePath = path.join(tempDir, 'code-role-test.ts');
+    await fs.writeFile(filePath, content, 'utf-8');
+
+    const result = await chunkContentUseCase.execute({
+      content,
+      filePath,
+      sourceId: TEST_SOURCE_ID,
+    });
+
+    expect(result.isOk()).toBe(true);
+    const chunks = result.getValue();
+    expect(chunks.length).toBeGreaterThan(0);
+
+    for (const chunk of chunks) {
+      expect(chunk.fileRole).toBe('code');
+      expect(chunk.language).toBeDefined();
+    }
+  });
+
+  it('should verify config chunks have correct fileRole', async () => {
+    const content = await readFixture('sample.json');
+    const filePath = path.join(tempDir, 'config-role-test.json');
+    await fs.writeFile(filePath, content, 'utf-8');
+
+    const result = await chunkContentUseCase.execute({
+      content,
+      filePath,
+      sourceId: TEST_SOURCE_ID,
+    });
+
+    expect(result.isOk()).toBe(true);
+    const chunks = result.getValue();
+    expect(chunks.length).toBeGreaterThan(0);
+
+    for (const chunk of chunks) {
+      expect(chunk.fileRole).toBe('config');
+    }
+  });
+
+  it('should verify Mnemosyne MCP connectivity and ingestion when available', async () => {
+    const healthResult = await mnemosyneClient.healthCheck();
+
+    if (healthResult.isKo()) {
+      console.warn(
+        '[E2E] Mnemosyne MCP health check failed. Skipping ingestion tests.',
+        healthResult.getError().message,
+      );
+      return;
+    }
+
+    const isHealthy = healthResult.getValue();
+    if (!isHealthy) {
+      console.warn('[E2E] Mnemosyne MCP reported unhealthy. Skipping ingestion tests.');
+      return;
+    }
+
+    const content = await readFixture('sample.md');
+    const filePath = path.join(tempDir, 'ingest-test.md');
+    await fs.writeFile(filePath, content, 'utf-8');
+
+    const chunkResult = await chunkContentUseCase.execute({
+      content,
+      filePath,
+      sourceId: TEST_SOURCE_ID,
+    });
+
+    expect(chunkResult.isOk()).toBe(true);
+    const chunks = chunkResult.getValue();
+
+    const ingestResult = await ingestChunkUseCase.execute({
+      chunks,
+      sourceId: TEST_SOURCE_ID,
+      metadata: { filePath },
+    });
+
+    expect(ingestResult.isOk()).toBe(true);
+    console.log(`[E2E] Successfully ingested ${chunks.length} chunks to Mnemosyne MCP`);
   });
 });

@@ -17,29 +17,43 @@ export class GracefulShutdownService implements OnApplicationShutdown {
     this.logger = logger.child({ component: '[GracefulShutdownService]' });
   }
 
+  /**
+   * Safely log during shutdown — falls back to console.log if logger is already closed.
+   */
+  private safeLog(level: 'info' | 'error' | 'warn', message: string, meta?: Record<string, unknown>): void {
+    try {
+      const args = meta != null ? [message, meta] : [message];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (this.logger as any)[level](...args);
+    } catch {
+      // Logger already closed during shutdown — fall back to console
+      console[level](`[GracefulShutdownService] ${message}`, meta ?? '');
+    }
+  }
+
   async onApplicationShutdown(signal?: string): Promise<void> {
-    this.logger.info('Initiating graceful shutdown', { signal });
+    this.safeLog('info', 'Initiating graceful shutdown', { signal });
 
     try {
       // 1. Stop file watchers first
-      this.logger.info('Stopping file watchers');
+      this.safeLog('info', 'Stopping file watchers');
       await this.fileWatcherService.stop();
-      this.logger.info('File watchers stopped');
+      this.safeLog('info', 'File watchers stopped');
 
       // 2. Drain processing queue
-      this.logger.info('Draining processing queue');
+      this.safeLog('info', 'Draining processing queue');
       // Wait for queue to empty (with timeout)
       await this.waitForQueue();
-      this.logger.info('Processing queue drained');
+      this.safeLog('info', 'Processing queue drained');
 
       // 3. Close MCP client
-      this.logger.info('Closing MCP client');
+      this.safeLog('info', 'Closing MCP client');
       // MCP uses HTTP, no explicit close needed but log it
-      this.logger.info('MCP client closed');
+      this.safeLog('info', 'MCP client closed');
 
-      this.logger.info('Graceful shutdown completed');
+      this.safeLog('info', 'Graceful shutdown completed');
     } catch (error) {
-      this.logger.error('Error during graceful shutdown', {
+      this.safeLog('error', 'Error during graceful shutdown', {
         error: error instanceof Error ? error.message : String(error),
       });
     }
@@ -51,7 +65,7 @@ export class GracefulShutdownService implements OnApplicationShutdown {
 
     while (this.processingQueue.length > 0 || this.processingQueue.isProcessing()) {
       if (Date.now() - startTime > timeout) {
-        this.logger.warn('Queue drain timeout reached', {
+        this.safeLog('warn', 'Queue drain timeout reached', {
           remaining: this.processingQueue.length,
         });
         break;

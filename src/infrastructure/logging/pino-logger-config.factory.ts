@@ -19,6 +19,7 @@ export function pinoLoggerConfigFactory(configService: ConfigService): Params {
   const serviceName = pkg.name;
 
   const environment = configService.get<string>('nodeEnv') ?? process.env.NODE_ENV ?? 'development';
+  const isTestEnv = environment === 'test';
 
   const logLevel = configService.get<string>('logging.level') ?? process.env.LOG_LEVEL ?? 'info';
 
@@ -29,7 +30,20 @@ export function pinoLoggerConfigFactory(configService: ConfigService): Params {
     String(verboseFromConfig).toLowerCase() === 'true' ||
     process.env.VERBOSE?.toLowerCase() === 'true';
 
-  ensureLogDir();
+  if (!isTestEnv) {
+    ensureLogDir();
+  }
+
+  // Test env: simple JSON logger without transports (avoids worker thread issues)
+  if (isTestEnv) {
+    return {
+      pinoHttp: {
+        level: 'warn',
+        messageKey: 'message',
+        base: { service: serviceName, environment },
+      },
+    } as Params;
+  }
 
   const pinoHttpOptions: {
     level: string;

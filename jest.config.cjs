@@ -2,8 +2,8 @@ module.exports = {
   preset: 'ts-jest',
   moduleFileExtensions: ['js', 'json', 'ts'],
   rootDir: '.',
-  testRegex: '.*\\.test\\.ts$',
-  collectCoverageFrom: ['src/**/*.ts'],
+  testRegex: 'src/((?!e2e/)).*\\.test\\.ts$',
+  collectCoverageFrom: ['src/**/*.ts', '!src/e2e/**/*'],
   coverageDirectory: 'coverage',
   testEnvironment: 'node',
   transform: {

@@ -10,7 +10,7 @@ module.exports = {
     '^.+\\.(ts|tsx|js|jsx)$': 'ts-jest',
   },
   transformIgnorePatterns: [
-    'node_modules/(?!(chokidar|anymatch|readdirp|glob-parent|is-binary-path|fsevents|nestjs-pino|pino-http|pino|pino-pretty)/)',
+    'node_modules/(?!(chokidar|anymatch|readdirp|glob-parent|is-binary-path|fsevents)/)',
   ],
   testTimeout: 60000,
   verbose: true,

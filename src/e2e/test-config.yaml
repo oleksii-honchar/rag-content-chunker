@@ -31,9 +31,9 @@ enrichment:
 
 mcp:
   url: http://localhost:8080/mcp
-  timeoutMs: 30000
-  maxRetries: 3
-  retryDelayMs: 500
+  timeoutMs: 2000
+  maxRetries: 0
+  retryDelayMs: 50
 
 telemetry:
   enabled: false

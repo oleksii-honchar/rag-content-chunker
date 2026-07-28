@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Injectable, Scope } from '@nestjs/common';
 import { PinoLogger } from 'nestjs-pino';
 
@@ -11,14 +12,17 @@ export class NestjsPinoLogger implements BasePinoLogger {
     this.pinoLogger.setContext(context);
   }
 
-  private buildLogPayload(
+  private buildLogArgs(
     message: string | Record<string, unknown>,
     meta?: Record<string, unknown>,
-  ): [unknown, string?] {
-    if (typeof message === 'string') {
-      return meta ? [{ ...meta, msg: message }] : [message];
+  ): any[] {
+    if (meta != null && Object.keys(meta).length > 0) {
+      if (typeof message === 'string') {
+        return [{ ...meta, msg: message }];
+      }
+      return [{ ...meta, ...message }];
     }
-    return meta ? [{ ...meta, ...message }] : [message];
+    return [message];
   }
 
   log(message: string | Record<string, unknown>, meta?: Record<string, unknown>): void {
@@ -26,23 +30,23 @@ export class NestjsPinoLogger implements BasePinoLogger {
   }
 
   info(message: string | Record<string, unknown>, meta?: Record<string, unknown>): void {
-    const [obj, msg] = this.buildLogPayload(message, meta);
-    this.pinoLogger.info(obj, msg);
+    const args = this.buildLogArgs(message, meta);
+    this.pinoLogger.info(args[0], ...args.slice(1));
   }
 
   error(message: string | Record<string, unknown>, meta?: Record<string, unknown>): void {
-    const [obj, msg] = this.buildLogPayload(message, meta);
-    this.pinoLogger.error(obj, msg);
+    const args = this.buildLogArgs(message, meta);
+    this.pinoLogger.error(args[0], ...args.slice(1));
   }
 
   warn(message: string | Record<string, unknown>, meta?: Record<string, unknown>): void {
-    const [obj, msg] = this.buildLogPayload(message, meta);
-    this.pinoLogger.warn(obj, msg);
+    const args = this.buildLogArgs(message, meta);
+    this.pinoLogger.warn(args[0], ...args.slice(1));
   }
 
   debug(message: string | Record<string, unknown>, meta?: Record<string, unknown>): void {
-    const [obj, msg] = this.buildLogPayload(message, meta);
-    this.pinoLogger.debug(obj, msg);
+    const args = this.buildLogArgs(message, meta);
+    this.pinoLogger.debug(args[0], ...args.slice(1));
   }
 
   child(bindings: Record<string, unknown>): BasePinoLogger {
