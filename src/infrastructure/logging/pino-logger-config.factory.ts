@@ -6,17 +6,11 @@ import pkg from '../../../package.json';
 export function pinoLoggerConfigFactory(configService: ConfigService): Params {
   const serviceName = pkg.name;
 
-  const environment =
-    configService.get<string>('nodeEnv') ??
-    process.env.NODE_ENV ??
-    'development';
+  const environment = configService.get<string>('nodeEnv') ?? process.env.NODE_ENV ?? 'development';
 
   const isProduction = environment === 'production';
 
-  const logLevel =
-    configService.get<string>('logging.level') ??
-    process.env.LOG_LEVEL ??
-    'info';
+  const logLevel = configService.get<string>('logging.level') ?? process.env.LOG_LEVEL ?? 'info';
 
   const verboseFromConfig = configService.get<boolean | string>('logging.verbose');
 

@@ -1,4 +1,42 @@
+---
+opencodeSessionId: ses_057067dc8ffeGvI7VbIEtgMFFQ
+agent: developer
+createdAt: "2026-07-28T11:46:00Z"
+---
+
 # RAG Content Chunker — Implementation Plan
+
+## Spec Alignment (vs specifications/spec.md)
+
+All spec deliverables implemented:
+
+| Spec Component | Status | Files |
+|---|---|---|
+| NestJS CLI (`npx rag-content-chunker`) | ✅ | `src/main.ts`, `package.json` bin |
+| Result pattern + BaseUseCase | ✅ | `src/utils/result.ts`, `src/utils/base-use-case.ts` |
+| YAML config + hot-reload | ✅ | `src/infrastructure/config/configuration.service.ts` |
+| nestjs-pino logging | ✅ | `src/infrastructure/logging/*` |
+| WatchSource entity (Zod) | ✅ | `src/domain/entities/watch-source.entity.ts` |
+| Chunk entity (Zod) | ✅ | `src/domain/entities/chunk.entity.ts` |
+| FileChange aggregate | ✅ | `src/domain/aggregates/file-change.aggregate.ts` |
+| Domain events/commands | ✅ | `src/domain/events/*`, `src/domain/commands/*` |
+| AppEventEmitter | ✅ | `src/infrastructure/events/app-event-emitter.ts` |
+| FileProcessingQueue (sequential) | ✅ | `src/infrastructure/queue/file-processing-queue.service.ts` |
+| FileWatcherService (chokidar) | ✅ | `src/infrastructure/watcher/file-watcher.service.ts` |
+| StrategyFactory | ✅ | `src/application/strategies/strategy-factory.service.ts` |
+| MarkdownChunker | ✅ | `src/application/strategies/markdown-chunker.service.ts` |
+| CodeChunker | ✅ | `src/application/strategies/code-chunker.service.ts` |
+| TextChunker | ✅ | `src/application/strategies/text-chunker.service.ts` |
+| ConfigChunker | ✅ | `src/application/strategies/config-chunker.service.ts` |
+| ChunkContentUseCase | ✅ | `src/chunk-content.use-case.ts` |
+| ProcessFileUseCase (+ @OnEvent) | ✅ | `src/process-file.use-case.ts` |
+| IngestChunkUseCase | ✅ | `src/ingest-chunk.use-case.ts` |
+| MnemosyneClient (MCP JSON-RPC) | ✅ | `src/infrastructure/mcp/mnemosyne-client.service.ts` |
+| ForceReprocessService | ✅ | `src/application/services/force-reprocess.service.ts` |
+| CLI args (--config, --verbose, --help, --version, --force-reprocess, --process-only, --source) | ✅ | `src/infrastructure/cli/cli-args.service.ts` |
+| GracefulShutdownService | ✅ | `src/infrastructure/shutdown/graceful-shutdown.service.ts` |
+| OpenTelemetry stub | ✅ | `src/infrastructure/telemetry/metrics-collector.service.ts` |
+| AppModule wiring | ✅ | `src/app.module.ts` |
 
 ## Completed Tasks
 
@@ -129,3 +167,27 @@
 - `src/main.ts` — added SIGINT/SIGTERM handlers
 
 **Tests:** 11 new passing tests, full suite 360 passing (7 pre-existing failures unrelated)
+
+---
+
+## Ad-Hoc Task: Structural Refactoring — Single Domain, Clean Layers, dotenv→dotenvx, Lint/Prettier Alignment
+
+_Origin: User instruction — "structural refactoring: single domain (flatten domains/chunking→domain), move use-cases to root src, move services/strategies into src/application, move cli into src/infrastructure, replace dotenv with dotenvx, copy ESLint/Prettier config from voqaria/bff-service"_
+
+- **Priority:** P0
+- **Depends on:** none
+- **Description:** Restructure codebase into cleaner layers and align tooling with voqaria standards
+- **Acceptance Criteria:**
+  - [x] Flatten `src/domains/chunking/` → `src/domain/`; rename ChunkingModule → DomainModule
+  - [x] Move use-cases to root `src/` (chunk-content.use-case.ts, process-file.use-case.ts, ingest-chunk.use-case.ts)
+  - [x] Create `src/application/` with services/ and strategies/
+  - [x] Move `src/cli/` → `src/infrastructure/cli/`
+  - [x] Replace dotenv with @dotenvx/dotenvx; update imports and mocks
+  - [x] Copy ESLint/Prettier config from voqaria/bff-service; add format/format:check scripts
+  - [x] `npm run build` succeeds
+  - [x] `npm run test` passes (390 tests, same count as before)
+  - [x] `npm run format:check` passes
+- **Files affected:** All source files (import paths), `package.json`, new config files (`.prettierrc.base.js`, `eslint.config.base.js`, `eslint.config.js`, `.prettierrc.js`)
+- **Test strategy:** Refactoring — behavior preserved, test count unchanged
+
+**Final state:** 390 tests passing, 28 suites green, build succeeds, lint/format commands operational.

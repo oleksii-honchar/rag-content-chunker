@@ -1,13 +1,13 @@
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Test, TestingModule } from '@nestjs/testing';
 import * as chokidar from 'chokidar';
-import * as path from 'path';
 import * as os from 'os';
-import { FileWatcherService } from './file-watcher.service';
+import * as path from 'path';
+import { WatchSourceConfig } from '../config/config-schemas';
 import { ConfigurationService } from '../config/configuration.service';
 import { AppEventEmitter } from '../events/app-event-emitter';
 import { BasePinoLogger } from '../logging/base-pino-logger';
-import { WatchSourceConfig } from '../config/config-schemas';
-import { EventEmitter2 } from '@nestjs/event-emitter';
+import { FileWatcherService } from './file-watcher.service';
 
 jest.mock('chokidar', () => ({
   watch: jest.fn(),
@@ -169,9 +169,9 @@ describe('FileWatcherService', () => {
       configService.getWatchSources.mockReturnValue([createSource()]);
       await service.start();
 
-      const addHandler = mockWatcher.on.mock.calls.find(
-        (call) => call[0] === 'add',
-      )?.[1] as ((filePath: string) => void) | undefined;
+      const addHandler = mockWatcher.on.mock.calls.find(call => call[0] === 'add')?.[1] as
+        | ((filePath: string) => void)
+        | undefined;
 
       addHandler?.('/test/new-file.md');
 
@@ -191,9 +191,9 @@ describe('FileWatcherService', () => {
       configService.getWatchSources.mockReturnValue([createSource()]);
       await service.start();
 
-      const changeHandler = mockWatcher.on.mock.calls.find(
-        (call) => call[0] === 'change',
-      )?.[1] as ((filePath: string) => void) | undefined;
+      const changeHandler = mockWatcher.on.mock.calls.find(call => call[0] === 'change')?.[1] as
+        | ((filePath: string) => void)
+        | undefined;
 
       changeHandler?.('/test/changed-file.md');
 
@@ -213,9 +213,9 @@ describe('FileWatcherService', () => {
       configService.getWatchSources.mockReturnValue([createSource()]);
       await service.start();
 
-      const unlinkHandler = mockWatcher.on.mock.calls.find(
-        (call) => call[0] === 'unlink',
-      )?.[1] as ((filePath: string) => void) | undefined;
+      const unlinkHandler = mockWatcher.on.mock.calls.find(call => call[0] === 'unlink')?.[1] as
+        | ((filePath: string) => void)
+        | undefined;
 
       unlinkHandler?.('/test/deleted-file.md');
 
@@ -242,7 +242,7 @@ describe('FileWatcherService', () => {
 
       const watchCall = mockWatchFn.mock.calls[0];
       const options = watchCall?.[1] as Record<string, unknown>;
-      const ignored = options.ignored as Array<string | RegExp>;
+      const ignored = options.ignored as (string | RegExp)[];
 
       expect(Array.isArray(ignored)).toBe(true);
       expect(ignored).toContain('**/node_modules/**');

@@ -1,10 +1,10 @@
 import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
 import * as http from 'http';
 import * as https from 'https';
+import { Chunk } from '../../domain/entities/chunk.entity';
 import { Result } from '../../utils/result';
-import { BasePinoLogger } from '../logging/base-pino-logger';
 import { ConfigurationService } from '../config/configuration.service';
-import { Chunk } from '../../domains/chunking/entities/chunk.entity';
+import { BasePinoLogger } from '../logging/base-pino-logger';
 
 interface McpToolRequest {
   jsonrpc: '2.0';
@@ -17,7 +17,7 @@ interface McpToolResponse {
   jsonrpc?: string;
   id?: number;
   result?: {
-    content?: Array<{ type?: string; text?: string }>;
+    content?: { type?: string; text?: string }[];
   };
   error?: {
     code?: number;
@@ -194,7 +194,7 @@ export class MnemosyneClient implements OnApplicationBootstrap {
         },
       };
 
-      const req = lib.request(options, (res) => {
+      const req = lib.request(options, res => {
         let responseData = '';
 
         res.on('data', (chunk: Buffer) => {

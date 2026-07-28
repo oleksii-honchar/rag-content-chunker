@@ -11,7 +11,10 @@ export class NestjsPinoLogger implements BasePinoLogger {
     this.pinoLogger.setContext(context);
   }
 
-  private buildLogPayload(message: string | Record<string, unknown>, meta?: Record<string, unknown>): [unknown, string?] {
+  private buildLogPayload(
+    message: string | Record<string, unknown>,
+    meta?: Record<string, unknown>,
+  ): [unknown, string?] {
     if (typeof message === 'string') {
       return meta ? [{ ...meta, msg: message }] : [message];
     }

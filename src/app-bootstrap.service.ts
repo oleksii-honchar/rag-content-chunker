@@ -21,8 +21,12 @@ export class AppBootstrapService implements OnApplicationBootstrap {
       this.logger.info(`    - ${source.id}: ${source.path}`);
     }
     this.logger.info(`  Chunking strategy: ${this.configService.getChunkingConfig().strategy}`);
-    this.logger.info(`  Enrichment: ${this.configService.getEnrichmentConfig().enabled ? 'enabled' : 'disabled'}`);
+    this.logger.info(
+      `  Enrichment: ${this.configService.getEnrichmentConfig().enabled ? 'enabled' : 'disabled'}`,
+    );
     this.logger.info(`  MCP endpoint: ${this.configService.getMcpConfig().url}`);
-    this.logger.info(`  Telemetry: ${this.configService.getTelemetryConfig().enabled ? 'enabled' : 'disabled'}`);
+    this.logger.info(
+      `  Telemetry: ${this.configService.getTelemetryConfig().enabled ? 'enabled' : 'disabled'}`,
+    );
   }
 }

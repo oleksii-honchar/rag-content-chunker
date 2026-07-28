@@ -1,19 +1,19 @@
-import { Injectable, OnApplicationBootstrap, Inject } from '@nestjs/common';
-import * as fs from 'fs/promises';
-import * as fsSync from 'fs';
-import * as path from 'path';
-import * as yaml from 'js-yaml';
+import { Inject, Injectable, OnApplicationBootstrap } from '@nestjs/common';
 import * as chokidar from 'chokidar';
+import * as fsSync from 'fs';
+import * as fs from 'fs/promises';
+import * as yaml from 'js-yaml';
+import * as path from 'path';
 import { Result } from '../../utils/result';
 import { BasePinoLogger } from '../logging/base-pino-logger';
 import {
-  configurationSchema,
-  Configuration,
-  WatchSourceConfig,
   ChunkingConfig,
+  Configuration,
+  configurationSchema,
   EnrichmentConfig,
   McpConfig,
   TelemetryConfig,
+  WatchSourceConfig,
 } from './config-schemas';
 
 const DEFAULT_CONFIG: Configuration = {
@@ -106,11 +106,9 @@ export class ConfigurationService implements OnApplicationBootstrap {
 
       if (!result.success) {
         const errors = result.error.issues
-          .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+          .map(issue => `${issue.path.join('.')}: ${issue.message}`)
           .join(', ');
-        return Result.ko(
-          new Error(`Configuration validation failed: ${errors}`),
-        );
+        return Result.ko(new Error(`Configuration validation failed: ${errors}`));
       }
 
       this.config = result.data;
@@ -121,22 +119,14 @@ export class ConfigurationService implements OnApplicationBootstrap {
 
       return Result.ok(this.config);
     } catch (error) {
-      if (
-        error instanceof Error &&
-        'code' in error &&
-        (error as { code: string }).code === 'ENOENT'
-      ) {
+      if (error instanceof Error && 'code' in error && (error as { code: string }).code === 'ENOENT') {
         return Result.ko(
           new Error(
             `Configuration file not found: ${this.configFilePath}. Run with --init to create default config.`,
           ),
         );
       }
-      return Result.ko(
-        new Error(
-          `Failed to load configuration: ${(error as Error).message}`,
-        ),
-      );
+      return Result.ko(new Error(`Failed to load configuration: ${(error as Error).message}`));
     }
   }
 
@@ -186,11 +176,7 @@ export class ConfigurationService implements OnApplicationBootstrap {
 
       return Result.ok(undefined);
     } catch (error) {
-      return Result.ko(
-        new Error(
-          `Failed to create default configuration: ${(error as Error).message}`,
-        ),
-      );
+      return Result.ko(new Error(`Failed to create default configuration: ${(error as Error).message}`));
     }
   }
 
@@ -199,9 +185,7 @@ export class ConfigurationService implements OnApplicationBootstrap {
     const loadResult = await this.load();
 
     if (loadResult.isKo()) {
-      this.logger.warn(
-        `Configuration load failed: ${loadResult.getError().message}. Using defaults.`,
-      );
+      this.logger.warn(`Configuration load failed: ${loadResult.getError().message}. Using defaults.`);
       this.config = DEFAULT_CONFIG;
     }
 
@@ -212,9 +196,7 @@ export class ConfigurationService implements OnApplicationBootstrap {
   private startConfigWatcher(): void {
     try {
       if (!fsSync.existsSync(this.configFilePath)) {
-        this.logger.debug(
-          'Config file does not exist, skipping watcher setup',
-        );
+        this.logger.debug('Config file does not exist, skipping watcher setup');
         return;
       }
 
@@ -234,9 +216,7 @@ export class ConfigurationService implements OnApplicationBootstrap {
           const result = await this.load();
 
           if (result.isKo()) {
-            this.logger.error(
-              `Config reload failed: ${result.getError().message}. Keeping current config.`,
-            );
+            this.logger.error(`Config reload failed: ${result.getError().message}. Keeping current config.`);
           } else {
             this.logger.info('Configuration reloaded successfully');
           }
@@ -248,9 +228,7 @@ export class ConfigurationService implements OnApplicationBootstrap {
         this.logger.error('Config watcher error', { error: message });
       });
     } catch (error) {
-      this.logger.warn(
-        `Failed to start config watcher: ${(error as Error).message}`,
-      );
+      this.logger.warn(`Failed to start config watcher: ${(error as Error).message}`);
     }
   }
 

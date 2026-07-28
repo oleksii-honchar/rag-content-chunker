@@ -1,16 +1,16 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { LoggerModule } from 'nestjs-pino';
 import { EventEmitterModule } from '@nestjs/event-emitter';
-import { ConfigurationModule } from './infrastructure/config/configuration.module';
-import { LoggingModule } from './infrastructure/logging/logger.module';
-import { TelemetryModule } from './infrastructure/telemetry/telemetry.module';
-import { ChunkingModule } from './domains/chunking/chunking.module';
-import { AppEventEmitter } from './infrastructure/events/app-event-emitter';
+import { LoggerModule } from 'nestjs-pino';
 import { AppBootstrapService } from './app-bootstrap.service';
-import { FileWatcherService } from './infrastructure/watcher/file-watcher.service';
-import { GracefulShutdownService } from './infrastructure/shutdown/graceful-shutdown.service';
+import { DomainModule } from './domain/domain.module';
+import { ConfigurationModule } from './infrastructure/config/configuration.module';
+import { AppEventEmitter } from './infrastructure/events/app-event-emitter';
+import { LoggingModule } from './infrastructure/logging/logger.module';
 import { pinoLoggerConfigFactory } from './infrastructure/logging/pino-logger-config.factory';
+import { GracefulShutdownService } from './infrastructure/shutdown/graceful-shutdown.service';
+import { TelemetryModule } from './infrastructure/telemetry/telemetry.module';
+import { FileWatcherService } from './infrastructure/watcher/file-watcher.service';
 
 const configLoader = (): Record<string, unknown> => {
   const configPath = process.env.RAG_CHUNKER_CONFIG || '~/.config/rag-content-chunker.yaml';
@@ -53,14 +53,9 @@ const configLoader = (): Record<string, unknown> => {
     LoggingModule,
     ConfigurationModule,
     TelemetryModule,
-    ChunkingModule,
+    DomainModule,
   ],
   controllers: [],
-  providers: [
-    AppEventEmitter,
-    AppBootstrapService,
-    FileWatcherService,
-    GracefulShutdownService,
-  ],
+  providers: [AppEventEmitter, AppBootstrapService, FileWatcherService, GracefulShutdownService],
 })
 export class AppModule {}

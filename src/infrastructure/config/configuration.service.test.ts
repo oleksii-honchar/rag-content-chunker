@@ -1,12 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import * as fs from 'fs/promises';
 import * as fsSync from 'fs';
+import * as fs from 'fs/promises';
+import * as yaml from 'js-yaml';
 import * as os from 'os';
 import * as path from 'path';
-import * as yaml from 'js-yaml';
-import { ConfigurationService } from './configuration.service';
-import { Configuration } from './config-schemas';
 import { BasePinoLogger } from '../logging/base-pino-logger';
+import { Configuration } from './config-schemas';
+import { ConfigurationService } from './configuration.service';
 
 // Mock chokidar
 jest.mock('chokidar', () => ({
@@ -260,7 +260,7 @@ describe('ConfigurationService', () => {
       expect(parsed.watchSources).toBeDefined();
       expect(parsed.watchSources?.length).toBe(3);
 
-      const sourceIds = parsed.watchSources?.map((s) => s.id) ?? [];
+      const sourceIds = parsed.watchSources?.map(s => s.id) ?? [];
       expect(sourceIds).toContain('obsidian-vault');
       expect(sourceIds).toContain('agent-sessions');
       expect(sourceIds).toContain('codebase');
@@ -320,9 +320,7 @@ describe('ConfigurationService', () => {
       // Simulate file change by writing new config and calling load again
       // (in production, chokidar watcher triggers load())
       const updatedConfig = {
-        watchSources: [
-          { id: 'updated', path: '/updated', include: ['*.ts'] },
-        ],
+        watchSources: [{ id: 'updated', path: '/updated', include: ['*.ts'] }],
       };
 
       await fs.writeFile(configPath, yaml.dump(updatedConfig));

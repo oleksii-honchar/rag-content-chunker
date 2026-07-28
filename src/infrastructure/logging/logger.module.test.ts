@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 
+import { BasePinoLogger } from './base-pino-logger';
 import { LoggingModule } from './logger.module';
 import { NestjsPinoLogger } from './nestjs-pino-logger';
-import { BasePinoLogger } from './base-pino-logger';
 
 describe('LoggingModule', () => {
   let module: TestingModule;

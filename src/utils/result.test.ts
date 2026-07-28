@@ -63,7 +63,7 @@ describe('Result', () => {
   describe('map', () => {
     it('should transform value when ok', () => {
       const result = Result.ok<number>(5);
-      const mapped = result.map((v) => v * 2);
+      const mapped = result.map(v => v * 2);
       expect(mapped.isOk()).toBe(true);
       expect(mapped.getValue()).toBe(10);
     });
@@ -71,7 +71,7 @@ describe('Result', () => {
     it('should preserve error when ko', () => {
       const error = new Error('ko');
       const result = Result.ko<number>(error);
-      const mapped = result.map((v) => v * 2);
+      const mapped = result.map(v => v * 2);
       expect(mapped.isKo()).toBe(true);
       expect(mapped.getError()).toBe(error);
     });
@@ -90,14 +90,14 @@ describe('Result', () => {
     it('should transform error when ko', () => {
       const error = new Error('original');
       const result = Result.ko<number>(error);
-      const mapped = result.mapErr((e) => new Error(`wrapped: ${e.message}`));
+      const mapped = result.mapErr(e => new Error(`wrapped: ${e.message}`));
       expect(mapped.isKo()).toBe(true);
       expect(mapped.getError().message).toBe('wrapped: original');
     });
 
     it('should preserve value when ok', () => {
       const result = Result.ok<number>(42);
-      const mapped = result.mapErr((e) => new Error(`wrapped: ${e.message}`));
+      const mapped = result.mapErr(e => new Error(`wrapped: ${e.message}`));
       expect(mapped.isOk()).toBe(true);
       expect(mapped.getValue()).toBe(42);
     });
@@ -106,7 +106,7 @@ describe('Result', () => {
   describe('flatMap', () => {
     it('should chain results when ok', () => {
       const result = Result.ok<number>(5);
-      const chained = result.flatMap((v) => Result.ok(v * 3));
+      const chained = result.flatMap(v => Result.ok(v * 3));
       expect(chained.isOk()).toBe(true);
       expect(chained.getValue()).toBe(15);
     });
@@ -114,14 +114,14 @@ describe('Result', () => {
     it('should propagate error when ko', () => {
       const error = new Error('ko');
       const result = Result.ko<number>(error);
-      const chained = result.flatMap((v) => Result.ok(v * 3));
+      const chained = result.flatMap(v => Result.ok(v * 3));
       expect(chained.isKo()).toBe(true);
       expect(chained.getError()).toBe(error);
     });
 
     it('should propagate error when flatMap function returns ko', () => {
       const result = Result.ok<number>(5);
-      const chained = result.flatMap((v) => {
+      const chained = result.flatMap(v => {
         if (v < 10) {
           return Result.ko(new Error('too small'));
         }

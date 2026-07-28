@@ -1,8 +1,8 @@
 import { Injectable, OnApplicationShutdown } from '@nestjs/common';
 import { BasePinoLogger } from '../logging/base-pino-logger';
-import { FileWatcherService } from '../watcher/file-watcher.service';
-import { FileProcessingQueue } from '../queue/file-processing-queue.service';
 import { MnemosyneClient } from '../mcp/mnemosyne-client.service';
+import { FileProcessingQueue } from '../queue/file-processing-queue.service';
+import { FileWatcherService } from '../watcher/file-watcher.service';
 
 @Injectable()
 export class GracefulShutdownService implements OnApplicationShutdown {

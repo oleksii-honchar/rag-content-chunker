@@ -1,19 +1,19 @@
 import { Injectable, OnApplicationBootstrap, OnApplicationShutdown } from '@nestjs/common';
-import { EventEmitter } from 'node:events';
 import * as chokidar from 'chokidar';
-import * as path from 'path';
+import { EventEmitter } from 'node:events';
 import * as os from 'os';
+import * as path from 'path';
+import { FileChange } from '../../domain/aggregates/file-change.aggregate';
 import { Result } from '../../utils/result';
-import { BasePinoLogger } from '../logging/base-pino-logger';
+import { WatchSourceConfig } from '../config/config-schemas';
 import { ConfigurationService } from '../config/configuration.service';
 import { AppEventEmitter } from '../events/app-event-emitter';
-import { FileChange } from '../../domains/chunking/aggregates/file-change.aggregate';
-import { WatchSourceConfig } from '../config/config-schemas';
+import { BasePinoLogger } from '../logging/base-pino-logger';
 
 @Injectable()
 export class FileWatcherService implements OnApplicationBootstrap, OnApplicationShutdown {
   private readonly logger: BasePinoLogger;
-  private watchers: Map<string, chokidar.FSWatcher> = new Map();
+  private watchers = new Map<string, chokidar.FSWatcher>();
 
   constructor(
     private readonly configService: ConfigurationService,
@@ -134,7 +134,7 @@ export class FileWatcherService implements OnApplicationBootstrap, OnApplication
     return path.resolve(filePath);
   }
 
-  private buildIgnorePatterns(source: WatchSourceConfig): Array<string | RegExp> {
+  private buildIgnorePatterns(source: WatchSourceConfig): (string | RegExp)[] {
     const patterns = [
       ...source.exclude,
       ...source.ignorePatterns,

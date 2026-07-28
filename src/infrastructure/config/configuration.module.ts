@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
-import { ConfigurationService } from './configuration.service';
 import { LoggingModule } from '../logging/logger.module';
+import { ConfigurationService } from './configuration.service';
 
 @Module({
   imports: [LoggingModule],
@@ -9,8 +9,7 @@ import { LoggingModule } from '../logging/logger.module';
     {
       provide: 'CONFIG_FILE_PATH',
       useValue:
-        process.env.RAG_CHUNKER_CONFIG ||
-        `${process.env.HOME || ''}/.config/rag-content-chunker.yaml`,
+        process.env.RAG_CHUNKER_CONFIG || `${process.env.HOME || ''}/.config/rag-content-chunker.yaml`,
     },
   ],
   exports: [ConfigurationService, 'CONFIG_FILE_PATH'],

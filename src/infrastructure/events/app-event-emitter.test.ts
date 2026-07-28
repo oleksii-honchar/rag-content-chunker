@@ -1,10 +1,9 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { Test, TestingModule } from '@nestjs/testing';
+import { DomainCommand, ProcessFileCommand } from '../../domain/commands/process-file-command';
+import { DomainEvent } from '../../domain/events/domain-event';
+import { FileAddedEvent, FileChangedEvent, FileDeletedEvent } from '../../domain/events/file-events';
 import { AppEventEmitter } from './app-event-emitter';
-import { DomainEvent } from '../../domains/chunking/events/domain-event';
-import { DomainCommand } from '../../domains/chunking/commands/process-file-command';
-import { FileAddedEvent, FileChangedEvent, FileDeletedEvent } from '../../domains/chunking/events/file-events';
-import { ProcessFileCommand } from '../../domains/chunking/commands/process-file-command';
 
 describe('AppEventEmitter', () => {
   let appEventEmitter: AppEventEmitter;
@@ -113,7 +112,7 @@ describe('AppEventEmitter', () => {
 
       appEventEmitter.publish(event);
 
-      await new Promise((resolve) => process.nextTick(resolve));
+      await new Promise(resolve => process.nextTick(resolve));
 
       expect(receivedEvents).toHaveLength(1);
       expect(receivedEvents[0]).toBe(event);

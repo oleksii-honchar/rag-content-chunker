@@ -1,11 +1,10 @@
-import { z } from 'zod';
 import {
-  watchSourceConfigSchema,
   chunkingConfigSchema,
+  configurationSchema,
   enrichmentConfigSchema,
   mcpConfigSchema,
   telemetryConfigSchema,
-  configurationSchema,
+  watchSourceConfigSchema,
 } from './config-schemas';
 
 describe('config-schemas', () => {

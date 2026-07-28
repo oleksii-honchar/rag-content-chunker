@@ -1,5 +1,5 @@
-import { FileProcessingQueue } from './file-processing-queue.service';
 import { BasePinoLogger } from '../logging/base-pino-logger';
+import { FileProcessingQueue } from './file-processing-queue.service';
 
 describe('FileProcessingQueue', () => {
   let queue: FileProcessingQueue;
@@ -21,7 +21,7 @@ describe('FileProcessingQueue', () => {
   it('should process tasks sequentially in order', async () => {
     const executionOrder: number[] = [];
     const delay = (ms: number, value: number) =>
-      new Promise<void>((resolve) => {
+      new Promise<void>(resolve => {
         setTimeout(() => {
           executionOrder.push(value);
           resolve();
@@ -40,7 +40,7 @@ describe('FileProcessingQueue', () => {
   it('should complete all queued tasks', async () => {
     const completed: number[] = [];
 
-    const tasks = [1, 2, 3, 4, 5].map((n) =>
+    const tasks = [1, 2, 3, 4, 5].map(n =>
       queue.addToQueue(async () => {
         completed.push(n);
       }),
@@ -78,13 +78,13 @@ describe('FileProcessingQueue', () => {
     expect(queue.length).toBe(0);
 
     const promises = [
-      queue.addToQueue(() => new Promise<void>((resolve) => setTimeout(resolve, 100))),
-      queue.addToQueue(() => new Promise<void>((resolve) => setTimeout(resolve, 100))),
-      queue.addToQueue(() => new Promise<void>((resolve) => setTimeout(resolve, 100))),
+      queue.addToQueue(() => new Promise<void>(resolve => setTimeout(resolve, 100))),
+      queue.addToQueue(() => new Promise<void>(resolve => setTimeout(resolve, 100))),
+      queue.addToQueue(() => new Promise<void>(resolve => setTimeout(resolve, 100))),
     ];
 
     // Allow queue to start processing but not complete
-    await new Promise((resolve) => setTimeout(resolve, 10));
+    await new Promise(resolve => setTimeout(resolve, 10));
 
     // Some tasks may be in flight, length reflects remaining in queue
     expect(queue.length).toBeGreaterThanOrEqual(0);
@@ -97,18 +97,19 @@ describe('FileProcessingQueue', () => {
   it('should report isProcessing correctly', async () => {
     expect(queue.isProcessing()).toBe(false);
 
-    const longTaskDone = new Promise<void>((resolve) => {
-      queue.addToQueue(() =>
-        new Promise<void>((taskResolve) => {
-          setTimeout(() => {
-            taskResolve();
-            resolve();
-          }, 100);
-        }),
+    const longTaskDone = new Promise<void>(resolve => {
+      queue.addToQueue(
+        () =>
+          new Promise<void>(taskResolve => {
+            setTimeout(() => {
+              taskResolve();
+              resolve();
+            }, 100);
+          }),
       );
     });
 
-    await new Promise((resolve) => setTimeout(resolve, 10));
+    await new Promise(resolve => setTimeout(resolve, 10));
     expect(queue.isProcessing()).toBe(true);
 
     await longTaskDone;

@@ -1,9 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BasePinoLogger } from '../logging/base-pino-logger';
 import { ConfigurationService } from '../config/configuration.service';
+import { BasePinoLogger } from '../logging/base-pino-logger';
 import { MetricsCollectorService } from './metrics-collector.service';
 
-type LoggerMock = {
+interface LoggerMock {
   setContext: jest.Mock;
   log: jest.Mock;
   info: jest.Mock;
@@ -11,11 +11,11 @@ type LoggerMock = {
   warn: jest.Mock;
   debug: jest.Mock;
   child: jest.Mock;
-};
+}
 
-type ConfigServiceMock = {
+interface ConfigServiceMock {
   getTelemetryConfig: jest.Mock;
-};
+}
 
 const createLoggerMock = (): LoggerMock => ({
   setContext: jest.fn(),
@@ -88,9 +88,7 @@ describe('MetricsCollectorService', () => {
           service: 'rag-content-chunker',
         }),
       );
-      expect(childLogger.info).toHaveBeenCalledWith(
-        expect.stringContaining('OpenTelemetry initialized'),
-      );
+      expect(childLogger.info).toHaveBeenCalledWith(expect.stringContaining('OpenTelemetry initialized'));
     });
   });
 

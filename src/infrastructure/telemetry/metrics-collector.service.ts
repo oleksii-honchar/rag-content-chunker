@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { BasePinoLogger } from '../logging/base-pino-logger';
 import { ConfigurationService } from '../config/configuration.service';
+import { BasePinoLogger } from '../logging/base-pino-logger';
 
 @Injectable()
 export class MetricsCollectorService {

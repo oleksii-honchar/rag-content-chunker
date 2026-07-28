@@ -24,7 +24,7 @@ export const chunkingConfigSchema = z
     overlap: z.number().optional(),
     hardCap: z.number().optional(),
   })
-  .transform((data) => ({
+  .transform(data => ({
     strategy: data.strategy ?? 'content-aware',
     maxSizes: {
       agentSessions: data.maxSizes?.agentSessions ?? 400,
@@ -47,7 +47,7 @@ export const enrichmentConfigSchema = z
     timeoutMs: z.number().positive().optional(),
     docMaxTokens: z.number().positive().optional(),
   })
-  .transform((data) => ({
+  .transform(data => ({
     enabled: data.enabled ?? false,
     llmUrl: data.llmUrl,
     llmModel: data.llmModel,
@@ -65,7 +65,7 @@ export const mcpConfigSchema = z
     maxRetries: z.number().positive().optional(),
     retryDelayMs: z.number().positive().optional(),
   })
-  .transform((data) => ({
+  .transform(data => ({
     url: data.url ?? 'https://lite-llm.lan/mcp/mnemosyne',
     apiKey: data.apiKey,
     timeoutMs: data.timeoutMs ?? 30000,
@@ -86,7 +86,7 @@ export const telemetryConfigSchema = z
       })
       .optional(),
   })
-  .transform((data) => ({
+  .transform(data => ({
     enabled: data.enabled ?? true,
     endpoint: data.endpoint ?? 'clickstack-otel-collector:4317',
     service: data.service ?? 'rag-content-chunker',
@@ -107,7 +107,7 @@ export const configurationSchema = z
     mcp: mcpConfigSchema.optional(),
     telemetry: telemetryConfigSchema.optional(),
   })
-  .transform((data) => ({
+  .transform(data => ({
     watchSources: data.watchSources ?? [],
     chunking: {
       strategy: data.chunking?.strategy ?? 'content-aware',

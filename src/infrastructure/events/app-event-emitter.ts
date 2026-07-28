@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { DomainEvent } from '../../domains/chunking/events/domain-event';
-import { DomainCommand } from '../../domains/chunking/commands/process-file-command';
+import { DomainCommand } from '../../domain/commands/process-file-command';
+import { DomainEvent } from '../../domain/events/domain-event';
 
 @Injectable()
 export class AppEventEmitter {
@@ -12,6 +12,6 @@ export class AppEventEmitter {
   }
 
   publishMany<T extends DomainEvent | DomainCommand>(events: T[]): void {
-    events.forEach((event) => this.publish(event));
+    events.forEach(event => this.publish(event));
   }
 }

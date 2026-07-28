@@ -1,11 +1,17 @@
+import { BasePinoLogger, BaseUseCase } from './base-use-case';
 import { Result } from './result';
-import { BaseUseCase, BasePinoLogger } from './base-use-case';
 
 class MockLogger implements BasePinoLogger {
-  public logs: Array<{ level: string; message: string; metadata?: Record<string, unknown> }> = [];
+  public logs: { level: string; message: string; metadata?: Record<string, unknown> }[] = [];
   private _bindings: Record<string, unknown> = {};
 
-  constructor(private readonly parentLogs?: Array<{ level: string; message: string; metadata?: Record<string, unknown> }>) {}
+  constructor(
+    private readonly parentLogs?: {
+      level: string;
+      message: string;
+      metadata?: Record<string, unknown>;
+    }[],
+  ) {}
 
   info(message: string, metadata?: Record<string, unknown>): void {
     this.logs.push({ level: 'info', message, metadata });
@@ -83,7 +89,7 @@ describe('BaseUseCase', () => {
 
       await useCase.execute({ id: 'test-123' });
 
-      const debugLogs = logger.logs.filter((l) => l.level === 'debug');
+      const debugLogs = logger.logs.filter(l => l.level === 'debug');
       expect(debugLogs.length).toBeGreaterThan(0);
       expect(debugLogs[0].message).toContain('[use-case] Processing: TestUseCase');
     });
@@ -104,7 +110,7 @@ describe('BaseUseCase', () => {
 
       await useCase.execute({ id: '' });
 
-      const errorLogs = logger.logs.filter((l) => l.level === 'error');
+      const errorLogs = logger.logs.filter(l => l.level === 'error');
       expect(errorLogs.length).toBeGreaterThan(0);
       expect(errorLogs[0].message).toContain('[use-case] Validation failed: FailingValidationUseCase');
       expect(errorLogs[0].metadata).toEqual({
@@ -117,7 +123,10 @@ describe('BaseUseCase', () => {
       const logger = new MockLogger();
       const useCase = new FailingValidationUseCase(logger);
 
-      const spy = jest.spyOn(FailingValidationUseCase.prototype as unknown as Record<string, unknown>, 'executeInternal' as never);
+      const spy = jest.spyOn(
+        FailingValidationUseCase.prototype as unknown as Record<string, unknown>,
+        'executeInternal' as never,
+      );
 
       await useCase.execute({ id: '' });
 
@@ -131,7 +140,9 @@ describe('BaseUseCase', () => {
       const logger = new MockLogger();
       const useCase = new TestUseCase(logger);
 
-      const result = (useCase as unknown as { validateParams(params: { id: string }): Result<{ id: string }> }).validateParams({ id: 'test' });
+      const result = (
+        useCase as unknown as { validateParams(params: { id: string }): Result<{ id: string }> }
+      ).validateParams({ id: 'test' });
 
       expect(result.isOk()).toBe(true);
       expect(result.getValue()).toEqual({ id: 'test' });

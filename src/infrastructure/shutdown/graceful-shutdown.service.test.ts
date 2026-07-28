@@ -1,23 +1,33 @@
-import { GracefulShutdownService } from './graceful-shutdown.service';
-import { BasePinoLogger } from '../logging/base-pino-logger';
-import { FileWatcherService } from '../watcher/file-watcher.service';
-import { FileProcessingQueue } from '../queue/file-processing-queue.service';
-import { MnemosyneClient } from '../mcp/mnemosyne-client.service';
 import { Result } from '../../utils/result';
+import { BasePinoLogger } from '../logging/base-pino-logger';
+import { MnemosyneClient } from '../mcp/mnemosyne-client.service';
+import { FileProcessingQueue } from '../queue/file-processing-queue.service';
+import { FileWatcherService } from '../watcher/file-watcher.service';
+import { GracefulShutdownService } from './graceful-shutdown.service';
 
 class MockBasePinoLogger extends BasePinoLogger {
-  logCalls: Array<{ message: string | Record<string, unknown>; meta?: Record<string, unknown> }> = [];
-  infoCalls: Array<{ message: string | Record<string, unknown>; meta?: Record<string, unknown> }> = [];
-  errorCalls: Array<{ message: string | Record<string, unknown>; meta?: Record<string, unknown> }> = [];
-  warnCalls: Array<{ message: string | Record<string, unknown>; meta?: Record<string, unknown> }> = [];
-  debugCalls: Array<{ message: string | Record<string, unknown>; meta?: Record<string, unknown> }> = [];
+  logCalls: { message: string | Record<string, unknown>; meta?: Record<string, unknown> }[] = [];
+  infoCalls: { message: string | Record<string, unknown>; meta?: Record<string, unknown> }[] = [];
+  errorCalls: { message: string | Record<string, unknown>; meta?: Record<string, unknown> }[] = [];
+  warnCalls: { message: string | Record<string, unknown>; meta?: Record<string, unknown> }[] = [];
+  debugCalls: { message: string | Record<string, unknown>; meta?: Record<string, unknown> }[] = [];
 
   setContext(_context: string): void {}
-  log(message: string | Record<string, unknown>, meta?: Record<string, unknown>): void { this.logCalls.push({ message, meta }); }
-  info(message: string | Record<string, unknown>, meta?: Record<string, unknown>): void { this.infoCalls.push({ message, meta }); }
-  error(message: string | Record<string, unknown>, meta?: Record<string, unknown>): void { this.errorCalls.push({ message, meta }); }
-  warn(message: string | Record<string, unknown>, meta?: Record<string, unknown>): void { this.warnCalls.push({ message, meta }); }
-  debug(message: string | Record<string, unknown>, meta?: Record<string, unknown>): void { this.debugCalls.push({ message, meta }); }
+  log(message: string | Record<string, unknown>, meta?: Record<string, unknown>): void {
+    this.logCalls.push({ message, meta });
+  }
+  info(message: string | Record<string, unknown>, meta?: Record<string, unknown>): void {
+    this.infoCalls.push({ message, meta });
+  }
+  error(message: string | Record<string, unknown>, meta?: Record<string, unknown>): void {
+    this.errorCalls.push({ message, meta });
+  }
+  warn(message: string | Record<string, unknown>, meta?: Record<string, unknown>): void {
+    this.warnCalls.push({ message, meta });
+  }
+  debug(message: string | Record<string, unknown>, meta?: Record<string, unknown>): void {
+    this.debugCalls.push({ message, meta });
+  }
   child(_bindings: Record<string, unknown>): BasePinoLogger {
     return this;
   }
@@ -35,11 +45,19 @@ class MockFileProcessingQueue {
   private _length = 0;
   private _processing = false;
 
-  setLength(value: number) { this._length = value; }
-  setProcessing(value: boolean) { this._processing = value; }
+  setLength(value: number) {
+    this._length = value;
+  }
+  setProcessing(value: boolean) {
+    this._processing = value;
+  }
 
-  get length(): number { return this._length; }
-  isProcessing(): boolean { return this._processing; }
+  get length(): number {
+    return this._length;
+  }
+  isProcessing(): boolean {
+    return this._processing;
+  }
 }
 
 class MockMnemosyneClient {
@@ -77,7 +95,13 @@ describe('GracefulShutdownService', () => {
     it('should log shutdown initiation with signal', async () => {
       await service.onApplicationShutdown('SIGTERM');
 
-      expect(logger.infoCalls.some(call => call.message === 'Initiating graceful shutdown' && (call.meta as { signal?: string })?.signal === 'SIGTERM')).toBe(true);
+      expect(
+        logger.infoCalls.some(
+          call =>
+            call.message === 'Initiating graceful shutdown' &&
+            (call.meta as { signal?: string })?.signal === 'SIGTERM',
+        ),
+      ).toBe(true);
     });
 
     it('should log shutdown initiation without signal', async () => {
@@ -131,7 +155,9 @@ describe('GracefulShutdownService', () => {
       await service.onApplicationShutdown('SIGTERM');
 
       const stopWatchersIndex = logger.infoCalls.findIndex(call => call.message === 'Stopping file watchers');
-      const drainQueueIndex = logger.infoCalls.findIndex(call => call.message === 'Draining processing queue');
+      const drainQueueIndex = logger.infoCalls.findIndex(
+        call => call.message === 'Draining processing queue',
+      );
       const closeMcpIndex = logger.infoCalls.findIndex(call => call.message === 'Closing MCP client');
 
       expect(stopWatchersIndex).toBeGreaterThan(-1);

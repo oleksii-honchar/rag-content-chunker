@@ -1,10 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import * as http from 'http';
 import * as https from 'https';
-import { MnemosyneClient } from './mnemosyne-client.service';
+import { Chunk, FILE_ROLES } from '../../domain/entities/chunk.entity';
 import { ConfigurationService } from '../config/configuration.service';
 import { BasePinoLogger } from '../logging/base-pino-logger';
-import { Chunk, FILE_ROLES } from '../../domains/chunking/entities/chunk.entity';
+import { MnemosyneClient } from './mnemosyne-client.service';
 
 jest.mock('chokidar', () => ({
   watch: jest.fn(),
@@ -163,9 +163,7 @@ describe('MnemosyneClient', () => {
       createMockResponse(200, { jsonrpc: '2.0', id: 1, result: {} });
       await client.initialize();
 
-      expect(mockLogger.info).toHaveBeenCalledWith(
-        'Mnemosyne MCP client initialized successfully',
-      );
+      expect(mockLogger.info).toHaveBeenCalledWith('Mnemosyne MCP client initialized successfully');
     });
 
     it('returns ok even when health check fails (will retry on use)', async () => {
@@ -173,9 +171,7 @@ describe('MnemosyneClient', () => {
       const result = await client.initialize();
 
       expect(result.isOk()).toBe(true);
-      expect(mockLogger.warn).toHaveBeenCalledWith(
-        'Mnemosyne MCP health check failed, will retry on use',
-      );
+      expect(mockLogger.warn).toHaveBeenCalledWith('Mnemosyne MCP health check failed, will retry on use');
     });
 
     it('returns ok even when health check request fails (non-fatal)', async () => {
@@ -192,9 +188,7 @@ describe('MnemosyneClient', () => {
 
       // Initialize is non-fatal — returns ok even when health check fails
       expect(result.isOk()).toBe(true);
-      expect(mockLogger.warn).toHaveBeenCalledWith(
-        'Mnemosyne MCP health check failed, will retry on use',
-      );
+      expect(mockLogger.warn).toHaveBeenCalledWith('Mnemosyne MCP health check failed, will retry on use');
       jest.useFakeTimers();
     });
   });

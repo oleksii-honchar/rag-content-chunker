@@ -4,10 +4,10 @@ import { BasePinoLogger } from '../logging/base-pino-logger';
 @Injectable()
 export class FileProcessingQueue {
   private readonly logger: BasePinoLogger;
-  private queue: Array<{
+  private queue: {
     task: () => Promise<void>;
     resolve: () => void;
-  }> = [];
+  }[] = [];
   private processing = false;
 
   constructor(logger: BasePinoLogger) {
@@ -15,7 +15,7 @@ export class FileProcessingQueue {
   }
 
   async addToQueue(task: () => Promise<void>): Promise<void> {
-    return new Promise<void>((resolve) => {
+    return new Promise<void>(resolve => {
       this.queue.push({ task, resolve });
       this.processQueue();
     });
@@ -55,7 +55,7 @@ export class FileProcessingQueue {
 
   async waitForEmpty(): Promise<void> {
     while (this.queue.length > 0 || this.processing) {
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 100));
     }
   }
 }

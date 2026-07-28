@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AppModule } from './app.module';
 import { AppBootstrapService } from './app-bootstrap.service';
-import { ConfigurationService } from './infrastructure/config/configuration.service';
+import { AppModule } from './app.module';
 import { Configuration } from './infrastructure/config/config-schemas';
+import { ConfigurationService } from './infrastructure/config/configuration.service';
 import { BasePinoLogger } from './infrastructure/logging/base-pino-logger';
 import { MnemosyneClient } from './infrastructure/mcp/mnemosyne-client.service';
 import { FileProcessingQueue } from './infrastructure/queue/file-processing-queue.service';
@@ -125,12 +125,35 @@ describe('AppModule Integration', () => {
       // Set up mock config
       const mockConfig = {
         watchSources: [
-          { id: 'test-source', path: '/test/path', include: ['*.md'], exclude: [], debounceMs: 3000, ignorePatterns: [] },
+          {
+            id: 'test-source',
+            path: '/test/path',
+            include: ['*.md'],
+            exclude: [],
+            debounceMs: 3000,
+            ignorePatterns: [],
+          },
         ],
-        chunking: { strategy: 'content-aware', maxSizes: { agentSessions: 400, obsidianNotes: 500, codeFiles: 400, configuration: 'per-key', plainText: 450 }, overlap: 50, hardCap: 600 },
+        chunking: {
+          strategy: 'content-aware',
+          maxSizes: {
+            agentSessions: 400,
+            obsidianNotes: 500,
+            codeFiles: 400,
+            configuration: 'per-key',
+            plainText: 450,
+          },
+          overlap: 50,
+          hardCap: 600,
+        },
         enrichment: { enabled: false, maxConcurrency: 1, timeoutMs: 15000, docMaxTokens: 16000 },
         mcp: { url: 'http://test-mcp:8080', timeoutMs: 30000, maxRetries: 3, retryDelayMs: 1000 },
-        telemetry: { enabled: true, endpoint: 'test-endpoint', service: 'test-service', metrics: { chunking: true, ingestion: true, errors: true } },
+        telemetry: {
+          enabled: true,
+          endpoint: 'test-endpoint',
+          service: 'test-service',
+          metrics: { chunking: true, ingestion: true, errors: true },
+        },
       };
 
       // Use reflection to set private config property
@@ -156,13 +179,43 @@ describe('AppModule Integration', () => {
 
       const mockConfig = {
         watchSources: [
-          { id: 'source-1', path: '/path/one', include: ['*.md'], exclude: [], debounceMs: 3000, ignorePatterns: [] },
-          { id: 'source-2', path: '/path/two', include: ['*.ts'], exclude: [], debounceMs: 2000, ignorePatterns: [] },
+          {
+            id: 'source-1',
+            path: '/path/one',
+            include: ['*.md'],
+            exclude: [],
+            debounceMs: 3000,
+            ignorePatterns: [],
+          },
+          {
+            id: 'source-2',
+            path: '/path/two',
+            include: ['*.ts'],
+            exclude: [],
+            debounceMs: 2000,
+            ignorePatterns: [],
+          },
         ],
-        chunking: { strategy: 'recursive', maxSizes: { agentSessions: 400, obsidianNotes: 500, codeFiles: 400, configuration: 'per-key', plainText: 450 }, overlap: 50, hardCap: 600 },
+        chunking: {
+          strategy: 'recursive',
+          maxSizes: {
+            agentSessions: 400,
+            obsidianNotes: 500,
+            codeFiles: 400,
+            configuration: 'per-key',
+            plainText: 450,
+          },
+          overlap: 50,
+          hardCap: 600,
+        },
         enrichment: { enabled: true, maxConcurrency: 3, timeoutMs: 15000, docMaxTokens: 16000 },
         mcp: { url: 'http://mcp-endpoint:9000', timeoutMs: 30000, maxRetries: 3, retryDelayMs: 1000 },
-        telemetry: { enabled: false, endpoint: '', service: '', metrics: { chunking: false, ingestion: false, errors: false } },
+        telemetry: {
+          enabled: false,
+          endpoint: '',
+          service: '',
+          metrics: { chunking: false, ingestion: false, errors: false },
+        },
       };
 
       Object.defineProperty(configService, 'config', {
