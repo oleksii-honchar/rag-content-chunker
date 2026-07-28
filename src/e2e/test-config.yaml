@@ -1,5 +1,5 @@
 # E2E test configuration for rag-content-chunker
-# Points to local Mnemosyne MCP instance
+# Points to local Mnemosyne MCP instance (started by mnemosyne-setup.ts)
 
 watchSources:
   - id: e2e-test-source
@@ -30,10 +30,10 @@ enrichment:
   enabled: false
 
 mcp:
-  url: http://localhost:8080/mcp
-  timeoutMs: 2000
-  maxRetries: 0
-  retryDelayMs: 50
+  url: http://localhost:8765/sse
+  timeoutMs: 5000
+  maxRetries: 2
+  retryDelayMs: 100
 
 telemetry:
   enabled: false
