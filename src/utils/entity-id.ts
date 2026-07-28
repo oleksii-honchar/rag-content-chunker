@@ -1,0 +1,22 @@
+/**
+ * EntityId wrapper for consistent ID handling across the application.
+ */
+
+export class EntityId {
+  private constructor(private readonly value: string) {}
+
+  static of(value: string): EntityId {
+    if (!value || typeof value !== 'string') {
+      throw new Error('EntityId must be a non-empty string');
+    }
+    return new EntityId(value);
+  }
+
+  getValue(): string {
+    return this.value;
+  }
+
+  toString(): string {
+    return this.value;
+  }
+}
