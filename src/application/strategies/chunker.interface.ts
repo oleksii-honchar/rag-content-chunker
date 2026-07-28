@@ -1,4 +1,4 @@
-import { Chunk } from '../../domain/entities/chunk.entity';
+import { Chunk } from '../../domain/chunk.entity';
 import { Result } from '../../utils/result';
 
 export interface ChunkContentConfig {

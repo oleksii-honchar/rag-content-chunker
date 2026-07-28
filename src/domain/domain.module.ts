@@ -1,16 +1,16 @@
 import { Module } from '@nestjs/common';
-import { ForceReprocessService } from '../application/services/force-reprocess.service';
+import { ForceReprocessService } from '../application/force-reprocess.service';
 import { CodeChunker } from '../application/strategies/code-chunker.service';
 import { ConfigChunker } from '../application/strategies/config-chunker.service';
 import { MarkdownChunker } from '../application/strategies/markdown-chunker.service';
 import { StrategyFactory } from '../application/strategies/strategy-factory.service';
 import { TextChunker } from '../application/strategies/text-chunker.service';
-import { ChunkContentUseCase } from '../chunk-content.use-case';
 import { ConfigurationModule } from '../infrastructure/config/configuration.module';
-import { MnemosyneClient } from '../infrastructure/mcp/mnemosyne-client.service';
-import { FileProcessingQueue } from '../infrastructure/queue/file-processing-queue.service';
-import { IngestChunkUseCase } from '../ingest-chunk.use-case';
-import { ProcessFileUseCase } from '../process-file.use-case';
+import { FileProcessingQueue } from '../infrastructure/file-processing-queue.service';
+import { MnemosyneClient } from '../infrastructure/mnemosyne-client.service';
+import { ChunkContentUseCase } from '../use-cases/chunk-content.use-case';
+import { IngestChunkUseCase } from '../use-cases/ingest-chunk.use-case';
+import { ProcessFileUseCase } from '../use-cases/process-file.use-case';
 
 @Module({
   imports: [ConfigurationModule],

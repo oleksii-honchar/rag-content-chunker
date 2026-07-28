@@ -1,4 +1,4 @@
-import { FILE_ROLES } from '../../domain/entities/chunk.entity';
+import { FILE_ROLES } from '../../domain/chunk.entity';
 
 import { TextChunker } from './text-chunker.service';
 

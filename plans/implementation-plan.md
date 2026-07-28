@@ -191,3 +191,35 @@ _Origin: User instruction — "structural refactoring: single domain (flatten do
 - **Test strategy:** Refactoring — behavior preserved, test count unchanged
 
 **Final state:** 390 tests passing, 28 suites green, build succeeds, lint/format commands operational.
+
+---
+
+## Ad-Hoc Task: Logging to File + Structural Adjustments + Env Vars + tsconfig + CLI version
+
+_Origin: User instruction — dual logging, env var rename, CLI version from package.json, tsconfig modernization, structural refactoring_
+
+- **Priority:** P0
+- **Depends on:** none
+- **Description:** Add file logging, rename env vars, read CLI version from package.json, modernize tsconfig, restructure source layout
+- **Acceptance Criteria:**
+  - [x] Dual logging: console (pretty) + file (JSON, line-delimited) to `~/.local/share/rag-content-chunker/logs/rag-content-chunker.log`
+  - [x] File rotation: every 1000 lines, keep up to 10 files (via pino-roll)
+  - [x] Log directory auto-created if missing
+  - [x] Env vars renamed: `RAG_CHUNKER_*` → `RAG_CONTENT_CHUNKER_*` (config, CLI, module)
+  - [x] CLI `--version` reads `version` from `package.json` at runtime
+  - [x] tsconfig: `"module": "NodeNext"`, `"moduleResolution": "NodeNext"`, `"forceConsistentCasingInFileNames": true`
+  - [x] Moved use-cases: `src/chunk-content.use-case.ts`, `process-file.use-case.ts`, `ingest-chunk.use-case.ts` → `src/use-cases/`
+  - [x] Unwrapped `src/application/services/` → `src/application/`
+  - [x] Unwrapped `src/domain/aggregates/` → `src/domain/`
+  - [x] Unwrapped `src/domain/entities/` → `src/domain/`
+  - [x] Flattened `src/infrastructure/`: only `logging/` and `config/` remain as subfolders
+  - [x] ALL import paths updated in source and test files
+  - [x] Zero `any` types
+  - [x] `npm run build` succeeds
+  - [x] `npm run test` passes (390 tests, same count)
+  - [x] `npm run format:check` passes
+- **Files Created:** none (all moves)
+- **Files Modified:** All source files (import paths), `src/infrastructure/logging/pino-logger-config.factory.ts`, `src/infrastructure/cli-args.service.ts`, `src/infrastructure/config/configuration.module.ts`, `src/app.module.ts`, `src/main.ts`, `tsconfig.json`, `package.json` (added pino-roll)
+- **Test strategy:** Refactoring — behavior preserved, test count unchanged (390)
+
+**Final state:** 390 tests passing, 28 suites green, build succeeds, format:check passes.

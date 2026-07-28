@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Chunk, FILE_ROLES } from '../../domain/entities/chunk.entity';
+import { Chunk, FILE_ROLES } from '../../domain/chunk.entity';
 import { Result } from '../../utils/result';
 import { ChunkContentConfig, Chunker } from './chunker.interface';
 

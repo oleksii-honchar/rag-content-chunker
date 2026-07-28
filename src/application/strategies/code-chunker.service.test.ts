@@ -1,4 +1,4 @@
-import { FILE_ROLES } from '../../domain/entities/chunk.entity';
+import { FILE_ROLES } from '../../domain/chunk.entity';
 import { CodeChunker } from './code-chunker.service';
 
 describe('CodeChunker', () => {

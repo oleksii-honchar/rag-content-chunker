@@ -9,7 +9,8 @@ import { ConfigurationService } from './configuration.service';
     {
       provide: 'CONFIG_FILE_PATH',
       useValue:
-        process.env.RAG_CHUNKER_CONFIG || `${process.env.HOME || ''}/.config/rag-content-chunker.yaml`,
+        process.env.RAG_CONTENT_CHUNKER_CONFIG ||
+        `${process.env.HOME || ''}/.config/rag-content-chunker.yaml`,
     },
   ],
   exports: [ConfigurationService, 'CONFIG_FILE_PATH'],

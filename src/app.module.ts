@@ -4,16 +4,16 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { LoggerModule } from 'nestjs-pino';
 import { AppBootstrapService } from './app-bootstrap.service';
 import { DomainModule } from './domain/domain.module';
+import { AppEventEmitter } from './infrastructure/app-event-emitter';
 import { ConfigurationModule } from './infrastructure/config/configuration.module';
-import { AppEventEmitter } from './infrastructure/events/app-event-emitter';
+import { FileWatcherService } from './infrastructure/file-watcher.service';
+import { GracefulShutdownService } from './infrastructure/graceful-shutdown.service';
 import { LoggingModule } from './infrastructure/logging/logger.module';
 import { pinoLoggerConfigFactory } from './infrastructure/logging/pino-logger-config.factory';
-import { GracefulShutdownService } from './infrastructure/shutdown/graceful-shutdown.service';
-import { TelemetryModule } from './infrastructure/telemetry/telemetry.module';
-import { FileWatcherService } from './infrastructure/watcher/file-watcher.service';
+import { TelemetryModule } from './infrastructure/telemetry.module';
 
 const configLoader = (): Record<string, unknown> => {
-  const configPath = process.env.RAG_CHUNKER_CONFIG || '~/.config/rag-content-chunker.yaml';
+  const configPath = process.env.RAG_CONTENT_CHUNKER_CONFIG || '~/.config/rag-content-chunker.yaml';
   const resolvedPath = configPath.startsWith('~')
     ? require('path').join(require('os').homedir(), configPath.slice(1))
     : configPath;

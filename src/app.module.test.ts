@@ -3,9 +3,9 @@ import { AppBootstrapService } from './app-bootstrap.service';
 import { AppModule } from './app.module';
 import { Configuration } from './infrastructure/config/config-schemas';
 import { ConfigurationService } from './infrastructure/config/configuration.service';
+import { FileProcessingQueue } from './infrastructure/file-processing-queue.service';
 import { BasePinoLogger } from './infrastructure/logging/base-pino-logger';
-import { MnemosyneClient } from './infrastructure/mcp/mnemosyne-client.service';
-import { FileProcessingQueue } from './infrastructure/queue/file-processing-queue.service';
+import { MnemosyneClient } from './infrastructure/mnemosyne-client.service';
 
 const mockWatcher = {
   on: jest.fn(),
