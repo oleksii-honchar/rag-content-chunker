@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import * as jsYaml from 'js-yaml';
 import { Chunk, FILE_ROLES } from '../../domain/chunk.entity';
+import { ErrorWithDetails } from '../../utils/error-with-details';
 import { Result } from '../../utils/result';
 import { ChunkContentConfig, Chunker } from './chunker.interface';
 
@@ -185,7 +186,9 @@ export class ConfigChunker implements Chunker {
           return this.chunkFallback(content, config);
       }
     } catch (error) {
-      return Result.ko(error instanceof Error ? error : new Error(String(error)));
+      return Result.ko(
+        new ErrorWithDetails(error instanceof Error ? error.message : String(error), 'ConfigChunkError'),
+      );
     }
   }
 

@@ -1,5 +1,14 @@
+import { DomainEvent } from '../../utils/domain-event';
+import { ErrorWithDetails } from '../../utils/error-with-details';
 import { Result } from '../../utils/result';
-import { DomainEvent, FILE_EVENTS } from './domain-event';
+
+export const FILE_EVENTS = {
+  ADDED: 'file.added' as const,
+  CHANGED: 'file.changed' as const,
+  DELETED: 'file.deleted' as const,
+} as const;
+
+export type FileEventType = (typeof FILE_EVENTS)[keyof typeof FILE_EVENTS];
 
 export class FileAddedEvent implements DomainEvent {
   readonly type: string;
@@ -14,7 +23,7 @@ export class FileAddedEvent implements DomainEvent {
 
   static of(path: string): Result<FileAddedEvent> {
     if (!path || typeof path !== 'string') {
-      return Result.ko(new Error('File path must be a non-empty string'));
+      return Result.ko(new ErrorWithDetails('File path must be a non-empty string', 'InvalidFilePath'));
     }
     return Result.ok(new FileAddedEvent(path));
   }
@@ -33,7 +42,7 @@ export class FileChangedEvent implements DomainEvent {
 
   static of(path: string): Result<FileChangedEvent> {
     if (!path || typeof path !== 'string') {
-      return Result.ko(new Error('File path must be a non-empty string'));
+      return Result.ko(new ErrorWithDetails('File path must be a non-empty string', 'InvalidFilePath'));
     }
     return Result.ok(new FileChangedEvent(path));
   }
@@ -52,7 +61,7 @@ export class FileDeletedEvent implements DomainEvent {
 
   static of(path: string): Result<FileDeletedEvent> {
     if (!path || typeof path !== 'string') {
-      return Result.ko(new Error('File path must be a non-empty string'));
+      return Result.ko(new ErrorWithDetails('File path must be a non-empty string', 'InvalidFilePath'));
     }
     return Result.ok(new FileDeletedEvent(path));
   }

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ErrorWithDetails } from '../utils/error-with-details';
 import { Result } from '../utils/result';
 import { ValuesType } from '../utils/values-type';
 
@@ -34,7 +35,7 @@ export class Chunk {
   static of(props: ChunkProps): Result<Chunk> {
     const parsed = chunkEntitySchema.safeParse(props);
     if (!parsed.success) {
-      return Result.ko(new Error('Invalid chunk data: ' + parsed.error.message));
+      return Result.ko(new ErrorWithDetails('Invalid chunk data: ' + parsed.error.message, 'InvalidChunk'));
     }
     return Result.ok(new Chunk(parsed.data));
   }

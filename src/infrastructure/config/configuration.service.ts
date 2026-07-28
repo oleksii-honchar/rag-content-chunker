@@ -4,6 +4,7 @@ import * as fsSync from 'fs';
 import * as fs from 'fs/promises';
 import * as yaml from 'js-yaml';
 import * as path from 'path';
+import { ErrorWithDetails } from '../../utils/error-with-details';
 import { Result } from '../../utils/result';
 import { BasePinoLogger } from '../logging/base-pino-logger';
 import {
@@ -85,13 +86,16 @@ const DEFAULT_CONFIG: Configuration = {
 
 @Injectable()
 export class ConfigurationService implements OnApplicationBootstrap {
+  private readonly logger: BasePinoLogger;
   private config: Configuration | null = null;
   private watcher: chokidar.FSWatcher | null = null;
 
   constructor(
-    private readonly logger: BasePinoLogger,
+    logger: BasePinoLogger,
     @Inject('CONFIG_FILE_PATH') private readonly configFilePath: string,
-  ) {}
+  ) {
+    this.logger = logger.child({ component: '[ConfigurationService]' });
+  }
 
   async load(): Promise<Result<Configuration>> {
     try {
@@ -99,7 +103,9 @@ export class ConfigurationService implements OnApplicationBootstrap {
       const parsed = yaml.load(content) as unknown;
 
       if (!parsed || typeof parsed !== 'object') {
-        return Result.ko(new Error('YAML parsing failed: invalid configuration format'));
+        return Result.ko(
+          new ErrorWithDetails('YAML parsing failed: invalid configuration format', 'ConfigParseError'),
+        );
       }
 
       const result = configurationSchema.safeParse(parsed);
@@ -108,25 +114,31 @@ export class ConfigurationService implements OnApplicationBootstrap {
         const errors = result.error.issues
           .map(issue => `${issue.path.join('.')}: ${issue.message}`)
           .join(', ');
-        return Result.ko(new Error(`Configuration validation failed: ${errors}`));
+        return Result.ko(
+          new ErrorWithDetails(`Configuration validation failed: ${errors}`, 'ConfigValidationError'),
+        );
       }
 
       this.config = result.data;
       this.logger.info('Configuration loaded successfully', {
-        path: this.configFilePath,
-        watchSources: this.config.watchSources.length,
+        configPath: this.configFilePath,
+        watchSourceCount: this.config.watchSources.length,
       });
 
       return Result.ok(this.config);
     } catch (error) {
       if (error instanceof Error && 'code' in error && (error as { code: string }).code === 'ENOENT') {
         return Result.ko(
-          new Error(
+          new ErrorWithDetails(
             `Configuration file not found: ${this.configFilePath}. Run with --init to create default config.`,
+            'ConfigFileNotFound',
+            { configPath: this.configFilePath },
           ),
         );
       }
-      return Result.ko(new Error(`Failed to load configuration: ${(error as Error).message}`));
+      return Result.ko(
+        new ErrorWithDetails(`Failed to load configuration: ${(error as Error).message}`, 'ConfigLoadError'),
+      );
     }
   }
 
@@ -170,13 +182,16 @@ export class ConfigurationService implements OnApplicationBootstrap {
 
       await fs.writeFile(this.configFilePath, header + yamlContent);
 
-      this.logger.info('Default configuration created', {
-        path: this.configFilePath,
-      });
+      this.logger.info('Default configuration created', { configPath: this.configFilePath });
 
       return Result.ok(undefined);
     } catch (error) {
-      return Result.ko(new Error(`Failed to create default configuration: ${(error as Error).message}`));
+      return Result.ko(
+        new ErrorWithDetails(
+          `Failed to create default configuration: ${(error as Error).message}`,
+          'ConfigCreateError',
+        ),
+      );
     }
   }
 

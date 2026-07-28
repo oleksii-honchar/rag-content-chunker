@@ -1,11 +1,23 @@
 import { CHUNKING_STRATEGIES } from './chunking-strategies';
+import { CodeChunker } from './code-chunker.service';
+import { ConfigChunker } from './config-chunker.service';
+import { MarkdownChunker } from './markdown-chunker.service';
 import { StrategyFactory } from './strategy-factory.service';
+import { TextChunker } from './text-chunker.service';
 
 describe('StrategyFactory', () => {
   let factory: StrategyFactory;
+  let mockMarkdownChunker: MarkdownChunker;
+  let mockCodeChunker: CodeChunker;
+  let mockTextChunker: TextChunker;
+  let mockConfigChunker: ConfigChunker;
 
   beforeEach(() => {
-    factory = new StrategyFactory();
+    mockMarkdownChunker = new MarkdownChunker();
+    mockCodeChunker = new CodeChunker();
+    mockTextChunker = new TextChunker();
+    mockConfigChunker = new ConfigChunker();
+    factory = new StrategyFactory(mockMarkdownChunker, mockCodeChunker, mockTextChunker, mockConfigChunker);
   });
 
   describe('determineStrategy', () => {
@@ -125,40 +137,46 @@ describe('StrategyFactory', () => {
   });
 
   describe('createChunker', () => {
-    it('should return Result.ko for MARKDOWN strategy (not yet implemented)', () => {
+    it('should return Result.ok with MarkdownChunker for MARKDOWN strategy', () => {
       const result = factory.createChunker(CHUNKING_STRATEGIES.MARKDOWN);
-      expect(result.isKo()).toBe(true);
-      expect(result.getError().message).toContain('markdown');
+      expect(result.isOk()).toBe(true);
+      expect(result.getValue()).toBe(mockMarkdownChunker);
     });
 
-    it('should return Result.ko for RECURSIVE strategy (not yet implemented)', () => {
+    it('should return Result.ok with CodeChunker for RECURSIVE strategy', () => {
       const result = factory.createChunker(CHUNKING_STRATEGIES.RECURSIVE);
-      expect(result.isKo()).toBe(true);
-      expect(result.getError().message).toContain('recursive');
+      expect(result.isOk()).toBe(true);
+      expect(result.getValue()).toBe(mockCodeChunker);
     });
 
-    it('should return Result.ko for SENTENCE strategy (not yet implemented)', () => {
+    it('should return Result.ok with TextChunker for SENTENCE strategy', () => {
       const result = factory.createChunker(CHUNKING_STRATEGIES.SENTENCE);
-      expect(result.isKo()).toBe(true);
-      expect(result.getError().message).toContain('sentence');
+      expect(result.isOk()).toBe(true);
+      expect(result.getValue()).toBe(mockTextChunker);
     });
 
-    it('should return Result.ko for CONFIG strategy (not yet implemented)', () => {
-      const result = factory.createChunker(CHUNKING_STRATEGIES.CONFIG);
-      expect(result.isKo()).toBe(true);
-      expect(result.getError().message).toContain('config');
-    });
-
-    it('should return Result.ko for SINGLE strategy (not yet implemented)', () => {
-      const result = factory.createChunker(CHUNKING_STRATEGIES.SINGLE);
-      expect(result.isKo()).toBe(true);
-      expect(result.getError().message).toContain('single');
-    });
-
-    it('should return Result.ko for FALLBACK strategy (not yet implemented)', () => {
+    it('should return Result.ok with TextChunker for FALLBACK strategy', () => {
       const result = factory.createChunker(CHUNKING_STRATEGIES.FALLBACK);
+      expect(result.isOk()).toBe(true);
+      expect(result.getValue()).toBe(mockTextChunker);
+    });
+
+    it('should return Result.ok with ConfigChunker for CONFIG strategy', () => {
+      const result = factory.createChunker(CHUNKING_STRATEGIES.CONFIG);
+      expect(result.isOk()).toBe(true);
+      expect(result.getValue()).toBe(mockConfigChunker);
+    });
+
+    it('should return Result.ok with ConfigChunker for SINGLE strategy', () => {
+      const result = factory.createChunker(CHUNKING_STRATEGIES.SINGLE);
+      expect(result.isOk()).toBe(true);
+      expect(result.getValue()).toBe(mockConfigChunker);
+    });
+
+    it('should return Result.ko for unknown strategy', () => {
+      const result = factory.createChunker('unknown' as any);
       expect(result.isKo()).toBe(true);
-      expect(result.getError().message).toContain('fallback');
+      expect(result.getError().code).toBe('UnknownStrategy');
     });
   });
 });

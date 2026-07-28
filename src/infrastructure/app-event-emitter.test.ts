@@ -1,8 +1,8 @@
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Test, TestingModule } from '@nestjs/testing';
 import { DomainCommand, ProcessFileCommand } from '../domain/commands/process-file-command';
-import { DomainEvent } from '../domain/events/domain-event';
 import { FileAddedEvent, FileChangedEvent, FileDeletedEvent } from '../domain/events/file-events';
+import { DomainEvent } from '../utils/domain-event';
 import { AppEventEmitter } from './app-event-emitter';
 
 describe('AppEventEmitter', () => {

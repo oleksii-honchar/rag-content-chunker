@@ -1,5 +1,5 @@
 import * as fs from 'fs/promises';
-import { aChunk } from '../domain/chunk.test-utils';
+import { aChunk } from '../domain/chunk.entity.test-utils';
 import { FileAddedEvent, FileChangedEvent, FileDeletedEvent } from '../domain/events/file-events';
 import { FileProcessingQueue } from '../infrastructure/file-processing-queue.service';
 import { BasePinoLogger } from '../infrastructure/logging/base-pino-logger';

@@ -1,10 +1,22 @@
 import { Injectable } from '@nestjs/common';
+import { ErrorWithDetails } from '../../utils/error-with-details';
 import { Result } from '../../utils/result';
 import { Chunker } from './chunker.interface';
 import { CHUNKING_STRATEGIES, ChunkingStrategy } from './chunking-strategies';
+import { CodeChunker } from './code-chunker.service';
+import { ConfigChunker } from './config-chunker.service';
+import { MarkdownChunker } from './markdown-chunker.service';
+import { TextChunker } from './text-chunker.service';
 
 @Injectable()
 export class StrategyFactory {
+  constructor(
+    private readonly markdownChunker: MarkdownChunker,
+    private readonly codeChunker: CodeChunker,
+    private readonly textChunker: TextChunker,
+    private readonly configChunker: ConfigChunker,
+  ) {}
+
   /**
    * Determine chunking strategy based on file path and extension.
    */
@@ -42,12 +54,23 @@ export class StrategyFactory {
   }
 
   /**
-   * Create chunker instance for the given strategy.
-   * TODO: Implement once strategy classes exist.
+   * Get chunker instance for the given strategy.
    */
   createChunker(strategy: ChunkingStrategy): Result<Chunker> {
-    // Placeholder - will be implemented when strategies are added
-    return Result.ko(new Error(`Chunker not yet implemented for strategy: ${strategy}`));
+    switch (strategy) {
+      case CHUNKING_STRATEGIES.MARKDOWN:
+        return Result.ok(this.markdownChunker);
+      case CHUNKING_STRATEGIES.RECURSIVE:
+        return Result.ok(this.codeChunker);
+      case CHUNKING_STRATEGIES.SENTENCE:
+      case CHUNKING_STRATEGIES.FALLBACK:
+        return Result.ok(this.textChunker);
+      case CHUNKING_STRATEGIES.CONFIG:
+      case CHUNKING_STRATEGIES.SINGLE:
+        return Result.ok(this.configChunker);
+      default:
+        return Result.ko(new ErrorWithDetails(`Unknown chunking strategy: ${strategy}`, 'UnknownStrategy'));
+    }
   }
 
   private getExtension(filePath: string): string {

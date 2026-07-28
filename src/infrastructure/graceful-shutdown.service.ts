@@ -14,7 +14,7 @@ export class GracefulShutdownService implements OnApplicationShutdown {
     private readonly mnemosyneClient: MnemosyneClient,
     logger: BasePinoLogger,
   ) {
-    this.logger = logger.child({ service: 'GracefulShutdownService' });
+    this.logger = logger.child({ component: '[GracefulShutdownService]' });
   }
 
   async onApplicationShutdown(signal?: string): Promise<void> {

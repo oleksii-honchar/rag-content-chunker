@@ -1,5 +1,5 @@
 import { Chunk } from '../domain/chunk.entity';
-import { aChunk } from '../domain/chunk.test-utils';
+import { aChunk } from '../domain/chunk.entity.test-utils';
 import { BasePinoLogger } from '../infrastructure/logging/base-pino-logger';
 import { Result } from '../utils/result';
 import { IngestChunkUseCase } from './ingest-chunk.use-case';

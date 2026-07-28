@@ -11,7 +11,7 @@ export class FileProcessingQueue {
   private processing = false;
 
   constructor(logger: BasePinoLogger) {
-    this.logger = logger.child({ service: 'FileProcessingQueue' });
+    this.logger = logger.child({ component: '[FileProcessingQueue]' });
   }
 
   async addToQueue(task: () => Promise<void>): Promise<void> {

@@ -1,5 +1,5 @@
 import { StrategyFactory } from '../application/strategies/strategy-factory.service';
-import { aChunk } from '../domain/chunk.test-utils';
+import { aChunk } from '../domain/chunk.entity.test-utils';
 import { BasePinoLogger } from '../infrastructure/logging/base-pino-logger';
 import { Result } from '../utils/result';
 import { ChunkContentUseCase } from './chunk-content.use-case';
@@ -351,6 +351,7 @@ describe('ChunkContentUseCase', () => {
 
       expect(mockLogger.info).toHaveBeenCalledWith('Content chunked', {
         filePath,
+        strategy: 'recursive',
         chunkCount: 2,
       });
     });

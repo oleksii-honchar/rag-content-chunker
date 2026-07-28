@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ErrorWithDetails } from '../utils/error-with-details';
 import { Result } from '../utils/result';
 
 export const watchSourceEntitySchema = z.object({
@@ -18,7 +19,9 @@ export class WatchSource {
   static of(props: WatchSourceProps): Result<WatchSource> {
     const parsed = watchSourceEntitySchema.safeParse(props);
     if (!parsed.success) {
-      return Result.ko(new Error('Invalid watch source data: ' + parsed.error.message));
+      return Result.ko(
+        new ErrorWithDetails('Invalid watch source data: ' + parsed.error.message, 'InvalidWatchSource'),
+      );
     }
     return Result.ok(new WatchSource(parsed.data));
   }

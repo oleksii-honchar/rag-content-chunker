@@ -1,5 +1,4 @@
-import { FILE_EVENTS } from './events/domain-event';
-import { FileAddedEvent, FileChangedEvent, FileDeletedEvent } from './events/file-events';
+import { FILE_EVENTS, FileAddedEvent, FileChangedEvent, FileDeletedEvent } from './events/file-events';
 import { FileChange } from './file-change.aggregate';
 
 describe('FileChange', () => {

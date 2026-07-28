@@ -1,3 +1,5 @@
+import { ErrorWithDetails } from './error-with-details';
+
 /**
  * EntityId wrapper for consistent ID handling across the application.
  */
@@ -7,7 +9,7 @@ export class EntityId {
 
   static of(value: string): EntityId {
     if (!value || typeof value !== 'string') {
-      throw new Error('EntityId must be a non-empty string');
+      throw new ErrorWithDetails('EntityId must be a non-empty string', 'InvalidEntityId');
     }
     return new EntityId(value);
   }

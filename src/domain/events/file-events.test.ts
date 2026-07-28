@@ -1,5 +1,10 @@
-import { FILE_EVENTS, FileEventType } from './domain-event';
-import { FileAddedEvent, FileChangedEvent, FileDeletedEvent } from './file-events';
+import {
+  FILE_EVENTS,
+  FileAddedEvent,
+  FileChangedEvent,
+  FileDeletedEvent,
+  FileEventType,
+} from './file-events';
 
 describe('FileAddedEvent', () => {
   it('of(validPath) returns ok with correct type', () => {

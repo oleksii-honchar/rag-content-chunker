@@ -4,6 +4,7 @@ import { StrategyFactory } from '../application/strategies/strategy-factory.serv
 import { Chunk } from '../domain/chunk.entity';
 import { BasePinoLogger } from '../infrastructure/logging/base-pino-logger';
 import { BaseUseCase } from '../utils/base-use-case';
+import { ErrorWithDetails } from '../utils/error-with-details';
 import { Result } from '../utils/result';
 
 const chunkContentParamsSchema = z.object({
@@ -24,12 +25,18 @@ export class ChunkContentUseCase extends BaseUseCase<ChunkContentParams, Chunk[]
     logger: BasePinoLogger,
   ) {
     super(logger);
+    this.logger = this.logger.child({ component: '[ChunkContentUseCase]' });
   }
 
   protected validateParams(params: ChunkContentParams): Result<ChunkContentParams> {
     const parsed = chunkContentParamsSchema.safeParse(params);
     if (!parsed.success) {
-      return Result.ko(new Error('Invalid chunk content params: ' + parsed.error.message));
+      return Result.ko(
+        new ErrorWithDetails(
+          'Invalid chunk content params: ' + parsed.error.message,
+          'InvalidChunkContentParams',
+        ),
+      );
     }
     return Result.ok(parsed.data);
   }
@@ -72,10 +79,7 @@ export class ChunkContentUseCase extends BaseUseCase<ChunkContentParams, Chunk[]
     }
 
     const chunks = chunksResult.getValue();
-    this.logger.info('Content chunked', {
-      filePath: params.filePath,
-      chunkCount: chunks.length,
-    });
+    this.logger.info('Content chunked', { filePath: params.filePath, strategy, chunkCount: chunks.length });
 
     return Result.ok(chunks);
   }

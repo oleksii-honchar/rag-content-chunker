@@ -1,3 +1,5 @@
+import { ErrorWithDetails } from './error-with-details';
+
 /**
  * Result pattern for handling success/failure without exceptions.
  * Follows DDD rules for domain/application error handling.
@@ -7,7 +9,7 @@ export class Result<T> {
   constructor(
     private readonly _isOk: boolean,
     private readonly _value: T | undefined,
-    private readonly _error: Error | undefined,
+    private readonly _error: ErrorWithDetails | undefined,
   ) {}
 
   /**
@@ -29,7 +31,7 @@ export class Result<T> {
    */
   getValue(): T {
     if (!this._isOk) {
-      throw new Error('Cannot get value from failed Result');
+      throw new ErrorWithDetails('Cannot get value from failed Result');
     }
     return this._value!;
   }
@@ -37,9 +39,9 @@ export class Result<T> {
   /**
    * Get the error (throws if successful).
    */
-  getError(): Error {
+  getError(): ErrorWithDetails {
     if (this._isOk) {
-      throw new Error('Cannot get error from successful Result');
+      throw new ErrorWithDetails('Cannot get error from successful Result');
     }
     return this._error!;
   }
@@ -56,8 +58,9 @@ export class Result<T> {
     return new Result(true, value, undefined);
   }
 
-  static ko<T>(error: Error): Result<T> {
-    return new Result<T>(false, undefined as unknown as T, error);
+  static ko<T>(error: ErrorWithDetails | Error): Result<T> {
+    const details = error instanceof ErrorWithDetails ? error : ErrorWithDetails.of(error);
+    return new Result<T>(false, undefined as unknown as T, details);
   }
 
   map<U>(fn: (value: T) => U): Result<U> {
@@ -69,7 +72,7 @@ export class Result<T> {
     }
   }
 
-  mapErr(fn: (error: Error) => Error): Result<T> {
+  mapErr(fn: (error: ErrorWithDetails) => ErrorWithDetails): Result<T> {
     if (this._isOk) return this;
     return Result.ko(fn(this._error!));
   }

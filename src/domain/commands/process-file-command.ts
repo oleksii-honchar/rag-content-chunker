@@ -1,3 +1,4 @@
+import { ErrorWithDetails } from '../../utils/error-with-details';
 import { Result } from '../../utils/result';
 import { ValuesType } from '../../utils/values-type';
 
@@ -27,7 +28,7 @@ export class ProcessFileCommand implements DomainCommand {
 
   static of(path: string, sourceId: string): Result<ProcessFileCommand> {
     if (!path || !sourceId) {
-      return Result.ko(new Error('Path and sourceId are required'));
+      return Result.ko(new ErrorWithDetails('Path and sourceId are required', 'InvalidProcessFileCommand'));
     }
     return Result.ok(new ProcessFileCommand(path, sourceId));
   }

@@ -163,7 +163,9 @@ describe('MnemosyneClient', () => {
       createMockResponse(200, { jsonrpc: '2.0', id: 1, result: {} });
       await client.initialize();
 
-      expect(mockLogger.info).toHaveBeenCalledWith('Mnemosyne MCP client initialized successfully');
+      expect(mockLogger.info).toHaveBeenCalledWith('Mnemosyne MCP client initialized successfully', {
+        url: 'http://mcp.test/mnemosyne',
+      });
     });
 
     it('returns ok even when health check fails (will retry on use)', async () => {

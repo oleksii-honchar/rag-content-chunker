@@ -2,6 +2,7 @@ import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
 import * as http from 'http';
 import * as https from 'https';
 import { Chunk } from '../domain/chunk.entity';
+import { ErrorWithDetails } from '../utils/error-with-details';
 import { Result } from '../utils/result';
 import { ConfigurationService } from './config/configuration.service';
 import { BasePinoLogger } from './logging/base-pino-logger';
@@ -39,7 +40,7 @@ export class MnemosyneClient implements OnApplicationBootstrap {
     private readonly configService: ConfigurationService,
     logger: BasePinoLogger,
   ) {
-    this.logger = logger.child({ service: 'MnemosyneClient' });
+    this.logger = logger.child({ component: '[MnemosyneClient]' });
     const mcpConfig = configService.getMcpConfig();
     this.url = mcpConfig.url;
     this.apiKey = mcpConfig.apiKey;
@@ -53,13 +54,17 @@ export class MnemosyneClient implements OnApplicationBootstrap {
   }
 
   async initialize(): Promise<Result<void>> {
-    this.logger.info('Initializing Mnemosyne MCP client', { url: this.url });
+    this.logger.info('Initializing Mnemosyne MCP client', {
+      url: this.url,
+      timeoutMs: this.timeoutMs,
+      maxRetries: this.maxRetries,
+    });
 
     try {
       const healthResult = await this.healthCheck();
       if (healthResult.isOk() && healthResult.getValue()) {
         this.connectionInitialized = true;
-        this.logger.info('Mnemosyne MCP client initialized successfully');
+        this.logger.info('Mnemosyne MCP client initialized successfully', { url: this.url });
         return Result.ok(undefined as unknown as void);
       }
       this.logger.warn('Mnemosyne MCP health check failed, will retry on use');
@@ -68,7 +73,9 @@ export class MnemosyneClient implements OnApplicationBootstrap {
       this.logger.error('Failed to initialize Mnemosyne MCP client', {
         error: error instanceof Error ? error.message : String(error),
       });
-      return Result.ko(error instanceof Error ? error : new Error(String(error)));
+      return Result.ko(
+        new ErrorWithDetails(error instanceof Error ? error.message : String(error), 'MnemosyneInitError'),
+      );
     }
   }
 
@@ -112,31 +119,27 @@ export class MnemosyneClient implements OnApplicationBootstrap {
         if (response.error) {
           this.logger.warn('MCP tool error', {
             chunkId: chunk.id,
-            attempt,
+            retryAttempt: attempt,
             error: response.error.message,
           });
-          lastError = new Error(`MCP error: ${response.error.message}`);
+          lastError = new ErrorWithDetails(`MCP error: ${response.error.message}`, 'McpToolError');
         } else if (response.result?.content) {
-          this.logger.debug('Chunk remembered', {
-            chunkId: chunk.id,
-            attempt,
-          });
+          this.logger.debug('Chunk remembered', { chunkId: chunk.id, retryAttempt: attempt });
           return Result.ok(undefined as unknown as void);
         } else {
-          this.logger.warn('Unexpected MCP response', {
-            chunkId: chunk.id,
-            attempt,
-            response,
-          });
-          lastError = new Error('Unexpected MCP response');
+          this.logger.warn('Unexpected MCP response', { chunkId: chunk.id, retryAttempt: attempt });
+          lastError = new ErrorWithDetails('Unexpected MCP response', 'UnexpectedMcpResponse');
         }
       } catch (error) {
         this.logger.warn('Request failed, retrying', {
           chunkId: chunk.id,
-          attempt,
+          retryAttempt: attempt,
           error: error instanceof Error ? error.message : String(error),
         });
-        lastError = error instanceof Error ? error : new Error(String(error));
+        lastError = new ErrorWithDetails(
+          error instanceof Error ? error.message : String(error),
+          'McpRequestError',
+        );
       }
 
       if (attempt < this.maxRetries) {
@@ -150,7 +153,7 @@ export class MnemosyneClient implements OnApplicationBootstrap {
       error: lastError?.message,
     });
 
-    return Result.ko(lastError || new Error('Failed to remember chunk'));
+    return Result.ko(lastError || new ErrorWithDetails('Failed to remember chunk', 'RememberChunkFailed'));
   }
 
   async healthCheck(): Promise<Result<boolean>> {
@@ -171,7 +174,9 @@ export class MnemosyneClient implements OnApplicationBootstrap {
       this.logger.debug('Health check failed', {
         error: error instanceof Error ? error.message : String(error),
       });
-      return Result.ko(error instanceof Error ? error : new Error(String(error)));
+      return Result.ko(
+        new ErrorWithDetails(error instanceof Error ? error.message : String(error), 'HealthCheckError'),
+      );
     }
   }
 
@@ -206,7 +211,7 @@ export class MnemosyneClient implements OnApplicationBootstrap {
             const response = JSON.parse(responseData) as McpToolResponse;
             resolve(response);
           } catch (error) {
-            reject(new Error(`Failed to parse MCP response: ${error}`));
+            reject(new ErrorWithDetails(`Failed to parse MCP response: ${error}`, 'McpParseError'));
           }
         });
       });
@@ -214,7 +219,7 @@ export class MnemosyneClient implements OnApplicationBootstrap {
       req.on('error', reject);
       req.on('timeout', () => {
         req.destroy();
-        reject(new Error(`Request timeout after ${this.timeoutMs}ms`));
+        reject(new ErrorWithDetails(`Request timeout after ${this.timeoutMs}ms`, 'McpTimeout'));
       });
 
       req.setTimeout(this.timeoutMs);

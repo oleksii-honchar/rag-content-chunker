@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { Chunk, FILE_ROLES } from '../../domain/chunk.entity';
-import { BasePinoLogger } from '../../infrastructure/logging/base-pino-logger';
 import { Result } from '../../utils/result';
 import { ChunkContentConfig, Chunker } from './chunker.interface';
 
@@ -23,10 +22,6 @@ interface RawChunkData {
 
 @Injectable()
 export class MarkdownChunker implements Chunker {
-  constructor(private readonly logger: BasePinoLogger) {
-    this.logger.setContext(MarkdownChunker.name);
-  }
-
   async chunk(content: string, config: ChunkContentConfig): Promise<Result<Chunk[]>> {
     try {
       if (!content.trim()) {
@@ -39,7 +34,6 @@ export class MarkdownChunker implements Chunker {
 
       return Result.ok(chunks);
     } catch (error) {
-      this.logger.error('Markdown chunking failed', { error, filePath: config.filePath });
       return Result.ko(error as Error);
     }
   }

@@ -10,7 +10,6 @@ import { FileWatcherService } from './infrastructure/file-watcher.service';
 import { GracefulShutdownService } from './infrastructure/graceful-shutdown.service';
 import { LoggingModule } from './infrastructure/logging/logger.module';
 import { pinoLoggerConfigFactory } from './infrastructure/logging/pino-logger-config.factory';
-import { TelemetryModule } from './infrastructure/telemetry.module';
 
 const configLoader = (): Record<string, unknown> => {
   const configPath = process.env.RAG_CONTENT_CHUNKER_CONFIG || '~/.config/rag-content-chunker.yaml';
@@ -52,7 +51,7 @@ const configLoader = (): Record<string, unknown> => {
     }),
     LoggingModule,
     ConfigurationModule,
-    TelemetryModule,
+
     DomainModule,
   ],
   controllers: [],

@@ -4,6 +4,7 @@ import { Chunk } from '../domain/chunk.entity';
 import { BasePinoLogger } from '../infrastructure/logging/base-pino-logger';
 import { MnemosyneClient } from '../infrastructure/mnemosyne-client.service';
 import { BaseUseCase } from '../utils/base-use-case';
+import { ErrorWithDetails } from '../utils/error-with-details';
 import { Result } from '../utils/result';
 
 const ingestChunkParamsSchema = z.object({
@@ -21,21 +22,24 @@ export class IngestChunkUseCase extends BaseUseCase<IngestChunkParams, void> {
     logger: BasePinoLogger,
   ) {
     super(logger);
+    this.logger = this.logger.child({ component: '[IngestChunkUseCase]' });
   }
 
   protected validateParams(params: IngestChunkParams): Result<IngestChunkParams> {
     const parsed = ingestChunkParamsSchema.safeParse(params);
     if (!parsed.success) {
-      return Result.ko(new Error('Invalid ingest chunk params: ' + parsed.error.message));
+      return Result.ko(
+        new ErrorWithDetails(
+          'Invalid ingest chunk params: ' + parsed.error.message,
+          'InvalidIngestChunkParams',
+        ),
+      );
     }
     return Result.ok(parsed.data);
   }
 
   protected async executeInternal(params: IngestChunkParams): Promise<Result<void>> {
-    this.logger.debug('Ingesting chunks', {
-      chunkCount: params.chunks.length,
-      sourceId: params.sourceId,
-    });
+    this.logger.debug('Ingesting chunks', { chunkCount: params.chunks.length, sourceId: params.sourceId });
 
     if (params.chunks.length === 0) {
       this.logger.debug('No chunks to ingest');
@@ -88,7 +92,10 @@ export class IngestChunkUseCase extends BaseUseCase<IngestChunkParams, void> {
 
     if (failureCount > 0 && successCount === 0) {
       return Result.ko(
-        new Error(`Failed to ingest all ${failureCount} chunks: ${errors.map(e => e.error).join('; ')}`),
+        new ErrorWithDetails(
+          `Failed to ingest all ${failureCount} chunks: ${errors.map(e => e.error).join('; ')}`,
+          'IngestionFailed',
+        ),
       );
     }
 

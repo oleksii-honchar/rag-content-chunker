@@ -2,11 +2,16 @@ import { Injectable } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import * as fs from 'fs/promises';
 import { z } from 'zod';
-import { FILE_EVENTS } from '../domain/events/domain-event';
-import { FileAddedEvent, FileChangedEvent, FileDeletedEvent } from '../domain/events/file-events';
+import {
+  FILE_EVENTS,
+  FileAddedEvent,
+  FileChangedEvent,
+  FileDeletedEvent,
+} from '../domain/events/file-events';
 import { FileProcessingQueue } from '../infrastructure/file-processing-queue.service';
 import { BasePinoLogger } from '../infrastructure/logging/base-pino-logger';
 import { BaseUseCase } from '../utils/base-use-case';
+import { ErrorWithDetails } from '../utils/error-with-details';
 import { Result } from '../utils/result';
 import { ChunkContentUseCase } from './chunk-content.use-case';
 import { IngestChunkUseCase } from './ingest-chunk.use-case';
@@ -28,12 +33,18 @@ export class ProcessFileUseCase extends BaseUseCase<ProcessFileParams, void> {
     logger: BasePinoLogger,
   ) {
     super(logger);
+    this.logger = this.logger.child({ component: '[ProcessFileUseCase]' });
   }
 
   protected validateParams(params: ProcessFileParams): Result<ProcessFileParams> {
     const parsed = processFileParamsSchema.safeParse(params);
     if (!parsed.success) {
-      return Result.ko(new Error('Invalid process file params: ' + parsed.error.message));
+      return Result.ko(
+        new ErrorWithDetails(
+          'Invalid process file params: ' + parsed.error.message,
+          'InvalidProcessFileParams',
+        ),
+      );
     }
     return Result.ok(parsed.data);
   }
@@ -58,7 +69,9 @@ export class ProcessFileUseCase extends BaseUseCase<ProcessFileParams, void> {
           result = await this.handleDelete(params);
           break;
         default:
-          result = Result.ko(new Error(`Unknown event type: ${params.eventType}`));
+          result = Result.ko(
+            new ErrorWithDetails(`Unknown event type: ${params.eventType}`, 'UnknownEventType'),
+          );
       }
 
       if (result.isKo()) {
@@ -83,7 +96,11 @@ export class ProcessFileUseCase extends BaseUseCase<ProcessFileParams, void> {
         filePath: params.filePath,
         error: error instanceof Error ? error.message : String(error),
       });
-      return Result.ko(error instanceof Error ? error : new Error(String(error)));
+      return Result.ko(
+        new ErrorWithDetails(error instanceof Error ? error.message : String(error), 'FileReadError', {
+          filePath: params.filePath,
+        }),
+      );
     }
 
     // Chunk content
@@ -107,10 +124,7 @@ export class ProcessFileUseCase extends BaseUseCase<ProcessFileParams, void> {
       return Result.ok(undefined as unknown as void);
     }
 
-    this.logger.info('Chunks created', {
-      filePath: params.filePath,
-      chunkCount: chunks.length,
-    });
+    this.logger.info('Chunks created', { filePath: params.filePath, chunkCount: chunks.length });
 
     // Ingest chunks
     const ingestResult = await this.ingestChunkUseCase.execute({

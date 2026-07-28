@@ -1,6 +1,7 @@
 import { z } from 'zod';
+import { DomainEvent } from '../utils/domain-event';
+import { ErrorWithDetails } from '../utils/error-with-details';
 import { Result } from '../utils/result';
-import { DomainEvent } from './events/domain-event';
 import { FileAddedEvent, FileChangedEvent, FileDeletedEvent } from './events/file-events';
 
 const fileChangeSchema = z.object({
@@ -16,7 +17,9 @@ export class FileChange {
   static of(props: FileChangeProps): Result<FileChange> {
     const parsed = fileChangeSchema.safeParse(props);
     if (!parsed.success) {
-      return Result.ko(new Error('Invalid file change data: ' + parsed.error.message));
+      return Result.ko(
+        new ErrorWithDetails('Invalid file change data: ' + parsed.error.message, 'InvalidFileChange'),
+      );
     }
     return Result.ok(new FileChange(parsed.data));
   }

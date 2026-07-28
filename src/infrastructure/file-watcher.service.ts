@@ -4,6 +4,7 @@ import { EventEmitter } from 'node:events';
 import * as os from 'os';
 import * as path from 'path';
 import { FileChange } from '../domain/file-change.aggregate';
+import { ErrorWithDetails } from '../utils/error-with-details';
 import { Result } from '../utils/result';
 import { AppEventEmitter } from './app-event-emitter';
 import { WatchSourceConfig } from './config/config-schemas';
@@ -20,11 +21,13 @@ export class FileWatcherService implements OnApplicationBootstrap, OnApplication
     private readonly eventEmitter: AppEventEmitter,
     logger: BasePinoLogger,
   ) {
-    this.logger = logger.child({ service: 'FileWatcherService' });
+    this.logger = logger.child({ component: '[FileWatcherService]' });
   }
 
   async onApplicationBootstrap(): Promise<void> {
-    this.logger.info('Starting file watcher service');
+    this.logger.info('Starting file watcher service', {
+      sourceCount: this.configService.getWatchSources().length,
+    });
     const result = await this.start();
     if (result.isKo()) {
       this.logger.error('Failed to start file watcher', { error: result.getError().message });
@@ -33,7 +36,7 @@ export class FileWatcherService implements OnApplicationBootstrap, OnApplication
 
   async start(): Promise<Result<void>> {
     const sources = this.configService.getWatchSources();
-    this.logger.info('Loading watch sources', { count: sources.length });
+    this.logger.info('Loading watch sources', { sourceCount: sources.length });
 
     for (const source of sources) {
       const startResult = await this.startWatchingSource(source);
@@ -45,7 +48,7 @@ export class FileWatcherService implements OnApplicationBootstrap, OnApplication
       }
     }
 
-    this.logger.info('File watcher started');
+    this.logger.info('File watcher started', { activeWatchers: this.watchers.size });
     return Result.ok(undefined as unknown as void);
   }
 
@@ -73,7 +76,11 @@ export class FileWatcherService implements OnApplicationBootstrap, OnApplication
   private async startWatchingSource(source: WatchSourceConfig): Promise<Result<void>> {
     try {
       const resolvedPath = this.resolvePath(source.path);
-      this.logger.info('Watching source', { sourceId: source.id, path: resolvedPath });
+      this.logger.info('Watching source', {
+        sourceId: source.id,
+        path: resolvedPath,
+        includePatterns: source.include,
+      });
 
       const watcher = chokidar.watch(resolvedPath, {
         ignored: this.buildIgnorePatterns(source),
@@ -99,12 +106,14 @@ export class FileWatcherService implements OnApplicationBootstrap, OnApplication
       this.watchers.set(source.id, watcher);
       return Result.ok(undefined as unknown as void);
     } catch (error) {
-      return Result.ko(error instanceof Error ? error : new Error(String(error)));
+      return Result.ko(
+        new ErrorWithDetails(error instanceof Error ? error.message : String(error), 'WatcherStartError'),
+      );
     }
   }
 
   private handleFileAdded(filePath: string, sourceId: string): void {
-    this.logger.debug('File added', { filePath, sourceId });
+    this.logger.debug('File added', { filePath, sourceId, eventType: 'add' });
     const result = FileChange.add(filePath);
     if (result.isOk()) {
       this.eventEmitter.publishMany(result.getValue().events);
@@ -112,7 +121,7 @@ export class FileWatcherService implements OnApplicationBootstrap, OnApplication
   }
 
   private handleFileChanged(filePath: string, sourceId: string): void {
-    this.logger.debug('File changed', { filePath, sourceId });
+    this.logger.debug('File changed', { filePath, sourceId, eventType: 'change' });
     const result = FileChange.change(filePath);
     if (result.isOk()) {
       this.eventEmitter.publishMany(result.getValue().events);
@@ -120,7 +129,7 @@ export class FileWatcherService implements OnApplicationBootstrap, OnApplication
   }
 
   private handleFileDeleted(filePath: string, sourceId: string): void {
-    this.logger.debug('File deleted', { filePath, sourceId });
+    this.logger.debug('File deleted', { filePath, sourceId, eventType: 'delete' });
     const result = FileChange.delete(filePath);
     if (result.isOk()) {
       this.eventEmitter.publishMany(result.getValue().events);

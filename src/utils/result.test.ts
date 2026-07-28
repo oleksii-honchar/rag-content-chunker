@@ -1,3 +1,4 @@
+import { ErrorWithDetails } from './error-with-details';
 import { Result } from './result';
 
 describe('Result', () => {
@@ -44,7 +45,7 @@ describe('Result', () => {
     it('should return the error via getError', () => {
       const error = new Error('something went wrong');
       const result = Result.ko(error);
-      expect(result.getError()).toBe(error);
+      expect(result.getError().message).toBe('something went wrong');
     });
 
     it('should throw when getValue is called on ko result', () => {
@@ -73,7 +74,7 @@ describe('Result', () => {
       const result = Result.ko<number>(error);
       const mapped = result.map(v => v * 2);
       expect(mapped.isKo()).toBe(true);
-      expect(mapped.getError()).toBe(error);
+      expect(mapped.getError().message).toBe('ko');
     });
 
     it('should return ko when transform function throws', () => {
@@ -90,14 +91,14 @@ describe('Result', () => {
     it('should transform error when ko', () => {
       const error = new Error('original');
       const result = Result.ko<number>(error);
-      const mapped = result.mapErr(e => new Error(`wrapped: ${e.message}`));
+      const mapped = result.mapErr(e => new ErrorWithDetails(`wrapped: ${e.message}`));
       expect(mapped.isKo()).toBe(true);
       expect(mapped.getError().message).toBe('wrapped: original');
     });
 
     it('should preserve value when ok', () => {
       const result = Result.ok<number>(42);
-      const mapped = result.mapErr(e => new Error(`wrapped: ${e.message}`));
+      const mapped = result.mapErr(e => new ErrorWithDetails(`wrapped: ${e.message}`));
       expect(mapped.isOk()).toBe(true);
       expect(mapped.getValue()).toBe(42);
     });
@@ -116,7 +117,7 @@ describe('Result', () => {
       const result = Result.ko<number>(error);
       const chained = result.flatMap(v => Result.ok(v * 3));
       expect(chained.isKo()).toBe(true);
-      expect(chained.getError()).toBe(error);
+      expect(chained.getError().message).toBe('ko');
     });
 
     it('should propagate error when flatMap function returns ko', () => {

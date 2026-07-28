@@ -25,7 +25,7 @@ describe('MarkdownChunker', () => {
   };
 
   beforeEach(() => {
-    chunker = new MarkdownChunker(createMockLogger());
+    chunker = new MarkdownChunker();
   });
 
   it('should implement Chunker interface', () => {
@@ -53,7 +53,7 @@ describe('MarkdownChunker', () => {
     });
 
     it('returns ko result on error', async () => {
-      const errorChunker = new MarkdownChunker(createMockLogger());
+      const errorChunker = new MarkdownChunker();
       // Force error by overriding extractSections to throw
       (errorChunker as unknown as { extractSections: () => never }).extractSections = () => {
         throw new Error('simulated');

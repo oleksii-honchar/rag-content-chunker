@@ -223,3 +223,50 @@ _Origin: User instruction — dual logging, env var rename, CLI version from pac
 - **Test strategy:** Refactoring — behavior preserved, test count unchanged (390)
 
 **Final state:** 390 tests passing, 28 suites green, build succeeds, format:check passes.
+
+---
+
+## Ad-Hoc Task: Refactoring — ErrorWithDetails, AggregateResult, DomainEvent, Logging Context, Test-Utils Rename, Telemetry Removal, E2E Bootstrap
+
+_Orgin: User instruction — "tsconfig ES2023, rename test-utils, remove telemetry, logging context prefix, DomainEvent refactor, ErrorWithDetails pattern, AggregateResult, bootstrap e2e tests"_
+
+- **Priority:** P0
+- **Depends on:** none
+- **Description:** Code quality improvements and e2e test foundation
+- **Acceptance Criteria:**
+  - [x] tsconfig: target/lib ES2022 → ES2023
+  - [x] Rename test-utils: `watch-source.test-utils.ts` → `watch-source.entity.test-utils.ts`, `chunk.test-utils.ts` → `chunk.entity.test-utils.ts`
+  - [x] Remove unused telemetry: TelemetryModule, MetricsCollectorService, all tests
+  - [x] DomainEvent refactor: move `DomainEvent` to `src/utils/domain-event.ts`, move `FILE_EVENTS`/`FileEventType` to `src/domain/events/file-events.ts`
+  - [x] ErrorWithDetails: create `src/utils/error-with-details.ts`, replace all `new Error()` with domain-specific ErrorWithDetails
+  - [x] Result<T> adapted to use ErrorWithDetails internally; Result.ko accepts Error or ErrorWithDetails
+  - [x] AggregateResult: create `src/utils/aggregate-result.ts` (voqaria pattern, standalone class)
+  - [x] Logging context: all services/use-cases use child loggers with `component: '[ServiceName]'` field and metadata
+  - [x] E2E bootstrap: jest.e2e.config.cjs, src/e2e/ with test config, utils, test app factory, mnemosyne-e2e.test.ts
+  - [x] StrategyFactory.createChunker wired to inject chunkers (no longer stub)
+  - [x] `npm run build` succeeds
+  - [x] `npm run test` passes (388 tests, 28 suites — 2 less due to telemetry removal)
+  - [x] `npm run test:e2e` passes (5 tests, 1 suite)
+- **Files Created:**
+  - `src/utils/error-with-details.ts`
+  - `src/utils/aggregate-result.ts`
+  - `src/utils/domain-event.ts`
+  - `jest.e2e.config.cjs`
+  - `src/e2e/.env.e2e`
+  - `src/e2e/test-config.yaml`
+  - `src/e2e/e2e-utils.ts`
+  - `src/e2e/main.test-application.ts`
+  - `src/e2e/mnemosyne-e2e.test.ts`
+  - `src/domain/watch-source.entity.test-utils.ts` (renamed)
+  - `src/domain/chunk.entity.test-utils.ts` (renamed)
+- **Files Modified:** All source files with Error usage, all services/use-cases (logging context), `src/utils/result.ts`, `src/domain/events/file-events.ts`, `src/domain/events/domain-event.ts` (removed), `src/infrastructure/telemetry.module.ts` (removed), `src/infrastructure/metrics-collector.service.ts` (removed), `src/application/strategies/strategy-factory.service.ts`, `src/application/strategies/markdown-chunker.service.ts`, `tsconfig.json`, `package.json` (added test:e2e scripts)
+- **Files Deleted:**
+  - `src/infrastructure/telemetry.module.ts`
+  - `src/infrastructure/metrics-collector.service.ts`
+  - `src/infrastructure/metrics-collector.service.test.ts`
+  - `src/domain/events/domain-event.ts`
+  - `src/domain/watch-source.test-utils.ts`
+  - `src/domain/chunk.test-utils.ts`
+- **Test strategy:** TDD-style for new patterns (ErrorWithDetails, AggregateResult, StrategyFactory wiring); refactoring for logging context and renames
+
+**Final state:** 388 unit tests passing (28 suites), 5 e2e tests passing (1 suite), build succeeds.
