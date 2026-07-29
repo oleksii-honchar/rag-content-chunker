@@ -21,20 +21,20 @@ export class AppBootstrapService implements OnApplicationBootstrap {
     const logFile = path.join(logDir, 'rag-content-chunker.log');
 
     this.logger.info('📋 Configuration Summary:');
-    this.logger.info(`  Config file: ${this.configFilePath}`);
-    this.logger.info(`  Log file: ${logFile} (symlink → current.log)`);
+    this.logger.info(`  - Config file: ${this.configFilePath}`);
+    this.logger.info(`  - Log file: ${logFile} (symlink → current.log)`);
     const watchSources = this.configService.getWatchSources();
-    this.logger.info(`  Watch sources: ${watchSources.length}`);
+    this.logger.info(`  - Watch sources: ${watchSources.length}`);
     for (const source of watchSources) {
       this.logger.info(`    - ${source.id}: ${source.path}`);
     }
-    this.logger.info(`  Chunking strategy: ${this.configService.getChunkingConfig().strategy}`);
+    this.logger.info(`  - Chunking strategy: ${this.configService.getChunkingConfig().strategy}`);
     this.logger.info(
-      `  Enrichment: ${this.configService.getEnrichmentConfig().enabled ? 'enabled' : 'disabled'}`,
+      `  - Enrichment: ${this.configService.getEnrichmentConfig().enabled ? 'enabled' : 'disabled'}`,
     );
-    this.logger.info(`  MCP endpoint: ${this.configService.getMcpConfig().url}`);
+    this.logger.info(`  - MCP endpoint: ${this.configService.getMcpConfig().url}`);
     this.logger.info(
-      `  Telemetry: ${this.configService.getTelemetryConfig().enabled ? 'enabled' : 'disabled'}`,
+      `  - Telemetry: ${this.configService.getTelemetryConfig().enabled ? 'enabled' : 'disabled'}`,
     );
   }
 }
