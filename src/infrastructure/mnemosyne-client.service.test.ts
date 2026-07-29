@@ -2,38 +2,16 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigurationService } from './config/configuration.service';
 import { BasePinoLogger } from './logging/base-pino-logger';
 import { MnemosyneClient } from './mnemosyne-client.service';
+import { aConfigService } from './config/configuration.test-utils';
+import { aLogger } from './logging/logger.test-utils';
 
 describe('MnemosyneClient (config)', () => {
   let configService: jest.Mocked<ConfigurationService>;
   let mockLogger: jest.Mocked<BasePinoLogger>;
 
   beforeEach(() => {
-    configService = {
-      getWatchSources: jest.fn(),
-      getChunkingConfig: jest.fn(),
-      getEnrichmentConfig: jest.fn(),
-      getMcpConfig: jest.fn().mockReturnValue({
-        url: 'http://mcp.test',
-        apiKey: 'test-key',
-        timeoutMs: 5000,
-        maxRetries: 3,
-        retryDelayMs: 100,
-      }),
-      getTelemetryConfig: jest.fn(),
-      load: jest.fn(),
-      initializeDefaultConfig: jest.fn(),
-      stop: jest.fn(),
-    } as unknown as jest.Mocked<ConfigurationService>;
-
-    mockLogger = {
-      setContext: jest.fn(),
-      log: jest.fn(),
-      info: jest.fn(),
-      error: jest.fn(),
-      warn: jest.fn(),
-      debug: jest.fn(),
-      child: jest.fn().mockReturnThis(),
-    } as unknown as jest.Mocked<BasePinoLogger>;
+    configService = aConfigService();
+    mockLogger = aLogger();
   });
 
   it('reads MCP config from ConfigurationService lazily on first use', async () => {
