@@ -1,10 +1,13 @@
-import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
+import { Inject, Injectable, OnApplicationBootstrap } from '@nestjs/common';
+import * as os from 'os';
+import * as path from 'path';
 import { ConfigurationService } from './infrastructure/config/configuration.service';
 import { BasePinoLogger } from './infrastructure/logging/base-pino-logger';
 
 @Injectable()
 export class AppBootstrapService implements OnApplicationBootstrap {
   constructor(
+    @Inject('CONFIG_FILE_PATH') private readonly configFilePath: string,
     private readonly configService: ConfigurationService,
     private readonly logger: BasePinoLogger,
   ) {}
@@ -14,7 +17,12 @@ export class AppBootstrapService implements OnApplicationBootstrap {
   }
 
   private async printConfigSummary(): Promise<void> {
+    const logDir = path.join(os.homedir(), '.local', 'share', 'rag-content-chunker', 'logs');
+    const logFile = path.join(logDir, 'rag-content-chunker.log');
+
     this.logger.info('📋 Configuration Summary:');
+    this.logger.info(`  Config file: ${this.configFilePath}`);
+    this.logger.info(`  Log file: ${logFile}`);
     const watchSources = this.configService.getWatchSources();
     this.logger.info(`  Watch sources: ${watchSources.length}`);
     for (const source of watchSources) {

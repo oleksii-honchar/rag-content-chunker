@@ -20,27 +20,11 @@ import {
 const DEFAULT_CONFIG: Configuration = {
   watchSources: [
     {
-      id: 'obsidian-vault',
-      path: '~/vault',
-      include: ['*.md', '*.txt'],
-      exclude: ['**/.git/**', '**/node_modules/**'],
-      debounceMs: 3000,
-      ignorePatterns: ['**/.DS_Store', '**/Thumbs.db', '**/.env*'],
-    },
-    {
       id: 'agent-sessions',
       path: '~/.agent-sessions',
       include: ['*.md'],
       exclude: ['**/archive/**'],
       debounceMs: 5000,
-      ignorePatterns: [],
-    },
-    {
-      id: 'codebase',
-      path: '~/www/project',
-      include: ['*.ts', '*.js', '*.py'],
-      exclude: ['**/node_modules/**', '**/dist/**'],
-      debounceMs: 2000,
       ignorePatterns: [],
     },
   ],
