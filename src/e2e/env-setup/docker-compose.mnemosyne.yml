@@ -1,0 +1,24 @@
+# Mnemosyne MCP instance for e2e tests.
+# Usage:
+#   docker compose -f docker-compose.mnemosyne.yml up -d --wait
+#   docker compose -f docker-compose.mnemosyne.yml down -v
+
+services:
+  mnemosyne-mcp:
+    build:
+      context: .
+      dockerfile: ./Dockerfile.mnemosyne
+    ports:
+      - "8765:8080"
+    volumes:
+      - ../../../data/e2e:/data
+    environment:
+      - MNEMOSYNE_DATA_DIR=/data
+      - MNEMOSYNE_MCP_TOKEN=e2e-test-token
+    command: ["--transport", "sse", "--host", "0.0.0.0", "--port", "8080"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; req = urllib.request.Request('http://localhost:8080/sse', headers={'Authorization': 'Bearer e2e-test-token'}); urllib.request.urlopen(req)"]
+      interval: 5s
+      timeout: 3s
+      retries: 6
+      start_period: 10s

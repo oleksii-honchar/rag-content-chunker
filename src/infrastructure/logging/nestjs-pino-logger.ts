@@ -1,28 +1,27 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Injectable, Scope } from '@nestjs/common';
-import { PinoLogger } from 'nestjs-pino';
+import type pino from 'pino';
 
 import { BasePinoLogger } from './base-pino-logger';
 
 @Injectable({ scope: Scope.TRANSIENT })
 export class NestjsPinoLogger implements BasePinoLogger {
-  constructor(private readonly pinoLogger: PinoLogger) {}
+  constructor(private readonly pinoLogger: pino.Logger) { }
 
-  setContext(context: string): void {
-    this.pinoLogger.setContext(context);
+  setContext(_context: string): void {
+    // Context is managed via bindings in child loggers
   }
 
   private buildLogArgs(
     message: string | Record<string, unknown>,
     meta?: Record<string, unknown>,
-  ): any[] {
+  ): Record<string, unknown> | string {
     if (meta != null && Object.keys(meta).length > 0) {
       if (typeof message === 'string') {
-        return [{ ...meta, msg: message }];
+        return { ...meta, msg: message };
       }
-      return [{ ...meta, ...message }];
+      return { ...meta, ...message };
     }
-    return [message];
+    return message;
   }
 
   log(message: string | Record<string, unknown>, meta?: Record<string, unknown>): void {
@@ -30,28 +29,23 @@ export class NestjsPinoLogger implements BasePinoLogger {
   }
 
   info(message: string | Record<string, unknown>, meta?: Record<string, unknown>): void {
-    const args = this.buildLogArgs(message, meta);
-    this.pinoLogger.info(args[0], ...args.slice(1));
+    this.pinoLogger.info(this.buildLogArgs(message, meta));
   }
 
   error(message: string | Record<string, unknown>, meta?: Record<string, unknown>): void {
-    const args = this.buildLogArgs(message, meta);
-    this.pinoLogger.error(args[0], ...args.slice(1));
+    this.pinoLogger.error(this.buildLogArgs(message, meta));
   }
 
   warn(message: string | Record<string, unknown>, meta?: Record<string, unknown>): void {
-    const args = this.buildLogArgs(message, meta);
-    this.pinoLogger.warn(args[0], ...args.slice(1));
+    this.pinoLogger.warn(this.buildLogArgs(message, meta));
   }
 
   debug(message: string | Record<string, unknown>, meta?: Record<string, unknown>): void {
-    const args = this.buildLogArgs(message, meta);
-    this.pinoLogger.debug(args[0], ...args.slice(1));
+    this.pinoLogger.debug(this.buildLogArgs(message, meta));
   }
 
   child(bindings: Record<string, unknown>): BasePinoLogger {
-    const childLogger = this.pinoLogger.logger.child(bindings);
-    const wrapper = new NestjsPinoLogger({ logger: childLogger } as PinoLogger);
-    return wrapper;
+    const childLogger = this.pinoLogger.child(bindings);
+    return new NestjsPinoLogger(childLogger);
   }
 }

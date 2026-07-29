@@ -7,6 +7,7 @@
 
 import { NestFactory } from '@nestjs/core';
 import { Logger } from 'nestjs-pino';
+import pino from 'pino';
 import 'reflect-metadata';
 import { AppModule } from './app.module';
 import { ForceReprocessService } from './application/force-reprocess.service';
@@ -19,9 +20,7 @@ import { NestjsPinoLogger } from './infrastructure/logging/nestjs-pino-logger';
 
 async function bootstrap(): Promise<void> {
   // Parse CLI args before NestJS bootstrap (need minimal logger for help/version)
-  const tempLogger = new NestjsPinoLogger({
-    logger: {} as unknown as import('pino').Logger,
-  } as import('nestjs-pino').PinoLogger);
+  const tempLogger = new NestjsPinoLogger(pino({ level: 'warn' }));
   const args = new CliArgsService(tempLogger).parse(process.argv.slice(2));
 
   // Handle help and version early

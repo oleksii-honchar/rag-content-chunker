@@ -6,6 +6,8 @@ module.exports = {
   collectCoverageFrom: ['src/**/*.ts'],
   coverageDirectory: 'coverage-e2e',
   testEnvironment: 'node',
+  globalSetup: '<rootDir>/src/e2e/global-setup.ts',
+  globalTeardown: '<rootDir>/src/e2e/global-teardown.ts',
   transform: {
     '^.+\\.(ts|tsx|js|jsx)$': 'ts-jest',
   },

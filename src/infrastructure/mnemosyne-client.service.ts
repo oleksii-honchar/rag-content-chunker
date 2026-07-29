@@ -29,12 +29,12 @@ interface McpToolResponse {
 @Injectable()
 export class MnemosyneClient implements OnApplicationBootstrap {
   private readonly logger: BasePinoLogger;
-  private readonly url: string;
+  private readonly baseUrl: string;
   private readonly apiKey: string | undefined;
   private readonly timeoutMs: number;
   private readonly maxRetries: number;
   private readonly retryDelayMs: number;
-  private connectionInitialized = false;
+  private sessionId: string | null = null;
 
   constructor(
     private readonly configService: ConfigurationService,
@@ -42,7 +42,8 @@ export class MnemosyneClient implements OnApplicationBootstrap {
   ) {
     this.logger = logger.child({ component: '[MnemosyneClient]' });
     const mcpConfig = configService.getMcpConfig();
-    this.url = mcpConfig.url;
+    // Strip trailing /messages/ or /mcp if present — config should be base URL
+    this.baseUrl = mcpConfig.url.replace(/(\/messages\/?|\/mcp\/?)$/, '');
     this.apiKey = mcpConfig.apiKey;
     this.timeoutMs = mcpConfig.timeoutMs;
     this.maxRetries = mcpConfig.maxRetries;
@@ -54,28 +55,31 @@ export class MnemosyneClient implements OnApplicationBootstrap {
   }
 
   async initialize(): Promise<Result<void>> {
-    this.logger.info('Initializing Mnemosyne MCP client', {
-      url: this.url,
+    this.logger.info('Initializing Mnemosyne MCP client (SSE)', {
+      baseUrl: this.baseUrl,
       timeoutMs: this.timeoutMs,
       maxRetries: this.maxRetries,
     });
 
     try {
-      const healthResult = await this.healthCheck();
-      if (healthResult.isOk() && healthResult.getValue()) {
-        this.connectionInitialized = true;
-        this.logger.info('Mnemosyne MCP client initialized successfully', { url: this.url });
+      const sessionResult = await this.establishSession();
+      if (sessionResult.isOk()) {
+        this.logger.info('Mnemosyne MCP client initialized successfully', {
+          baseUrl: this.baseUrl,
+          sessionId: this.sessionId,
+        });
         return Result.ok(undefined as unknown as void);
       }
-      this.logger.warn('Mnemosyne MCP health check failed, will retry on use');
+      this.logger.warn('Mnemosyne MCP SSE connection failed, will retry on use', {
+        error: sessionResult.getError().message,
+      });
+      // Non-fatal — retry on first use
       return Result.ok(undefined as unknown as void);
     } catch (error) {
       this.logger.error('Failed to initialize Mnemosyne MCP client', {
         error: error instanceof Error ? error.message : String(error),
       });
-      return Result.ko(
-        new ErrorWithDetails(error instanceof Error ? error.message : String(error), 'MnemosyneInitError'),
-      );
+      return Result.ok(undefined as unknown as void);
     }
   }
 
@@ -114,6 +118,23 @@ export class MnemosyneClient implements OnApplicationBootstrap {
 
     for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
       try {
+        // Ensure we have a session
+        if (!this.sessionId) {
+          const sessionResult = await this.establishSession();
+          if (!sessionResult.isOk()) {
+            lastError = sessionResult.getError();
+            this.logger.warn('Failed to establish session for remember', {
+              chunkId: chunk.id,
+              retryAttempt: attempt,
+              error: lastError.message,
+            });
+            if (attempt < this.maxRetries) {
+              await this.delay(this.retryDelayMs * attempt);
+            }
+            continue;
+          }
+        }
+
         const response = await this.sendRequest(request);
 
         if (response.error) {
@@ -157,9 +178,15 @@ export class MnemosyneClient implements OnApplicationBootstrap {
   }
 
   async healthCheck(): Promise<Result<boolean>> {
-    this.logger.debug('Health checking Mnemosyne MCP', { url: this.url });
+    this.logger.debug('Health checking Mnemosyne MCP (SSE)', { baseUrl: this.baseUrl });
 
     try {
+      // Need a session to send any request
+      const sessionResult = await this.establishSession();
+      if (!sessionResult.isOk()) {
+        return sessionResult.map(() => false);
+      }
+
       const response = await this.sendRequest({
         jsonrpc: '2.0',
         id: Date.now(),
@@ -180,9 +207,95 @@ export class MnemosyneClient implements OnApplicationBootstrap {
     }
   }
 
+  /**
+   * Establishes an SSE session with Mnemosyne MCP.
+   * GET /sse → receive event: endpoint\ndata: /messages/?session_id=xxx
+   */
+  private async establishSession(): Promise<Result<string>> {
+    return new Promise(resolve => {
+      const parsedUrl = new URL(this.baseUrl);
+      const lib = parsedUrl.protocol === 'https:' ? https : http;
+
+      const options: http.RequestOptions = {
+        hostname: parsedUrl.hostname,
+        port: parsedUrl.port,
+        path: '/sse',
+        method: 'GET',
+        headers: {
+          Accept: 'text/event-stream',
+          ...(this.apiKey ? { Authorization: `Bearer ${this.apiKey}` } : {}),
+        },
+      };
+
+      const req = lib.get(options, res => {
+        let buffer = '';
+
+        res.on('data', (chunk: Buffer) => {
+          buffer += chunk.toString();
+
+          // Parse SSE events
+          const lines = buffer.split('\n');
+          for (const line of lines) {
+            if (line.startsWith('data: /messages/?session_id=')) {
+              const endpoint = line.slice(5).trim();
+              const sessionId = this.extractSessionId(endpoint);
+              if (sessionId) {
+                this.sessionId = sessionId;
+                req.destroy(); // Close SSE connection after getting session_id
+                resolve(Result.ok(sessionId));
+                return;
+              }
+            }
+          }
+        });
+
+        res.on('end', () => {
+          if (!this.sessionId) {
+            resolve(
+              Result.ko(new ErrorWithDetails('No session_id received from SSE endpoint', 'SseSessionError')),
+            );
+          }
+        });
+      });
+
+      req.on('error', error => {
+        resolve(
+          Result.ko(
+            new ErrorWithDetails(
+              error instanceof Error ? error.message : String(error),
+              'SseConnectionError',
+            ),
+          ),
+        );
+      });
+
+      req.setTimeout(this.timeoutMs, () => {
+        req.destroy();
+        resolve(
+          Result.ko(new ErrorWithDetails(`SSE connection timeout after ${this.timeoutMs}ms`, 'SseTimeout')),
+        );
+      });
+    });
+  }
+
+  private extractSessionId(endpoint: string): string | null {
+    try {
+      const url = new URL(endpoint, this.baseUrl);
+      return url.searchParams.get('session_id');
+    } catch {
+      // Fallback: try to extract from query string directly
+      const match = endpoint.match(/[?&]session_id=([^&]+)/);
+      return match ? match[1] : null;
+    }
+  }
+
   private async sendRequest(request: McpToolRequest): Promise<McpToolResponse> {
+    if (!this.sessionId) {
+      throw new ErrorWithDetails('No session established', 'NoSessionError');
+    }
+
     return new Promise((resolve, reject) => {
-      const parsedUrl = new URL(this.url);
+      const parsedUrl = new URL(this.baseUrl);
       const lib = parsedUrl.protocol === 'https:' ? https : http;
 
       const data = JSON.stringify(request);
@@ -190,7 +303,7 @@ export class MnemosyneClient implements OnApplicationBootstrap {
       const options: http.RequestOptions = {
         hostname: parsedUrl.hostname,
         port: parsedUrl.port,
-        path: parsedUrl.pathname,
+        path: `/messages/?session_id=${this.sessionId}`,
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

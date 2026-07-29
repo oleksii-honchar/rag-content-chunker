@@ -1,5 +1,5 @@
 mcp:
-  url: "http://localhost:8765/mcp"
+  url: "http://localhost:8765/messages/"
   timeoutMs: 30000
   maxRetries: 2
   retryDelayMs: 500

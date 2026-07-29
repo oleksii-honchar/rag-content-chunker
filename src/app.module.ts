@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ConfigModule } from '@nestjs/config';
 import { EventEmitterModule } from '@nestjs/event-emitter';
-import { LoggerModule } from 'nestjs-pino';
 import { AppBootstrapService } from './app-bootstrap.service';
 import { ForceReprocessService } from './application/force-reprocess.service';
 import { CodeChunker } from './application/strategies/code-chunker.service';
@@ -16,7 +15,6 @@ import { FileProcessingQueue } from './infrastructure/file-processing-queue.serv
 import { FileWatcherService } from './infrastructure/file-watcher.service';
 import { GracefulShutdownService } from './infrastructure/graceful-shutdown.service';
 import { LoggingModule } from './infrastructure/logging/logger.module';
-import { pinoLoggerConfigFactory } from './infrastructure/logging/pino-logger-config.factory';
 import { MnemosyneClient } from './infrastructure/mnemosyne-client.service';
 import { ChunkContentUseCase } from './use-cases/chunk-content.use-case';
 import { IngestChunkUseCase } from './use-cases/ingest-chunk.use-case';
@@ -48,11 +46,6 @@ const configLoader = (): Record<string, unknown> => {
       isGlobal: true,
       envFilePath: process.env.ENV_FILE || '.env',
     }),
-    LoggerModule.forRootAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: pinoLoggerConfigFactory,
-    }),
     EventEmitterModule.forRoot({
       wildcard: false,
       delimiter: '.',
@@ -60,7 +53,7 @@ const configLoader = (): Record<string, unknown> => {
       verboseMemoryLeak: false,
       ignoreErrors: false,
     }),
-    LoggingModule,
+    LoggingModule.forRootAsync(),
     ConfigurationModule,
     DomainModule,
   ],

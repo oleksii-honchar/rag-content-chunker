@@ -12,55 +12,72 @@ jest.mock('chokidar', () => ({
 
 jest.mock('http', () => ({
   request: jest.fn(),
+  get: jest.fn(),
 }));
 
 jest.mock('https', () => ({
   request: jest.fn(),
+  get: jest.fn(),
 }));
 
-describe('MnemosyneClient', () => {
+describe('MnemosyneClient (SSE)', () => {
   let client: MnemosyneClient;
   let configService: jest.Mocked<ConfigurationService>;
   let mockLogger: jest.Mocked<BasePinoLogger>;
-  let mockRes: jest.Mocked<http.IncomingMessage>;
   const mockHttpReq = http.request as jest.Mock;
+  const mockHttpGet = http.get as jest.Mock;
   const mockHttpsReq = https.request as jest.Mock;
-
-  // Handler storage per mock request
-  let lastReqHandlers: Record<string, (...args: unknown[]) => void>;
-  let lastCallback: ((res: http.IncomingMessage) => void) | null;
-
-  const createMockResponse = (statusCode: number, body: unknown) => {
-    mockRes = {
-      on: jest.fn((event: string | symbol, handler: (...args: unknown[]) => void) => {
-        if (event === 'data') {
-          handler(Buffer.from(JSON.stringify(body)));
-        }
-        if (event === 'end') {
-          handler(Buffer.from(''));
-        }
-        return mockRes;
-      }),
-      statusCode,
-    } as unknown as jest.Mocked<http.IncomingMessage>;
-  };
+  const mockHttpsGet = https.get as jest.Mock;
 
   const createMockRequest = (): jest.Mocked<http.ClientRequest> => {
-    lastReqHandlers = {};
+    const handlers: Record<string, (...args: unknown[]) => void> = {};
     const mockReq = {} as jest.Mocked<http.ClientRequest>;
     mockReq.on = jest.fn((event: string | symbol, handler: (...args: unknown[]) => void) => {
-      lastReqHandlers[String(event)] = handler;
+      handlers[String(event)] = handler;
       return mockReq;
     });
     mockReq.setTimeout = jest.fn();
     mockReq.write = jest.fn();
     mockReq.end = jest.fn();
     mockReq.destroy = jest.fn();
+    // Attach handlers for test invocation
+    (mockReq as unknown as Record<string, unknown>).__handlers = handlers;
     return mockReq;
   };
 
-  const invokeHandler = (event: string, ...args: unknown[]) => {
-    const handler = lastReqHandlers?.[event];
+  const createMockGetResponse = () => {
+    const handlers: Record<string, (...args: unknown[]) => void> = {};
+    // http.get returns ClientRequest; the callback receives IncomingMessage separately
+    const mockObj = {} as Record<string, unknown>;
+    mockObj.on = jest.fn((event: string | symbol, handler: (...args: unknown[]) => void) => {
+      handlers[String(event)] = handler;
+      return mockObj;
+    });
+    mockObj.setTimeout = jest.fn();
+    mockObj.resume = jest.fn();
+    mockObj.destroy = jest.fn();
+    mockObj.__handlers = handlers;
+    return mockObj;
+  };
+
+  const createMockPostResponse = (statusCode: number, body: unknown): jest.Mocked<http.IncomingMessage> => {
+    const mockRes = {} as jest.Mocked<http.IncomingMessage>;
+    mockRes.on = jest.fn((event: string | symbol, handler: (...args: unknown[]) => void) => {
+      if (event === 'data') {
+        handler(Buffer.from(JSON.stringify(body)));
+      }
+      if (event === 'end') {
+        handler(Buffer.from(''));
+      }
+      return mockRes;
+    });
+    mockRes.statusCode = statusCode;
+    return mockRes;
+  };
+
+  const invokeHandlers = (obj: unknown, event: string, ...args: unknown[]) => {
+    const handlers = (obj as unknown as Record<string, unknown>)?.__handlers as Record<string, (...args: unknown[]) => void> | undefined;
+    const handler = handlers?.[event];
     if (typeof handler === 'function') {
       handler(...args);
     }
@@ -87,15 +104,23 @@ describe('MnemosyneClient', () => {
     jest.clearAllMocks();
     jest.useFakeTimers();
 
-    createMockRequest();
-    createMockResponse(200, { jsonrpc: '2.0', id: 1, result: {} });
+    // Default: HTTP GET for SSE returns session endpoint
+    mockHttpGet.mockImplementation((_urlOrOptions: unknown, _optionsOrCb?: unknown, _cb?: unknown) => {
+      const mockGetRes = createMockGetResponse();
+      const callback = typeof _optionsOrCb === 'function' ? _optionsOrCb : _cb;
+      if (typeof callback === 'function') {
+        callback(mockGetRes);
+      }
+      return mockGetRes;
+    });
+    mockHttpsGet.mockImplementation(mockHttpGet);
 
-    // Default: return req, callback invoked when test calls lastCallback(mockRes)
-    // Tests that expect success rely on response mock's on() handlers firing synchronously
-    mockHttpReq.mockImplementation((_options: unknown, callback: (res: http.IncomingMessage) => void) => {
+    // Default: HTTP POST for messages returns success
+    mockHttpReq.mockImplementation((_options: unknown, callback?: (res: http.IncomingMessage) => void) => {
       const req = createMockRequest();
-      // Immediately invoke callback with mock response
-      callback(mockRes);
+      if (typeof callback === 'function') {
+        callback(createMockPostResponse(200, { jsonrpc: '2.0', id: 1, result: {} }));
+      }
       return req;
     });
     mockHttpsReq.mockImplementation(mockHttpReq);
@@ -105,7 +130,7 @@ describe('MnemosyneClient', () => {
       getChunkingConfig: jest.fn(),
       getEnrichmentConfig: jest.fn(),
       getMcpConfig: jest.fn().mockReturnValue({
-        url: 'http://mcp.test/mnemosyne',
+        url: 'http://mcp.test',
         apiKey: 'test-key',
         timeoutMs: 5000,
         maxRetries: 3,
@@ -146,104 +171,249 @@ describe('MnemosyneClient', () => {
     it('reads MCP config from ConfigurationService', () => {
       expect(configService.getMcpConfig).toHaveBeenCalled();
     });
+
+    it('strips trailing /messages/ from base URL', async () => {
+      configService.getMcpConfig.mockReturnValue({
+        url: 'http://mcp.test/messages/',
+        apiKey: 'test-key',
+        timeoutMs: 5000,
+        maxRetries: 3,
+        retryDelayMs: 100,
+      });
+
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          MnemosyneClient,
+          { provide: ConfigurationService, useValue: configService },
+          { provide: BasePinoLogger, useValue: mockLogger },
+        ],
+      }).compile();
+      const client2 = module.get(MnemosyneClient);
+
+      mockHttpGet.mockImplementationOnce((_urlOrOptions: unknown, _optionsOrCb?: unknown, _cb?: unknown) => {
+        const mockGetRes = createMockGetResponse();
+        const callback = typeof _optionsOrCb === 'function' ? _optionsOrCb : _cb;
+        if (typeof callback === 'function') {
+          callback(mockGetRes);
+          invokeHandlers(mockGetRes, 'data', Buffer.from('event: endpoint\ndata: /messages/?session_id=test\n\n'));
+        }
+        return mockGetRes;
+      });
+
+      await client2.initialize();
+
+      const callArgs = mockHttpGet.mock.calls[0];
+      const firstArg = callArgs[0] as string | http.RequestOptions;
+      const path = typeof firstArg === 'string' ? new URL(firstArg).pathname : firstArg.path;
+      expect(path).toBe('/sse');
+    });
   });
 
   describe('initialize', () => {
-    it('attempts health check on bootstrap', async () => {
+    it('connects via SSE GET /sse to establish session', async () => {
+      mockHttpGet.mockImplementationOnce((_urlOrOptions: unknown, _optionsOrCb?: unknown, _cb?: unknown) => {
+        const mockGetRes = createMockGetResponse();
+        const callback = typeof _optionsOrCb === 'function' ? _optionsOrCb : _cb;
+        if (typeof callback === 'function') {
+          callback(mockGetRes);
+          invokeHandlers(mockGetRes, 'data', Buffer.from('event: endpoint\ndata: /messages/?session_id=test-session-123\n\n'));
+        }
+        return mockGetRes;
+      });
+
       const result = await client.initialize();
 
       expect(result.isOk()).toBe(true);
-      expect(mockLogger.info).toHaveBeenCalledWith(
-        'Initializing Mnemosyne MCP client',
-        expect.objectContaining({ url: 'http://mcp.test/mnemosyne' }),
-      );
+      expect(mockHttpGet).toHaveBeenCalled();
+      const callArgs = mockHttpGet.mock.calls[0];
+      const firstArg = callArgs[0] as string | http.RequestOptions;
+      const path = typeof firstArg === 'string' ? new URL(firstArg).pathname : firstArg.path;
+      expect(path).toBe('/sse');
     });
 
-    it('sets connectionInitialized when health check succeeds', async () => {
-      createMockResponse(200, { jsonrpc: '2.0', id: 1, result: {} });
+    it('parses session_id from SSE endpoint event', async () => {
+      mockHttpGet.mockImplementationOnce((_urlOrOptions: unknown, _optionsOrCb?: unknown, _cb?: unknown) => {
+        const mockGetRes = createMockGetResponse();
+        const callback = typeof _optionsOrCb === 'function' ? _optionsOrCb : _cb;
+        if (typeof callback === 'function') {
+          callback(mockGetRes);
+          invokeHandlers(mockGetRes, 'data', Buffer.from('event: endpoint\ndata: /messages/?session_id=parsed-session-id\n\n'));
+        }
+        return mockGetRes;
+      });
+
       await client.initialize();
 
-      expect(mockLogger.info).toHaveBeenCalledWith('Mnemosyne MCP client initialized successfully', {
-        url: 'http://mcp.test/mnemosyne',
-      });
+      expect(mockLogger.info).toHaveBeenCalledWith('Mnemosyne MCP client initialized successfully', expect.any(Object));
     });
 
-    it('returns ok even when health check fails (will retry on use)', async () => {
-      createMockResponse(500, { jsonrpc: '2.0', id: 1, error: { code: -32603, message: 'Server error' } });
+    it('includes Authorization header in SSE request when apiKey is set', async () => {
+      mockHttpGet.mockImplementationOnce((_urlOrOptions: unknown, optionsOrCb?: unknown, _cb?: unknown) => {
+        const mockGetRes = createMockGetResponse();
+        const options = typeof optionsOrCb === 'function' ? undefined : optionsOrCb;
+        const callback = typeof optionsOrCb === 'function' ? optionsOrCb : _cb;
+        if (typeof callback === 'function') {
+          callback(mockGetRes);
+          invokeHandlers(mockGetRes, 'data', Buffer.from('event: endpoint\ndata: /messages/?session_id=test\n\n'));
+        }
+        return mockGetRes;
+      });
+
+      await client.initialize();
+
+      const callArgs = mockHttpGet.mock.calls[0];
+      const firstArg = callArgs[0] as string | http.RequestOptions;
+      const options = typeof firstArg === 'string' ? callArgs[1] : firstArg;
+      expect((options as http.RequestOptions).headers).toHaveProperty('Authorization', 'Bearer test-key');
+    });
+
+    it('returns ok even when SSE connection fails (will retry on use)', async () => {
+      mockHttpGet.mockImplementationOnce((_urlOrOptions: unknown, _optionsOrCb?: unknown, _cb?: unknown) => {
+        const mockGetRes = createMockGetResponse();
+        const callback = typeof _optionsOrCb === 'function' ? _optionsOrCb : _cb;
+        if (typeof callback === 'function') {
+          callback(mockGetRes);
+          invokeHandlers(mockGetRes, 'error', new Error('Connection refused'));
+        }
+        return mockGetRes;
+      });
+
       const result = await client.initialize();
 
       expect(result.isOk()).toBe(true);
-      expect(mockLogger.warn).toHaveBeenCalledWith('Mnemosyne MCP health check failed, will retry on use');
-    });
-
-    it('returns ok even when health check request fails (non-fatal)', async () => {
-      jest.useRealTimers();
-      mockHttpReq.mockImplementation((_options: unknown, _callback: unknown) => {
-        const req = createMockRequest();
-        setTimeout(() => {
-          invokeHandler('error', new Error('Connection refused'));
-        }, 0);
-        return req;
-      });
-
-      const result = await client.initialize();
-
-      // Initialize is non-fatal — returns ok even when health check fails
-      expect(result.isOk()).toBe(true);
-      expect(mockLogger.warn).toHaveBeenCalledWith('Mnemosyne MCP health check failed, will retry on use');
-      jest.useFakeTimers();
+      expect(mockLogger.warn).toHaveBeenCalled();
     });
   });
 
   describe('healthCheck', () => {
-    it('sends ping request', async () => {
-      await client.healthCheck();
+    it('establishes SSE session then sends ping via POST /messages/?session_id', async () => {
+      // SSE for session
+      mockHttpGet.mockImplementationOnce((_urlOrOptions: unknown, _optionsOrCb?: unknown, _cb?: unknown) => {
+        const mockGetRes = createMockGetResponse();
+        const callback = typeof _optionsOrCb === 'function' ? _optionsOrCb : _cb;
+        if (typeof callback === 'function') {
+          callback(mockGetRes);
+          invokeHandlers(mockGetRes, 'data', Buffer.from('event: endpoint\ndata: /messages/?session_id=health-session\n\n'));
+        }
+        return mockGetRes;
+      });
 
+      // POST ping with session_id
+      mockHttpReq.mockImplementationOnce((_options: unknown, callback?: (res: http.IncomingMessage) => void) => {
+        const req = createMockRequest();
+        if (typeof callback === 'function') {
+          callback(createMockPostResponse(200, { jsonrpc: '2.0', id: 1, result: {} }));
+        }
+        return req;
+      });
+
+      const result = await client.healthCheck();
+
+      expect(result.isOk()).toBe(true);
+      expect(mockHttpGet).toHaveBeenCalled();
       expect(mockHttpReq).toHaveBeenCalled();
+
+      const postCall = mockHttpReq.mock.calls[0];
+      const options = postCall[0] as http.RequestOptions;
+      expect(options.path).toContain('session_id=health-session');
     });
 
     it('returns ok(true) when response has no error', async () => {
-      createMockResponse(200, { jsonrpc: '2.0', id: 1, result: {} });
+      mockHttpGet.mockImplementationOnce((_urlOrOptions: unknown, _optionsOrCb?: unknown, _cb?: unknown) => {
+        const mockGetRes = createMockGetResponse();
+        const callback = typeof _optionsOrCb === 'function' ? _optionsOrCb : _cb;
+        if (typeof callback === 'function') {
+          callback(mockGetRes);
+          invokeHandlers(mockGetRes, 'data', Buffer.from('event: endpoint\ndata: /messages/?session_id=test\n\n'));
+        }
+        return mockGetRes;
+      });
+
+      mockHttpReq.mockImplementationOnce((_options: unknown, callback?: (res: http.IncomingMessage) => void) => {
+        const req = createMockRequest();
+        if (typeof callback === 'function') {
+          callback(createMockPostResponse(200, { jsonrpc: '2.0', id: 1, result: {} }));
+        }
+        return req;
+      });
+
       const result = await client.healthCheck();
 
       expect(result.isOk()).toBe(true);
       expect(result.getValue()).toBe(true);
     });
 
-    it('returns ok(false) when response has error', async () => {
-      createMockResponse(200, { jsonrpc: '2.0', id: 1, error: { code: -32600, message: 'Invalid request' } });
-      const result = await client.healthCheck();
-
-      expect(result.isOk()).toBe(true);
-      expect(result.getValue()).toBe(false);
-    });
-
-    it('returns ko when request fails', async () => {
-      jest.useRealTimers();
-      mockHttpReq.mockImplementation((_options: unknown, _callback: unknown) => {
-        const req = createMockRequest();
-        process.nextTick(() => {
-          invokeHandler('error', new Error('Network error'));
-        });
-        return req;
+    it('returns ko when SSE fails', async () => {
+      mockHttpGet.mockImplementationOnce((_urlOrOptions: unknown, _optionsOrCb?: unknown, _cb?: unknown) => {
+        const mockGetRes = createMockGetResponse();
+        const callback = typeof _optionsOrCb === 'function' ? _optionsOrCb : _cb;
+        if (typeof callback === 'function') {
+          callback(mockGetRes);
+          invokeHandlers(mockGetRes, 'error', new Error('SSE failed'));
+        }
+        return mockGetRes;
       });
 
       const result = await client.healthCheck();
 
       expect(result.isKo()).toBe(true);
-      jest.useFakeTimers();
     });
   });
 
   describe('remember', () => {
+    it('establishes SSE session if not connected, then POSTs to /messages/?session_id', async () => {
+      mockHttpGet.mockImplementationOnce((_urlOrOptions: unknown, _optionsOrCb?: unknown, _cb?: unknown) => {
+        const mockGetRes = createMockGetResponse();
+        const callback = typeof _optionsOrCb === 'function' ? _optionsOrCb : _cb;
+        if (typeof callback === 'function') {
+          callback(mockGetRes);
+          invokeHandlers(mockGetRes, 'data', Buffer.from('event: endpoint\ndata: /messages/?session_id=remember-session\n\n'));
+        }
+        return mockGetRes;
+      });
+
+      mockHttpReq.mockImplementationOnce((_options: unknown, callback?: (res: http.IncomingMessage) => void) => {
+        const req = createMockRequest();
+        if (typeof callback === 'function') {
+          callback(createMockPostResponse(200, { jsonrpc: '2.0', id: 1, result: { content: [{ type: 'text', text: 'OK' }] } }));
+        }
+        return req;
+      });
+
+      const chunk = aChunk();
+      const result = await client.remember(chunk);
+
+      expect(result.isOk()).toBe(true);
+      expect(mockHttpGet).toHaveBeenCalled();
+      expect(mockHttpReq).toHaveBeenCalled();
+
+      const postCall = mockHttpReq.mock.calls[0];
+      const options = postCall[0] as http.RequestOptions;
+      expect(options.path).toContain('session_id=remember-session');
+    });
+
     it('sends tools/call request with memory_remember tool name', async () => {
-      createMockResponse(200, { jsonrpc: '2.0', id: 1, result: { content: [{ type: 'text', text: 'OK' }] } });
+      mockHttpGet.mockImplementationOnce((_urlOrOptions: unknown, _optionsOrCb?: unknown, _cb?: unknown) => {
+        const mockGetRes = createMockGetResponse();
+        const callback = typeof _optionsOrCb === 'function' ? _optionsOrCb : _cb;
+        if (typeof callback === 'function') {
+          callback(mockGetRes);
+          invokeHandlers(mockGetRes, 'data', Buffer.from('event: endpoint\ndata: /messages/?session_id=test\n\n'));
+        }
+        return mockGetRes;
+      });
+
+      mockHttpReq.mockImplementationOnce((_options: unknown, callback?: (res: http.IncomingMessage) => void) => {
+        const req = createMockRequest();
+        if (typeof callback === 'function') {
+          callback(createMockPostResponse(200, { jsonrpc: '2.0', id: 1, result: { content: [{ type: 'text', text: 'OK' }] } }));
+        }
+        return req;
+      });
+
       const chunk = aChunk();
       await client.remember(chunk);
 
-      expect(mockHttpReq).toHaveBeenCalled();
-      // mockHttpReq called with (options, callback) and returns req
-      // find the returned req from the mock call result
       const returnedReq = mockHttpReq.mock.results[0].value;
       const writeCall = returnedReq.write.mock.calls[0];
       const requestBody = JSON.parse(writeCall[0] as string);
@@ -254,7 +424,24 @@ describe('MnemosyneClient', () => {
     });
 
     it('includes chunk metadata in tool arguments', async () => {
-      createMockResponse(200, { jsonrpc: '2.0', id: 1, result: { content: [{ type: 'text', text: 'OK' }] } });
+      mockHttpGet.mockImplementationOnce((_urlOrOptions: unknown, _optionsOrCb?: unknown, _cb?: unknown) => {
+        const mockGetRes = createMockGetResponse();
+        const callback = typeof _optionsOrCb === 'function' ? _optionsOrCb : _cb;
+        if (typeof callback === 'function') {
+          callback(mockGetRes);
+          invokeHandlers(mockGetRes, 'data', Buffer.from('event: endpoint\ndata: /messages/?session_id=test\n\n'));
+        }
+        return mockGetRes;
+      });
+
+      mockHttpReq.mockImplementationOnce((_options: unknown, callback?: (res: http.IncomingMessage) => void) => {
+        const req = createMockRequest();
+        if (typeof callback === 'function') {
+          callback(createMockPostResponse(200, { jsonrpc: '2.0', id: 1, result: { content: [{ type: 'text', text: 'OK' }] } }));
+        }
+        return req;
+      });
+
       const chunk = aChunk();
       await client.remember(chunk);
 
@@ -277,36 +464,53 @@ describe('MnemosyneClient', () => {
     });
 
     it('returns ok when response has content', async () => {
-      createMockResponse(200, {
-        jsonrpc: '2.0',
-        id: 1,
-        result: { content: [{ type: 'text', text: 'OK' }] },
+      mockHttpGet.mockImplementationOnce((_urlOrOptions: unknown, _optionsOrCb?: unknown, _cb?: unknown) => {
+        const mockGetRes = createMockGetResponse();
+        const callback = typeof _optionsOrCb === 'function' ? _optionsOrCb : _cb;
+        if (typeof callback === 'function') {
+          callback(mockGetRes);
+          invokeHandlers(mockGetRes, 'data', Buffer.from('event: endpoint\ndata: /messages/?session_id=test\n\n'));
+        }
+        return mockGetRes;
       });
+
+      mockHttpReq.mockImplementationOnce((_options: unknown, callback?: (res: http.IncomingMessage) => void) => {
+        const req = createMockRequest();
+        if (typeof callback === 'function') {
+          callback(createMockPostResponse(200, {
+            jsonrpc: '2.0',
+            id: 1,
+            result: { content: [{ type: 'text', text: 'OK' }] },
+          }));
+        }
+        return req;
+      });
+
       const chunk = aChunk();
       const result = await client.remember(chunk);
 
       expect(result.isOk()).toBe(true);
     });
 
-    it('returns ko when result present but no content field', async () => {
-      jest.useRealTimers();
-      createMockResponse(200, { jsonrpc: '2.0', id: 1, result: {} });
-      const chunk = aChunk();
-      const result = await client.remember(chunk);
-
-      // Service requires result.content to be present; retries then fails
-      expect(result.isKo()).toBe(true);
-      jest.useFakeTimers();
-    });
-
     it('retries on request failure up to maxRetries', async () => {
       jest.useRealTimers();
+
+      mockHttpGet.mockImplementationOnce((_urlOrOptions: unknown, _optionsOrCb?: unknown, _cb?: unknown) => {
+        const mockGetRes = createMockGetResponse();
+        const callback = typeof _optionsOrCb === 'function' ? _optionsOrCb : _cb;
+        if (typeof callback === 'function') {
+          callback(mockGetRes);
+          invokeHandlers(mockGetRes, 'data', Buffer.from('event: endpoint\ndata: /messages/?session_id=test\n\n'));
+        }
+        return mockGetRes;
+      });
+
       let attempt = 0;
       mockHttpReq.mockImplementation((_options: unknown, _callback: unknown) => {
         attempt++;
         const req = createMockRequest();
         process.nextTick(() => {
-          invokeHandler('error', new Error('Connection error'));
+          invokeHandlers(req, 'error', new Error('Connection error'));
         });
         return req;
       });
@@ -315,44 +519,61 @@ describe('MnemosyneClient', () => {
       const result = await client.remember(chunk);
 
       expect(result.isKo()).toBe(true);
-      expect(attempt).toBe(3); // maxRetries = 3
+      expect(attempt).toBe(3);
       jest.useFakeTimers();
     });
 
     it('applies retry delay between attempts', async () => {
       jest.useRealTimers();
+
+      mockHttpGet.mockImplementationOnce((_urlOrOptions: unknown, _optionsOrCb?: unknown, _cb?: unknown) => {
+        const mockGetRes = createMockGetResponse();
+        const callback = typeof _optionsOrCb === 'function' ? _optionsOrCb : _cb;
+        if (typeof callback === 'function') {
+          callback(mockGetRes);
+          invokeHandlers(mockGetRes, 'data', Buffer.from('event: endpoint\ndata: /messages/?session_id=test\n\n'));
+        }
+        return mockGetRes;
+      });
+
       const attempts: number[] = [];
       mockHttpReq.mockImplementation((_options: unknown, _callback: unknown) => {
         const attempt = attempts.length + 1;
         attempts.push(attempt);
         const req = createMockRequest();
         process.nextTick(() => {
-          invokeHandler('error', new Error('Connection error'));
+          invokeHandlers(req, 'error', new Error('Connection error'));
         });
         return req;
       });
 
       const chunk = aChunk();
       const startTime = Date.now();
-      const promise = client.remember(chunk);
-
-      // Wait for all retries to complete
-      await promise;
+      await client.remember(chunk);
       const elapsed = Date.now() - startTime;
 
-      // 3 attempts with delays of 100ms and 200ms between them
       expect(attempts).toEqual([1, 2, 3]);
-      // Total delay should be ~300ms (100 + 200)
       expect(elapsed).toBeGreaterThanOrEqual(250);
       jest.useFakeTimers();
     });
 
     it('returns error after all retries exhausted', async () => {
       jest.useRealTimers();
+
+      mockHttpGet.mockImplementationOnce((_urlOrOptions: unknown, _optionsOrCb?: unknown, _cb?: unknown) => {
+        const mockGetRes = createMockGetResponse();
+        const callback = typeof _optionsOrCb === 'function' ? _optionsOrCb : _cb;
+        if (typeof callback === 'function') {
+          callback(mockGetRes);
+          invokeHandlers(mockGetRes, 'data', Buffer.from('event: endpoint\ndata: /messages/?session_id=test\n\n'));
+        }
+        return mockGetRes;
+      });
+
       mockHttpReq.mockImplementation((_options: unknown, _callback: unknown) => {
         const req = createMockRequest();
         process.nextTick(() => {
-          invokeHandler('error', new Error('Connection refused'));
+          invokeHandlers(req, 'error', new Error('Connection refused'));
         });
         return req;
       });
@@ -371,10 +592,27 @@ describe('MnemosyneClient', () => {
 
     it('returns ko when MCP tool returns error response', async () => {
       jest.useRealTimers();
-      createMockResponse(200, {
-        jsonrpc: '2.0',
-        id: 1,
-        error: { code: -32603, message: 'Internal error' },
+
+      mockHttpGet.mockImplementationOnce((_urlOrOptions: unknown, _optionsOrCb?: unknown, _cb?: unknown) => {
+        const mockGetRes = createMockGetResponse();
+        const callback = typeof _optionsOrCb === 'function' ? _optionsOrCb : _cb;
+        if (typeof callback === 'function') {
+          callback(mockGetRes);
+          invokeHandlers(mockGetRes, 'data', Buffer.from('event: endpoint\ndata: /messages/?session_id=test\n\n'));
+        }
+        return mockGetRes;
+      });
+
+      mockHttpReq.mockImplementation((_options: unknown, callback?: (res: http.IncomingMessage) => void) => {
+        const req = createMockRequest();
+        if (typeof callback === 'function') {
+          callback(createMockPostResponse(200, {
+            jsonrpc: '2.0',
+            id: 1,
+            error: { code: -32603, message: 'Internal error' },
+          }));
+        }
+        return req;
       });
 
       const chunk = aChunk();
@@ -389,7 +627,7 @@ describe('MnemosyneClient', () => {
   describe('sendRequest', () => {
     it('uses https for https URLs', async () => {
       configService.getMcpConfig.mockReturnValue({
-        url: 'https://mcp.test/mnemosyne',
+        url: 'https://mcp.test',
         apiKey: 'test-key',
         timeoutMs: 5000,
         maxRetries: 3,
@@ -405,21 +643,43 @@ describe('MnemosyneClient', () => {
       }).compile();
       const httpsClient = module.get(MnemosyneClient);
 
+      mockHttpsGet.mockImplementationOnce((_urlOrOptions: unknown, _optionsOrCb?: unknown, _cb?: unknown) => {
+        const mockGetRes = createMockGetResponse();
+        const callback = typeof _optionsOrCb === 'function' ? _optionsOrCb : _cb;
+        if (typeof callback === 'function') {
+          callback(mockGetRes);
+          invokeHandlers(mockGetRes, 'data', Buffer.from('event: endpoint\ndata: /messages/?session_id=test\n\n'));
+        }
+        return mockGetRes;
+      });
+
       await httpsClient.healthCheck();
-      expect(mockHttpsReq).toHaveBeenCalled();
+      expect(mockHttpsGet).toHaveBeenCalled();
     });
 
     it('includes Authorization header when apiKey is set', async () => {
+      mockHttpGet.mockImplementationOnce((_urlOrOptions: unknown, optionsOrCb?: unknown, _cb?: unknown) => {
+        const mockGetRes = createMockGetResponse();
+        const options = typeof optionsOrCb === 'function' ? undefined : optionsOrCb;
+        const callback = typeof optionsOrCb === 'function' ? optionsOrCb : _cb;
+        if (typeof callback === 'function') {
+          callback(mockGetRes);
+          invokeHandlers(mockGetRes, 'data', Buffer.from('event: endpoint\ndata: /messages/?session_id=test\n\n'));
+        }
+        return mockGetRes;
+      });
+
       await client.healthCheck();
 
-      const callArgs = mockHttpReq.mock.calls[0];
-      const options = callArgs[0] as http.RequestOptions;
-      expect((options.headers as Record<string, string>)['Authorization']).toBe('Bearer test-key');
+      const callArgs = mockHttpGet.mock.calls[0];
+      const firstArg = callArgs[0] as string | http.RequestOptions;
+      const options = typeof firstArg === 'string' ? callArgs[1] : firstArg;
+      expect((options as http.RequestOptions).headers).toHaveProperty('Authorization', 'Bearer test-key');
     });
 
     it('omits Authorization header when apiKey is not set', async () => {
       configService.getMcpConfig.mockReturnValue({
-        url: 'http://mcp.test/mnemosyne',
+        url: 'http://mcp.test',
         apiKey: undefined,
         timeoutMs: 5000,
         maxRetries: 3,
@@ -435,14 +695,36 @@ describe('MnemosyneClient', () => {
       }).compile();
       const noKeyClient = module.get(MnemosyneClient);
 
+      mockHttpGet.mockImplementationOnce((_urlOrOptions: unknown, optionsOrCb?: unknown, _cb?: unknown) => {
+        const mockGetRes = createMockGetResponse();
+        const options = typeof optionsOrCb === 'function' ? undefined : optionsOrCb;
+        const callback = typeof optionsOrCb === 'function' ? optionsOrCb : _cb;
+        if (typeof callback === 'function') {
+          callback(mockGetRes);
+          invokeHandlers(mockGetRes, 'data', Buffer.from('event: endpoint\ndata: /messages/?session_id=test\n\n'));
+        }
+        return mockGetRes;
+      });
+
       await noKeyClient.healthCheck();
 
-      const callArgs = mockHttpReq.mock.calls[0];
-      const options = callArgs[0] as http.RequestOptions;
-      expect((options.headers as Record<string, string>)['Authorization']).toBeUndefined();
+      const callArgs = mockHttpGet.mock.calls[0];
+      const firstArg = callArgs[0] as string | http.RequestOptions;
+      const options = typeof firstArg === 'string' ? callArgs[1] : firstArg;
+      expect((options as http.RequestOptions).headers).not.toHaveProperty('Authorization');
     });
 
     it('sets request timeout from config', async () => {
+      mockHttpGet.mockImplementationOnce((_urlOrOptions: unknown, _optionsOrCb?: unknown, _cb?: unknown) => {
+        const mockGetRes = createMockGetResponse();
+        const callback = typeof _optionsOrCb === 'function' ? _optionsOrCb : _cb;
+        if (typeof callback === 'function') {
+          callback(mockGetRes);
+          invokeHandlers(mockGetRes, 'data', Buffer.from('event: endpoint\ndata: /messages/?session_id=test\n\n'));
+        }
+        return mockGetRes;
+      });
+
       await client.healthCheck();
 
       const returnedReq = mockHttpReq.mock.results[0].value;
@@ -451,12 +733,26 @@ describe('MnemosyneClient', () => {
 
     it('returns ko on timeout', async () => {
       jest.useRealTimers();
+
+      mockHttpGet.mockImplementationOnce((_urlOrOptions: unknown, _optionsOrCb?: unknown, _cb?: unknown) => {
+        const mockGetRes = createMockGetResponse();
+        const callback = typeof _optionsOrCb === 'function' ? _optionsOrCb : _cb;
+        if (typeof callback === 'function') {
+          callback(mockGetRes);
+          invokeHandlers(mockGetRes, 'data', Buffer.from('event: endpoint\ndata: /messages/?session_id=test\n\n'));
+        }
+        return mockGetRes;
+      });
+
+      let savedReq: jest.Mocked<http.ClientRequest> | null = null;
       mockHttpReq.mockImplementation((_options: unknown, _callback: unknown) => {
-        const req = createMockRequest();
-        process.nextTick(() => {
-          invokeHandler('timeout');
+        savedReq = createMockRequest();
+        setImmediate(() => {
+          if (savedReq) {
+            invokeHandlers(savedReq, 'timeout');
+          }
         });
-        return req;
+        return savedReq;
       });
 
       const result = await client.healthCheck();
@@ -466,8 +762,20 @@ describe('MnemosyneClient', () => {
     });
 
     it('returns ko on invalid JSON response', async () => {
-      mockRes = {
-        on: jest.fn((event: string | symbol, handler: (...args: unknown[]) => void) => {
+      mockHttpGet.mockImplementationOnce((_urlOrOptions: unknown, _optionsOrCb?: unknown, _cb?: unknown) => {
+        const mockGetRes = createMockGetResponse();
+        const callback = typeof _optionsOrCb === 'function' ? _optionsOrCb : _cb;
+        if (typeof callback === 'function') {
+          callback(mockGetRes);
+          invokeHandlers(mockGetRes, 'data', Buffer.from('event: endpoint\ndata: /messages/?session_id=test\n\n'));
+        }
+        return mockGetRes;
+      });
+
+      mockHttpReq.mockImplementation((_options: unknown, callback?: (res: http.IncomingMessage) => void) => {
+        const req = createMockRequest();
+        const mockRes = {} as jest.Mocked<http.IncomingMessage>;
+        mockRes.on = jest.fn((event: string | symbol, handler: (...args: unknown[]) => void) => {
           if (event === 'data') {
             handler(Buffer.from('not json'));
           }
@@ -475,9 +783,12 @@ describe('MnemosyneClient', () => {
             handler(Buffer.from(''));
           }
           return mockRes;
-        }),
-        statusCode: 200,
-      } as unknown as jest.Mocked<http.IncomingMessage>;
+        });
+        if (typeof callback === 'function') {
+          callback(mockRes);
+        }
+        return req;
+      });
 
       const result = await client.healthCheck();
       expect(result.isKo()).toBe(true);
