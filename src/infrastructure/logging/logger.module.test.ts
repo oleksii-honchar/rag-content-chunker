@@ -2,7 +2,7 @@ import { ConfigModule } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 
 import { BasePinoLogger } from './base-pino-logger';
-import { LoggingModule } from './logger.module';
+import { LoggerModule } from './logger.module';
 import { NestjsPinoLogger } from './nestjs-pino-logger';
 
 describe('LoggingModule', () => {
@@ -11,7 +11,7 @@ describe('LoggingModule', () => {
 
   beforeEach(async () => {
     module = await Test.createTestingModule({
-      imports: [ConfigModule.forRoot({ isGlobal: true }), LoggingModule.forRootAsync()],
+      imports: [ConfigModule.forRoot({ isGlobal: true }), LoggerModule.forRootAsync()],
     }).compile();
 
     logger = await module.resolve<BasePinoLogger>(BasePinoLogger);
@@ -22,7 +22,7 @@ describe('LoggingModule', () => {
   });
 
   it('should be defined', () => {
-    expect(LoggingModule).toBeDefined();
+    expect(LoggerModule).toBeDefined();
   });
 
   it('should provide BasePinoLogger as NestjsPinoLogger', () => {

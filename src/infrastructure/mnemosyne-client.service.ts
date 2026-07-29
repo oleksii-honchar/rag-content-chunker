@@ -208,6 +208,50 @@ export class MnemosyneClient implements OnApplicationBootstrap {
   }
 
   /**
+   * Recalls/searches stored memories — used for e2e verification that chunks were actually stored.
+   */
+  async recall(query: string): Promise<Result<string[]>> {
+    this.logger.debug('Recalling memories', { query });
+
+    const request: McpToolRequest = {
+      jsonrpc: '2.0',
+      id: Date.now(),
+      method: 'tools/call',
+      params: {
+        name: 'memory_retrieve',
+        arguments: { query },
+      },
+    };
+
+    try {
+      // Ensure we have a session
+      if (!this.sessionId) {
+        const sessionResult = await this.establishSession();
+        if (!sessionResult.isOk()) {
+          return Result.ko(sessionResult.getError());
+        }
+      }
+
+      const response = await this.sendRequest(request);
+
+      if (response.error) {
+        return Result.ko(new ErrorWithDetails(`MCP error: ${response.error.message}`, 'McpToolError'));
+      }
+
+      const textContent = response.result?.content
+        ?.filter(c => c.type === 'text')
+        .map(c => c.text ?? '')
+        .filter(t => t.length > 0);
+
+      return Result.ok(textContent ?? []);
+    } catch (error) {
+      return Result.ko(
+        new ErrorWithDetails(error instanceof Error ? error.message : String(error), 'RecallError'),
+      );
+    }
+  }
+
+  /**
    * Establishes an SSE session with Mnemosyne MCP.
    * GET /sse → receive event: endpoint\ndata: /messages/?session_id=xxx
    */
@@ -227,7 +271,8 @@ export class MnemosyneClient implements OnApplicationBootstrap {
         },
       };
 
-      const req = lib.get(options, res => {
+      let request: http.ClientRequest | null = null;
+      request = lib.get(options, res => {
         let buffer = '';
 
         res.on('data', (chunk: Buffer) => {
@@ -241,7 +286,7 @@ export class MnemosyneClient implements OnApplicationBootstrap {
               const sessionId = this.extractSessionId(endpoint);
               if (sessionId) {
                 this.sessionId = sessionId;
-                req.destroy(); // Close SSE connection after getting session_id
+                request?.destroy(); // Close SSE connection after getting session_id
                 resolve(Result.ok(sessionId));
                 return;
               }
@@ -258,7 +303,7 @@ export class MnemosyneClient implements OnApplicationBootstrap {
         });
       });
 
-      req.on('error', error => {
+      request.on('error', error => {
         resolve(
           Result.ko(
             new ErrorWithDetails(
@@ -269,8 +314,8 @@ export class MnemosyneClient implements OnApplicationBootstrap {
         );
       });
 
-      req.setTimeout(this.timeoutMs, () => {
-        req.destroy();
+      request?.setTimeout(this.timeoutMs, () => {
+        request?.destroy();
         resolve(
           Result.ko(new ErrorWithDetails(`SSE connection timeout after ${this.timeoutMs}ms`, 'SseTimeout')),
         );

@@ -14,7 +14,7 @@ import { ConfigurationModule } from './infrastructure/config/configuration.modul
 import { FileProcessingQueue } from './infrastructure/file-processing-queue.service';
 import { FileWatcherService } from './infrastructure/file-watcher.service';
 import { GracefulShutdownService } from './infrastructure/graceful-shutdown.service';
-import { LoggingModule } from './infrastructure/logging/logger.module';
+import { LoggerModule } from './infrastructure/logging/logger.module';
 import { MnemosyneClient } from './infrastructure/mnemosyne-client.service';
 import { ChunkContentUseCase } from './use-cases/chunk-content.use-case';
 import { IngestChunkUseCase } from './use-cases/ingest-chunk.use-case';
@@ -53,7 +53,7 @@ const configLoader = (): Record<string, unknown> => {
       verboseMemoryLeak: false,
       ignoreErrors: false,
     }),
-    LoggingModule.forRootAsync(),
+    LoggerModule.forRootAsync(),
     ConfigurationModule,
     DomainModule,
   ],
@@ -80,4 +80,4 @@ const configLoader = (): Record<string, unknown> => {
     MnemosyneClient,
   ],
 })
-export class AppModule {}
+export class AppModule { }

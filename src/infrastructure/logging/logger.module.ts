@@ -9,10 +9,10 @@ import { pinoLoggerConfigFactory } from './pino-logger-config.factory';
 
 @Global()
 @Module({})
-export class LoggingModule {
+export class LoggerModule {
   static forRootAsync(): DynamicModule {
     return {
-      module: LoggingModule,
+      module: LoggerModule,
       imports: [
         PinoLoggerModule.forRootAsync({
           inject: [ConfigService],
@@ -32,10 +32,10 @@ export class LoggingModule {
             const base = pinoHttpConfig?.base ?? { service: 'rag-content-chunker' };
 
             // In test env: simple logger, no transports (avoids worker thread issues)
-            if (isTest) {
-              const logger = pino({ level, base });
-              return new NestjsPinoLogger(logger);
-            }
+            // if (isTest) {
+            //   const logger = pino({ level, base });
+            //   return new NestjsPinoLogger(logger);
+            // }
 
             // Production: include transport config
             const logger = pino({

@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
-import { LoggingModule } from '../logging/logger.module';
+import { LoggerModule } from '../logging/logger.module';
 import { ConfigurationService } from './configuration.service';
 
 @Module({
-  imports: [LoggingModule],
+  imports: [LoggerModule],
   providers: [
     ConfigurationService,
     {
@@ -15,4 +15,4 @@ import { ConfigurationService } from './configuration.service';
   ],
   exports: [ConfigurationService, 'CONFIG_FILE_PATH'],
 })
-export class ConfigurationModule {}
+export class ConfigurationModule { }

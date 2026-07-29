@@ -51,7 +51,7 @@ export function pinoLoggerConfigFactory(configService: ConfigService): Params {
     timestamp: () => string;
     base: Record<string, unknown>;
     transport?: {
-      targets: Array<{ target: string; options: Record<string, unknown>; level?: string }>;
+      targets: { target: string; options: Record<string, unknown>; level?: string }[];
     };
   } = {
     level: isLocalLogVerbose ? 'debug' : logLevel,
@@ -63,7 +63,7 @@ export function pinoLoggerConfigFactory(configService: ConfigService): Params {
     },
   };
 
-  const transports: Array<{ target: string; options: Record<string, unknown>; level?: string }> = [];
+  const transports: { target: string; options: Record<string, unknown>; level?: string }[] = [];
 
   // Console transport: pretty-printed for terminal
   transports.push({
