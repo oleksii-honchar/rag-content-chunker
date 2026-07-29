@@ -61,6 +61,10 @@ describe('[E2E] FileWatcher Flow — file creation → watch → chunk → inges
     const recallResult = await mnemosyneClient!.recall('chunking');
     expect(recallResult.isOk()).toBe(true);
     const results = recallResult.getValue();
+    console.log(`[E2E-FileWatcher] Recall("chunking") returned ${results.length} results`);
+    if (results.length > 0) {
+      console.log(`[E2E-FileWatcher] First result: ${JSON.stringify(results[0]).slice(0, 200)}`);
+    }
     // Mnemosyne may return related results via semantic search
     expect(results.length).toBeGreaterThan(0);
   }, 120000);
