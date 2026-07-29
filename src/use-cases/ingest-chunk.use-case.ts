@@ -22,7 +22,7 @@ export class IngestChunkUseCase extends BaseUseCase<IngestChunkParams, void> {
     logger: BasePinoLogger,
   ) {
     super(logger);
-    this.logger = this.logger.child({ component: '[IngestChunkUseCase]' });
+    this.logger = this.logger.child({ component: 'IngestChunkUseCase' });
   }
 
   protected validateParams(params: IngestChunkParams): Result<IngestChunkParams> {
@@ -39,7 +39,7 @@ export class IngestChunkUseCase extends BaseUseCase<IngestChunkParams, void> {
   }
 
   protected async executeInternal(params: IngestChunkParams): Promise<Result<void>> {
-    this.logger.debug('Ingesting chunks', { chunkCount: params.chunks.length, sourceId: params.sourceId });
+    this.logger.debug(`Ingesting chunks: count=${params.chunks.length}, source="${params.sourceId}"`);
 
     if (params.chunks.length === 0) {
       this.logger.debug('No chunks to ingest');
@@ -55,20 +55,14 @@ export class IngestChunkUseCase extends BaseUseCase<IngestChunkParams, void> {
         const result = await this.mnemosyneClient.remember(chunk);
         if (result.isOk()) {
           successCount++;
-          this.logger.debug('Chunk ingested', {
-            chunkId: chunk.id,
-            chunkIndex: chunk.chunkIndex,
-          });
+          this.logger.debug(`Chunk ingested: id="${chunk.id}", index=${chunk.chunkIndex}`);
         } else {
           failureCount++;
           errors.push({
             chunkId: chunk.id,
             error: result.getError().message,
           });
-          this.logger.error('Chunk ingestion failed', {
-            chunkId: chunk.id,
-            error: result.getError().message,
-          });
+          this.logger.error(`Chunk ingestion failed: id="${chunk.id}", error="${result.getError().message}"`);
         }
       } catch (error) {
         failureCount++;
@@ -76,19 +70,15 @@ export class IngestChunkUseCase extends BaseUseCase<IngestChunkParams, void> {
           chunkId: chunk.id,
           error: error instanceof Error ? error.message : String(error),
         });
-        this.logger.error('Chunk ingestion threw', {
-          chunkId: chunk.id,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        this.logger.error(
+          `Chunk ingestion threw: id="${chunk.id}", error="${error instanceof Error ? error.message : String(error)}"`,
+        );
       }
     }
 
-    this.logger.info('Chunk ingestion completed', {
-      sourceId: params.sourceId,
-      totalChunks: params.chunks.length,
-      successCount,
-      failureCount,
-    });
+    this.logger.info(
+      `Chunk ingestion completed: source="${params.sourceId}", total=${params.chunks.length}, success=${successCount}, failed=${failureCount}`,
+    );
 
     if (failureCount > 0 && successCount === 0) {
       return Result.ko(
@@ -100,9 +90,9 @@ export class IngestChunkUseCase extends BaseUseCase<IngestChunkParams, void> {
     }
 
     if (failureCount > 0) {
-      this.logger.warn('Partial chunk ingestion failure', {
-        errors,
-      });
+      this.logger.warn(
+        `Partial chunk ingestion: ${failureCount}/${params.chunks.length} failed: ${errors.map(e => `${e.chunkId}(${e.error})`).join('; ')}`,
+      );
     }
 
     return Result.ok(undefined as unknown as void);

@@ -33,7 +33,7 @@ export class ProcessFileUseCase extends BaseUseCase<ProcessFileParams, void> {
     logger: BasePinoLogger,
   ) {
     super(logger);
-    this.logger = this.logger.child({ component: '[ProcessFileUseCase]' });
+    this.logger = this.logger.child({ component: 'ProcessFileUseCase' });
   }
 
   protected validateParams(params: ProcessFileParams): Result<ProcessFileParams> {
@@ -50,11 +50,9 @@ export class ProcessFileUseCase extends BaseUseCase<ProcessFileParams, void> {
   }
 
   protected async executeInternal(params: ProcessFileParams): Promise<Result<void>> {
-    this.logger.debug('Processing file', {
-      filePath: params.filePath,
-      eventType: params.eventType,
-      sourceId: params.sourceId,
-    });
+    this.logger.debug(
+      `Processing file: path="${params.filePath}", event="${params.eventType}", source="${params.sourceId}"`,
+    );
 
     // Queue the processing
     await this.processingQueue.addToQueue(async () => {
@@ -75,11 +73,9 @@ export class ProcessFileUseCase extends BaseUseCase<ProcessFileParams, void> {
       }
 
       if (result.isKo()) {
-        this.logger.error('File processing failed', {
-          filePath: params.filePath,
-          eventType: params.eventType,
-          error: result.getError().message,
-        });
+        this.logger.error(
+          `File processing failed: path="${params.filePath}", event="${params.eventType}", error="${result.getError().message}"`,
+        );
       }
     });
 
@@ -92,10 +88,9 @@ export class ProcessFileUseCase extends BaseUseCase<ProcessFileParams, void> {
     try {
       content = await fs.readFile(params.filePath, 'utf-8');
     } catch (error) {
-      this.logger.error('Failed to read file', {
-        filePath: params.filePath,
-        error: error instanceof Error ? error.message : String(error),
-      });
+      this.logger.error(
+        `Failed to read file: path="${params.filePath}", error="${error instanceof Error ? error.message : String(error)}"`,
+      );
       return Result.ko(
         new ErrorWithDetails(error instanceof Error ? error.message : String(error), 'FileReadError', {
           filePath: params.filePath,
@@ -111,20 +106,19 @@ export class ProcessFileUseCase extends BaseUseCase<ProcessFileParams, void> {
     });
 
     if (chunksResult.isKo()) {
-      this.logger.error('Failed to chunk content', {
-        filePath: params.filePath,
-        error: chunksResult.getError().message,
-      });
+      this.logger.error(
+        `Failed to chunk content: path="${params.filePath}", error="${chunksResult.getError().message}"`,
+      );
       return chunksResult as unknown as Result<void>;
     }
 
     const chunks = chunksResult.getValue();
     if (chunks.length === 0) {
-      this.logger.debug('No chunks generated', { filePath: params.filePath });
+      this.logger.debug(`No chunks generated: path="${params.filePath}"`);
       return Result.ok(undefined as unknown as void);
     }
 
-    this.logger.info('Chunks created', { filePath: params.filePath, chunkCount: chunks.length });
+    this.logger.info(`Chunks created: path="${params.filePath}", chunks=${chunks.length}`);
 
     // Ingest chunks
     const ingestResult = await this.ingestChunkUseCase.execute({
@@ -137,27 +131,21 @@ export class ProcessFileUseCase extends BaseUseCase<ProcessFileParams, void> {
     });
 
     if (ingestResult.isKo()) {
-      this.logger.error('Failed to ingest chunks', {
-        filePath: params.filePath,
-        error: ingestResult.getError().message,
-      });
+      this.logger.error(
+        `Failed to ingest chunks: path="${params.filePath}", error="${ingestResult.getError().message}"`,
+      );
       return ingestResult as unknown as Result<void>;
     }
 
-    this.logger.info('File processed successfully', {
-      filePath: params.filePath,
-      eventType: params.eventType,
-      chunkCount: chunks.length,
-    });
+    this.logger.info(
+      `File processed: path="${params.filePath}", event="${params.eventType}", chunks=${chunks.length}`,
+    );
 
     return Result.ok(undefined as unknown as void);
   }
 
   private async handleDelete(params: ProcessFileParams): Promise<Result<void>> {
-    this.logger.info('File deleted', {
-      filePath: params.filePath,
-      sourceId: params.sourceId,
-    });
+    this.logger.info(`File deleted: path="${params.filePath}", source="${params.sourceId}"`);
     // MCP deletion handled separately
     return Result.ok(undefined as unknown as void);
   }

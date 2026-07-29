@@ -28,7 +28,12 @@ export class LoggerModule {
             const pinoHttpConfig = params.pinoHttp as Record<string, unknown>;
 
             const level = String(pinoHttpConfig?.level ?? 'info');
-            const base = pinoHttpConfig?.base ?? { service: 'rag-content-chunker' };
+            const environment = configService.get<string>('nodeEnv') ?? process.env.NODE_ENV ?? 'development';
+            const base = {
+              ...(pinoHttpConfig?.base ?? {}),
+              service: 'rag-content-chunker',
+              environment,
+            };
 
             // Production: include transport config
             const logger = pino({

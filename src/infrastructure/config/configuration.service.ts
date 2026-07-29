@@ -94,7 +94,7 @@ export class ConfigurationService implements OnApplicationBootstrap {
     logger: BasePinoLogger,
     @Inject('CONFIG_FILE_PATH') private readonly configFilePath: string,
   ) {
-    this.logger = logger.child({ component: '[ConfigurationService]' });
+    this.logger = logger.child({ component: 'ConfigurationService', configPath: this.configFilePath });
   }
 
   async load(): Promise<Result<Configuration>> {
@@ -120,10 +120,9 @@ export class ConfigurationService implements OnApplicationBootstrap {
       }
 
       this.config = result.data;
-      this.logger.info('Configuration loaded successfully', {
-        configPath: this.configFilePath,
-        watchSourceCount: this.config.watchSources.length,
-      });
+      this.logger.info(
+        `Configuration loaded: path="${this.configFilePath}", watchSources=${this.config.watchSources.length}`,
+      );
 
       return Result.ok(this.config);
     } catch (error) {
@@ -182,7 +181,7 @@ export class ConfigurationService implements OnApplicationBootstrap {
 
       await fs.writeFile(this.configFilePath, header + yamlContent);
 
-      this.logger.info('Default configuration created', { configPath: this.configFilePath });
+      this.logger.info(`Default configuration created: path="${this.configFilePath}"`);
 
       return Result.ok(undefined);
     } catch (error) {
@@ -214,7 +213,7 @@ export class ConfigurationService implements OnApplicationBootstrap {
           this.config = DEFAULT_CONFIG;
         }
       } else {
-        this.logger.warn(`Configuration load failed: ${err.message}. Using defaults.`);
+        this.logger.warn(`Configuration load failed, using defaults: ${err.message}`);
         this.config = DEFAULT_CONFIG;
       }
     }
@@ -255,7 +254,7 @@ export class ConfigurationService implements OnApplicationBootstrap {
 
       this.watcher.on('error', (error: unknown) => {
         const message = error instanceof Error ? error.message : String(error);
-        this.logger.error('Config watcher error', { error: message });
+        this.logger.error(`Config watcher error: ${message}`);
       });
     } catch (error) {
       this.logger.warn(`Failed to start config watcher: ${(error as Error).message}`);

@@ -16,11 +16,11 @@ export class ForceReprocessService {
     private readonly processingQueue: FileProcessingQueue,
     logger: BasePinoLogger,
   ) {
-    this.logger = logger.child({ service: 'ForceReprocessService' });
+    this.logger = logger.child({ component: 'ForceReprocessService' });
   }
 
   async forceReprocessAll(sources: WatchSourceConfig[]): Promise<void> {
-    this.logger.info('Force reprocessing all sources', { sourceCount: sources.length });
+    this.logger.info(`Force reprocessing all sources: count=${sources.length}`);
 
     for (const source of sources) {
       await this.processSource(source);
@@ -28,11 +28,11 @@ export class ForceReprocessService {
   }
 
   async forceReprocessSource(sourceId: string, sources: WatchSourceConfig[]): Promise<void> {
-    this.logger.info('Force reprocessing source', { sourceId });
+    this.logger.info(`Force reprocessing source: id="${sourceId}"`);
 
     const source = sources.find(s => s.id === sourceId);
     if (!source) {
-      this.logger.error('Source not found', { sourceId });
+      this.logger.error(`Source not found: id="${sourceId}"`);
       return;
     }
 
@@ -42,11 +42,9 @@ export class ForceReprocessService {
   private async processSource(source: WatchSourceConfig): Promise<void> {
     try {
       const files = await this.getFiles(source);
-      this.logger.info('Files found for reprocessing', {
-        sourceId: source.id,
-        path: source.path,
-        fileCount: files.length,
-      });
+      this.logger.info(
+        `Files found for reprocessing: source="${source.id}", path="${source.path}", count=${files.length}`,
+      );
 
       // Add each file to processing queue (sequential)
       for (const file of files) {
@@ -58,18 +56,16 @@ export class ForceReprocessService {
           });
 
           if (result.isKo()) {
-            this.logger.error('File reprocessing failed', {
-              filePath: file,
-              error: result.getError().message,
-            });
+            this.logger.error(
+              `File reprocessing failed: path="${file}", error="${result.getError().message}"`,
+            );
           }
         });
       }
     } catch (error) {
-      this.logger.error('Failed to process source', {
-        sourceId: source.id,
-        error: error instanceof Error ? error.message : String(error),
-      });
+      this.logger.error(
+        `Failed to process source: id="${source.id}", error="${error instanceof Error ? error.message : String(error)}"`,
+      );
     }
   }
 
@@ -79,16 +75,15 @@ export class ForceReprocessService {
     try {
       const stats = await fs.stat(resolvedPath);
       if (!stats.isDirectory()) {
-        this.logger.warn('Source path is not a directory', { path: resolvedPath });
+        this.logger.warn(`Source path is not a directory: "${resolvedPath}"`);
         return [];
       }
 
       return this.scanDirectory(resolvedPath, source);
     } catch (error) {
-      this.logger.error('Failed to stat source path', {
-        path: resolvedPath,
-        error: error instanceof Error ? error.message : String(error),
-      });
+      this.logger.error(
+        `Failed to stat source path: "${resolvedPath}", error="${error instanceof Error ? error.message : String(error)}"`,
+      );
       return [];
     }
   }
@@ -122,10 +117,9 @@ export class ForceReprocessService {
         }
       }
     } catch (error) {
-      this.logger.warn('Failed to read directory', {
-        dirPath,
-        error: error instanceof Error ? error.message : String(error),
-      });
+      this.logger.warn(
+        `Failed to read directory: "${dirPath}", error="${error instanceof Error ? error.message : String(error)}"`,
+      );
     }
 
     return files;

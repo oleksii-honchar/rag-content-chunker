@@ -55,6 +55,13 @@ export function pinoLoggerConfigFactory(configService: ConfigService): Params {
   const transports: { target: string; options: Record<string, unknown>; level?: string }[] = [];
 
   // Console transport: pretty-printed for terminal
+  const msgFormat = isLocalLogVerbose
+    ? {}
+    : {
+        messageFormat: '{if component}[{component}] {end}{msg}',
+        include: 'level,name,time',
+      };
+
   transports.push({
     target: 'pino-pretty',
     options: {
@@ -64,12 +71,7 @@ export function pinoLoggerConfigFactory(configService: ConfigService): Params {
       translateTime: 'yyyy-mm-dd HH:MM:ss',
       singleLine: false,
       ignore: 'pid,hostname',
-      ...(isLocalLogVerbose
-        ? {}
-        : {
-          messageFormat: '{component ? "[" + component + "] " : ""}{msg}',
-          include: 'level,name,time',
-        }),
+      ...msgFormat,
     },
   });
 

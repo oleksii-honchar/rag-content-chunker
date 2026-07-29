@@ -58,14 +58,14 @@ async function bootstrap(): Promise<void> {
   const fileWatcherService = app.get(FileWatcherService);
   const processingQueue = app.get(FileProcessingQueue);
 
-  logger.info('rag-content-chunker starting', {
-    configPath: args.config,
-    verbose: args.verbose,
-    watchMode: args.watch,
-    processOnly: args.processOnly,
-    forceReprocess: args.forceReprocess,
-    source: args.source,
-  });
+  const mode = args.forceReprocess
+    ? `force-reprocess${args.source ? ` (${args.source})` : ' (all)'}`
+    : args.processOnly
+      ? 'process-only'
+      : 'watch';
+  logger.info(
+    `rag-content-chunker starting: mode="${mode}", verbose=${args.verbose}, config="${args.config}"${args.source ? `, source="${args.source}"` : ''}`,
+  );
 
   const sources = configurationService.getWatchSources();
   logger.info(`Loaded ${sources.length} watch sources`);
@@ -116,7 +116,7 @@ async function bootstrap(): Promise<void> {
     if (startResult.isOk()) {
       logger.info('File watcher started. Watching for changes...');
     } else {
-      logger.error('Failed to start file watcher', { error: startResult.getError().message });
+      logger.error(`Failed to start file watcher: ${startResult.getError().message}`);
     }
   }
 

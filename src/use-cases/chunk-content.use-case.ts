@@ -25,7 +25,7 @@ export class ChunkContentUseCase extends BaseUseCase<ChunkContentParams, Chunk[]
     logger: BasePinoLogger,
   ) {
     super(logger);
-    this.logger = this.logger.child({ component: '[ChunkContentUseCase]' });
+    this.logger = this.logger.child({ component: 'ChunkContentUseCase' });
   }
 
   protected validateParams(params: ChunkContentParams): Result<ChunkContentParams> {
@@ -42,20 +42,16 @@ export class ChunkContentUseCase extends BaseUseCase<ChunkContentParams, Chunk[]
   }
 
   protected async executeInternal(params: ChunkContentParams): Promise<Result<Chunk[]>> {
-    this.logger.debug('Chunking content', {
-      filePath: params.filePath,
-      contentLength: params.content.length,
-    });
+    this.logger.debug(`Chunking content: path="${params.filePath}", length=${params.content.length}`);
 
     const strategy = this.strategyFactory.determineStrategy(params.filePath);
-    this.logger.debug('Using chunking strategy', { strategy, filePath: params.filePath });
+    this.logger.debug(`Using chunking strategy: "${strategy}" for path="${params.filePath}"`);
 
     const chunkerResult = this.strategyFactory.createChunker(strategy);
     if (chunkerResult.isKo()) {
-      this.logger.error('Failed to create chunker', {
-        error: chunkerResult.getError().message,
-        strategy,
-      });
+      this.logger.error(
+        `Failed to create chunker: strategy="${strategy}", error="${chunkerResult.getError().message}"`,
+      );
       return chunkerResult as unknown as Result<Chunk[]>;
     }
 
@@ -71,15 +67,16 @@ export class ChunkContentUseCase extends BaseUseCase<ChunkContentParams, Chunk[]
 
     const chunksResult = await chunker.chunk(params.content, chunkConfig);
     if (chunksResult.isKo()) {
-      this.logger.error('Chunking failed', {
-        error: chunksResult.getError().message,
-        filePath: params.filePath,
-      });
+      this.logger.error(
+        `Chunking failed: path="${params.filePath}", error="${chunksResult.getError().message}"`,
+      );
       return chunksResult;
     }
 
     const chunks = chunksResult.getValue();
-    this.logger.info('Content chunked', { filePath: params.filePath, strategy, chunkCount: chunks.length });
+    this.logger.info(
+      `Content chunked: path="${params.filePath}", strategy="${strategy}", chunks=${chunks.length}`,
+    );
 
     return Result.ok(chunks);
   }

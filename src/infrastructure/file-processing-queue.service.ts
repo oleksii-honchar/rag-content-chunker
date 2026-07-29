@@ -11,7 +11,7 @@ export class FileProcessingQueue {
   private processing = false;
 
   constructor(logger: BasePinoLogger) {
-    this.logger = logger.child({ component: '[FileProcessingQueue]' });
+    this.logger = logger.child({ component: 'FileProcessingQueue' });
   }
 
   async addToQueue(task: () => Promise<void>): Promise<void> {
@@ -33,9 +33,9 @@ export class FileProcessingQueue {
         try {
           await item.task();
         } catch (error) {
-          this.logger.error('Task failed in processing queue', {
-            error: error instanceof Error ? error.message : String(error),
-          });
+          this.logger.error(
+            `Task failed in processing queue: ${error instanceof Error ? error.message : String(error)}`,
+          );
         } finally {
           item.resolve();
         }

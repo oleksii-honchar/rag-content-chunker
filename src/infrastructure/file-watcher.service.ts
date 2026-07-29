@@ -14,55 +14,51 @@ import { BasePinoLogger } from './logging/base-pino-logger';
 @Injectable()
 export class FileWatcherService implements OnApplicationBootstrap, OnApplicationShutdown {
   private readonly logger: BasePinoLogger;
-  private watchers = new Map<string, chokidar.FSWatcher>();
+  private watchers = new Map<string, { watcher: chokidar.FSWatcher; sourceId: string; sourcePath: string }>();
 
   constructor(
     private readonly configService: ConfigurationService,
     private readonly eventEmitter: AppEventEmitter,
     logger: BasePinoLogger,
   ) {
-    this.logger = logger.child({ component: '[FileWatcherService]' });
+    this.logger = logger.child({ component: 'FileWatcherService' });
   }
 
   async onApplicationBootstrap(): Promise<void> {
-    this.logger.info('Starting file watcher service', {
-      sourceCount: this.configService.getWatchSources().length,
-    });
+    this.logger.info(`Starting file watcher service: sources=${this.configService.getWatchSources().length}`);
     const result = await this.start();
     if (result.isKo()) {
-      this.logger.error('Failed to start file watcher', { error: result.getError().message });
+      this.logger.error(`Failed to start file watcher: ${result.getError().message}`);
     }
   }
 
   async start(): Promise<Result<void>> {
     const sources = this.configService.getWatchSources();
-    this.logger.info('Loading watch sources', { sourceCount: sources.length });
+    this.logger.info(`Loading watch sources: count=${sources.length}`);
 
     for (const source of sources) {
       const startResult = await this.startWatchingSource(source);
       if (startResult.isKo()) {
-        this.logger.error('Failed to start watching source', {
-          sourceId: source.id,
-          error: startResult.getError().message,
-        });
+        this.logger.error(
+          `Failed to start watching source: id="${source.id}", error="${startResult.getError().message}"`,
+        );
       }
     }
 
-    this.logger.info('File watcher started', { activeWatchers: this.watchers.size });
+    this.logger.info(`File watcher started: activeWatchers=${this.watchers.size}`);
     return Result.ok(undefined as unknown as void);
   }
 
   async stop(): Promise<Result<void>> {
     for (const entry of Array.from(this.watchers.entries())) {
-      const [sourceId, watcher] = entry;
+      const [sourceId, { watcher, sourcePath }] = entry;
       try {
         await watcher.close();
-        this.logger.info('Stopped watching source', { sourceId });
+        this.logger.info(`Stopped watching source: id="${sourceId}", path="${sourcePath}"`);
       } catch (error) {
-        this.logger.error('Error stopping watcher', {
-          sourceId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        this.logger.error(
+          `Error stopping watcher: id="${sourceId}", error="${error instanceof Error ? error.message : String(error)}"`,
+        );
       }
     }
     this.watchers.clear();
@@ -76,11 +72,9 @@ export class FileWatcherService implements OnApplicationBootstrap, OnApplication
   private async startWatchingSource(source: WatchSourceConfig): Promise<Result<void>> {
     try {
       const resolvedPath = this.resolvePath(source.path);
-      this.logger.info('Watching source', {
-        sourceId: source.id,
-        path: resolvedPath,
-        includePatterns: source.include,
-      });
+      this.logger.info(
+        `Watching source: id="${source.id}", path="${resolvedPath}", includes=[${source.include.join(', ')}]`,
+      );
 
       const watcher = chokidar.watch(resolvedPath, {
         ignored: this.buildIgnorePatterns(source),
@@ -97,13 +91,12 @@ export class FileWatcherService implements OnApplicationBootstrap, OnApplication
       emitter.on('change', (filePath: string) => this.handleFileChanged(filePath, source.id));
       emitter.on('unlink', (filePath: string) => this.handleFileDeleted(filePath, source.id));
       emitter.on('error', (error: unknown) => {
-        this.logger.error('Watcher error', {
-          sourceId: source.id,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        this.logger.error(
+          `Watcher error: source="${source.id}", path="${resolvedPath}", error="${error instanceof Error ? error.message : String(error)}"`,
+        );
       });
 
-      this.watchers.set(source.id, watcher);
+      this.watchers.set(source.id, { watcher, sourceId: source.id, sourcePath: resolvedPath });
       return Result.ok(undefined as unknown as void);
     } catch (error) {
       return Result.ko(
@@ -113,7 +106,7 @@ export class FileWatcherService implements OnApplicationBootstrap, OnApplication
   }
 
   private handleFileAdded(filePath: string, sourceId: string): void {
-    this.logger.debug('File added', { filePath, sourceId, eventType: 'add' });
+    this.logger.debug(`File added: path="${filePath}", source="${sourceId}"`);
     const result = FileChange.add(filePath);
     if (result.isOk()) {
       this.eventEmitter.publishMany(result.getValue().events);
@@ -121,7 +114,7 @@ export class FileWatcherService implements OnApplicationBootstrap, OnApplication
   }
 
   private handleFileChanged(filePath: string, sourceId: string): void {
-    this.logger.debug('File changed', { filePath, sourceId, eventType: 'change' });
+    this.logger.debug(`File changed: path="${filePath}", source="${sourceId}"`);
     const result = FileChange.change(filePath);
     if (result.isOk()) {
       this.eventEmitter.publishMany(result.getValue().events);
@@ -129,7 +122,7 @@ export class FileWatcherService implements OnApplicationBootstrap, OnApplication
   }
 
   private handleFileDeleted(filePath: string, sourceId: string): void {
-    this.logger.debug('File deleted', { filePath, sourceId, eventType: 'delete' });
+    this.logger.debug(`File deleted: path="${filePath}", source="${sourceId}"`);
     const result = FileChange.delete(filePath);
     if (result.isOk()) {
       this.eventEmitter.publishMany(result.getValue().events);
