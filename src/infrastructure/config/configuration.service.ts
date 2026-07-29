@@ -22,10 +22,8 @@ const DEFAULT_CONFIG: Configuration = {
     {
       id: 'agent-sessions',
       path: '~/.agent-sessions',
-      include: ['*.md'],
-      exclude: ['**/archive/**'],
+      exclude: ['**/archive/**', '**/.git/**', '**/.smart-env/**'],
       debounceMs: 5000,
-      ignorePatterns: [],
     },
   ],
   chunking: {
@@ -165,7 +163,7 @@ export class ConfigurationService implements OnApplicationBootstrap {
 
       await fs.writeFile(this.configFilePath, header + yamlContent);
 
-      this.logger.info(`Default configuration created: path="${this.configFilePath}"`);
+      this.logger.info(`Default configuration created; path="${this.configFilePath}"`);
 
       return Result.ok(undefined);
     } catch (error) {

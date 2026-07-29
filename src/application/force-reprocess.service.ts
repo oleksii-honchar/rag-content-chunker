@@ -28,11 +28,11 @@ export class ForceReprocessService {
   }
 
   async forceReprocessSource(sourceId: string, sources: WatchSourceConfig[]): Promise<void> {
-    this.logger.info(`Force reprocessing source: id="${sourceId}"`);
+    this.logger.info(`Force reprocessing source; id="${sourceId}"`);
 
     const source = sources.find(s => s.id === sourceId);
     if (!source) {
-      this.logger.error(`Source not found: id="${sourceId}"`);
+      this.logger.error(`Source not found; id="${sourceId}"`);
       return;
     }
 
@@ -75,7 +75,7 @@ export class ForceReprocessService {
     try {
       const stats = await fs.stat(resolvedPath);
       if (!stats.isDirectory()) {
-        this.logger.warn(`Source path is not a directory: "${resolvedPath}"`);
+        this.logger.warn(`Source path is not a directory; "${resolvedPath}"`);
         return [];
       }
 
@@ -106,13 +106,9 @@ export class ForceReprocessService {
           const subFiles = await this.scanDirectory(fullPath, source);
           files.push(...subFiles);
         } else if (entry.isFile()) {
-          // Check include patterns
-          if (this.matchesInclude(entry.name, source.include)) {
-            // Check exclude patterns
-            const relPath = path.relative(this.resolvePath(source.path), fullPath);
-            if (!this.isExcluded(relPath, source.exclude)) {
-              files.push(fullPath);
-            }
+          const relPath = path.relative(this.resolvePath(source.path), fullPath);
+          if (!this.isExcluded(relPath, source.exclude)) {
+            files.push(fullPath);
           }
         }
       }
@@ -123,15 +119,6 @@ export class ForceReprocessService {
     }
 
     return files;
-  }
-
-  private matchesInclude(filename: string, patterns: string[]): boolean {
-    for (const pattern of patterns) {
-      if (this.matchGlob(filename, pattern)) {
-        return true;
-      }
-    }
-    return false;
   }
 
   private isExcluded(relPath: string, patterns: string[]): boolean {

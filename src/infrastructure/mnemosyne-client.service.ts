@@ -153,10 +153,10 @@ export class MnemosyneClient implements OnApplicationBootstrap {
           );
           lastError = new ErrorWithDetails(`MCP error: ${response.error.message}`, 'McpToolError');
         } else if (response.result?.content) {
-          this.logger.debug(`Chunk remembered: id="${chunk.id}", attempt=${attempt}`);
+          this.logger.debug(`Chunk remembered; id="${chunk.id}", attempt=${attempt}`);
           return Result.ok(undefined as unknown as void);
         } else {
-          this.logger.warn(`Unexpected MCP response: chunkId="${chunk.id}", attempt=${attempt}`);
+          this.logger.warn(`Unexpected MCP response; chunkId="${chunk.id}", attempt=${attempt}`);
           lastError = new ErrorWithDetails('Unexpected MCP response', 'UnexpectedMcpResponse');
         }
       } catch (error) {
@@ -183,7 +183,7 @@ export class MnemosyneClient implements OnApplicationBootstrap {
 
   async healthCheck(): Promise<Result<boolean>> {
     this.ensureConfigLoaded();
-    this.logger.debug(`Health checking Mnemosyne MCP: baseUrl="${this.baseUrl}"`);
+    this.logger.debug(`Health checking Mnemosyne MCP; baseUrl="${this.baseUrl}"`);
 
     try {
       // Need a session to send any request
@@ -215,7 +215,7 @@ export class MnemosyneClient implements OnApplicationBootstrap {
    */
   async recall(query: string): Promise<Result<string[]>> {
     this.ensureConfigLoaded();
-    this.logger.debug(`Recalling memories: query="${query}"`);
+    this.logger.debug(`Recalling memories; query="${query}"`);
 
     const request: McpToolRequest = {
       jsonrpc: '2.0',

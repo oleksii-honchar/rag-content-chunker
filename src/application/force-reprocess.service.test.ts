@@ -27,10 +27,8 @@ describe('ForceReprocessService', () => {
   const createSource = (overrides?: Partial<WatchSourceConfig>): WatchSourceConfig => ({
     id: 'test-source',
     path: '/tmp/test-source',
-    include: ['*.md'],
     exclude: ['**/.git/**'],
     debounceMs: 3000,
-    ignorePatterns: [],
     ...overrides,
   });
 

@@ -54,7 +54,7 @@ export class FileWatcherService implements OnApplicationBootstrap, OnApplication
       const [sourceId, { watcher, sourcePath }] = entry;
       try {
         await watcher.close();
-        this.logger.info(`Stopped watching source: id="${sourceId}", path="${sourcePath}"`);
+        this.logger.info(`Stopped watching source; id="${sourceId}", path="${sourcePath}"`);
       } catch (error) {
         this.logger.error(
           `Error stopping watcher: id="${sourceId}", error="${error instanceof Error ? error.message : String(error)}"`,
@@ -72,9 +72,7 @@ export class FileWatcherService implements OnApplicationBootstrap, OnApplication
   private async startWatchingSource(source: WatchSourceConfig): Promise<Result<void>> {
     try {
       const resolvedPath = this.resolvePath(source.path);
-      this.logger.info(
-        `Watching source: id="${source.id}", path="${resolvedPath}", includes=[${source.include.join(', ')}]`,
-      );
+      this.logger.info(`Watching source; id="${source.id}", path="${resolvedPath}"`);
 
       const watcher = chokidar.watch(resolvedPath, {
         ignored: this.buildIgnorePatterns(source),
@@ -106,7 +104,7 @@ export class FileWatcherService implements OnApplicationBootstrap, OnApplication
   }
 
   private handleFileAdded(filePath: string, sourceId: string): void {
-    this.logger.debug(`File added: path="${filePath}", source="${sourceId}"`);
+    this.logger.debug(`File added; path="${filePath}", source="${sourceId}"`);
     const result = FileChange.add(filePath);
     if (result.isOk()) {
       this.eventEmitter.publishMany(result.getValue().events);
@@ -114,7 +112,7 @@ export class FileWatcherService implements OnApplicationBootstrap, OnApplication
   }
 
   private handleFileChanged(filePath: string, sourceId: string): void {
-    this.logger.debug(`File changed: path="${filePath}", source="${sourceId}"`);
+    this.logger.debug(`File changed; path="${filePath}", source="${sourceId}"`);
     const result = FileChange.change(filePath);
     if (result.isOk()) {
       this.eventEmitter.publishMany(result.getValue().events);
@@ -122,7 +120,7 @@ export class FileWatcherService implements OnApplicationBootstrap, OnApplication
   }
 
   private handleFileDeleted(filePath: string, sourceId: string): void {
-    this.logger.debug(`File deleted: path="${filePath}", source="${sourceId}"`);
+    this.logger.debug(`File deleted; path="${filePath}", source="${sourceId}"`);
     const result = FileChange.delete(filePath);
     if (result.isOk()) {
       this.eventEmitter.publishMany(result.getValue().events);
@@ -137,13 +135,11 @@ export class FileWatcherService implements OnApplicationBootstrap, OnApplication
   }
 
   private buildIgnorePatterns(source: WatchSourceConfig): (string | RegExp)[] {
-    const patterns = [
+    return [
       ...source.exclude,
-      ...source.ignorePatterns,
       '**/.DS_Store',
       '**/Thumbs.db',
       '**/.env*',
     ];
-    return patterns;
   }
 }

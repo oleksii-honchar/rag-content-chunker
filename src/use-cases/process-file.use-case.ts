@@ -114,11 +114,11 @@ export class ProcessFileUseCase extends BaseUseCase<ProcessFileParams, void> {
 
     const chunks = chunksResult.getValue();
     if (chunks.length === 0) {
-      this.logger.debug(`No chunks generated: path="${params.filePath}"`);
+      this.logger.debug(`No chunks generated; path="${params.filePath}"`);
       return Result.ok(undefined as unknown as void);
     }
 
-    this.logger.info(`Chunks created: path="${params.filePath}", chunks=${chunks.length}`);
+    this.logger.info(`Chunks created; path="${params.filePath}", chunks=${chunks.length}`);
 
     // Ingest chunks
     const ingestResult = await this.ingestChunkUseCase.execute({
@@ -145,7 +145,7 @@ export class ProcessFileUseCase extends BaseUseCase<ProcessFileParams, void> {
   }
 
   private async handleDelete(params: ProcessFileParams): Promise<Result<void>> {
-    this.logger.info(`File deleted: path="${params.filePath}", source="${params.sourceId}"`);
+    this.logger.info(`File deleted; path="${params.filePath}", source="${params.sourceId}"`);
     // MCP deletion handled separately
     return Result.ok(undefined as unknown as void);
   }

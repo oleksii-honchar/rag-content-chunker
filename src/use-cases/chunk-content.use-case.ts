@@ -42,10 +42,10 @@ export class ChunkContentUseCase extends BaseUseCase<ChunkContentParams, Chunk[]
   }
 
   protected async executeInternal(params: ChunkContentParams): Promise<Result<Chunk[]>> {
-    this.logger.debug(`Chunking content: path="${params.filePath}", length=${params.content.length}`);
+    this.logger.debug(`Chunking content; path="${params.filePath}", length=${params.content.length}`);
 
     const strategy = this.strategyFactory.determineStrategy(params.filePath);
-    this.logger.debug(`Using chunking strategy: "${strategy}" for path="${params.filePath}"`);
+    this.logger.debug(`Using chunking strategy; strategy="${strategy}", path="${params.filePath}"`);
 
     const chunkerResult = this.strategyFactory.createChunker(strategy);
     if (chunkerResult.isKo()) {

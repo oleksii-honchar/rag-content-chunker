@@ -39,7 +39,7 @@ export class IngestChunkUseCase extends BaseUseCase<IngestChunkParams, void> {
   }
 
   protected async executeInternal(params: IngestChunkParams): Promise<Result<void>> {
-    this.logger.debug(`Ingesting chunks: count=${params.chunks.length}, source="${params.sourceId}"`);
+    this.logger.debug(`Ingesting chunks; count=${params.chunks.length}, source="${params.sourceId}"`);
 
     if (params.chunks.length === 0) {
       this.logger.debug('No chunks to ingest');
@@ -55,14 +55,14 @@ export class IngestChunkUseCase extends BaseUseCase<IngestChunkParams, void> {
         const result = await this.mnemosyneClient.remember(chunk);
         if (result.isOk()) {
           successCount++;
-          this.logger.debug(`Chunk ingested: id="${chunk.id}", index=${chunk.chunkIndex}`);
+          this.logger.debug(`Chunk ingested; id="${chunk.id}", index=${chunk.chunkIndex}`);
         } else {
           failureCount++;
           errors.push({
             chunkId: chunk.id,
             error: result.getError().message,
           });
-          this.logger.error(`Chunk ingestion failed: id="${chunk.id}", error="${result.getError().message}"`);
+          this.logger.error(`Chunk ingestion failed; id="${chunk.id}", error="${result.getError().message}"`);
         }
       } catch (error) {
         failureCount++;

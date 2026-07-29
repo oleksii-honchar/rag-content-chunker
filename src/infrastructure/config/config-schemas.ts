@@ -3,10 +3,8 @@ import { z } from 'zod';
 export const watchSourceConfigSchema = z.object({
   id: z.string(),
   path: z.string(),
-  include: z.array(z.string()).default(['*.md']),
   exclude: z.array(z.string()).default(['**/.git/**', '**/node_modules/**']),
   debounceMs: z.number().positive().default(3000),
-  ignorePatterns: z.array(z.string()).default([]),
 });
 
 export const chunkingConfigSchema = z
