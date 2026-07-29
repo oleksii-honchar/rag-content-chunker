@@ -1,0 +1,43 @@
+# Dev configuration — used by `npm run start:dev`
+# Watches ./watch-folder-dev and ingests chunks to local Mnemosyne MCP instance.
+#
+# Start Mnemosyne first: `npm run mnemosyne:start`
+# Then start chunker: `npm run start:dev`
+# Drop files into ./watch-folder-dev to trigger chunking.
+
+watchSources:
+  - id: dev-watch
+    path: ./watch-folder-dev
+    exclude:
+      - '.git/**'
+      - '**/.git/**'
+      - 'node_modules/**'
+      - '**/node_modules/**'
+      - '**/.DS_Store'
+      - '**/Thumbs.db'
+      - '**/.env*'
+    debounceMs: 1000
+
+chunking:
+  strategy: content-aware
+  maxSizes:
+    agentSessions: 400
+    obsidianNotes: 500
+    codeFiles: 400
+    configuration: per-key
+    plainText: 450
+  overlap: 50
+  hardCap: 600
+
+enrichment:
+  enabled: false
+
+mcp:
+  url: http://localhost:8765
+  apiKey: e2e-test-token
+  timeoutMs: 30000
+  maxRetries: 3
+  retryDelayMs: 1000
+
+telemetry:
+  enabled: false
