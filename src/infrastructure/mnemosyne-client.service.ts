@@ -159,7 +159,11 @@ export class MnemosyneClient implements OnApplicationBootstrap {
   /**
    * Send a JSON-RPC notification (no response expected).
    */
-  private async sendNotification(notification: { jsonrpc: '2.0'; method: string; params?: Record<string, unknown> }): Promise<void> {
+  private async sendNotification(notification: {
+    jsonrpc: '2.0';
+    method: string;
+    params?: Record<string, unknown>;
+  }): Promise<void> {
     if (!this.sessionId) {
       throw new ErrorWithDetails('No session established', 'NoSessionError');
     }
@@ -257,10 +261,14 @@ export class MnemosyneClient implements OnApplicationBootstrap {
           this.logger.warn(`MCP tool error: chunkId="${chunk.id}", error="${errMsg}"`);
           lastError = new ErrorWithDetails(errMsg, 'McpToolError');
         } else if (parsed.status === 'stored') {
-          this.logger.debug(`Chunk remembered; id="${chunk.id}", memoryId="${parsed.memory_id}", attempt=${attempt}`);
+          this.logger.debug(
+            `Chunk remembered; id="${chunk.id}", memoryId="${parsed.memory_id}", attempt=${attempt}`,
+          );
           return Result.ok(undefined as unknown as void);
         } else {
-          this.logger.warn(`Unexpected remember response: chunkId="${chunk.id}", response="${JSON.stringify(parsed)}"`);
+          this.logger.warn(
+            `Unexpected remember response: chunkId="${chunk.id}", response="${JSON.stringify(parsed)}"`,
+          );
           lastError = new ErrorWithDetails('Unexpected remember response', 'UnexpectedMcpResponse');
         }
       } catch (error) {
@@ -345,7 +353,9 @@ export class MnemosyneClient implements OnApplicationBootstrap {
         // Parse MCP response — result.content[0].text contains JSON string from Mnemosyne
         const parsed = this.parseMcpResponse(response);
         if (parsed.status === 'error') {
-          const errMsg = (typeof parsed.message === 'string' ? parsed.message : JSON.stringify(parsed.message)) || 'Recall error';
+          const errMsg =
+            (typeof parsed.message === 'string' ? parsed.message : JSON.stringify(parsed.message)) ||
+            'Recall error';
           return Result.ko(new ErrorWithDetails(errMsg, 'RecallError'));
         }
 
@@ -566,7 +576,9 @@ export class MnemosyneClient implements OnApplicationBootstrap {
       // Register pending request handler
       const timeout = setTimeout(() => {
         this.pendingRequests.delete(requestId);
-        reject(new ErrorWithDetails(`Request timeout after ${this.timeoutMs}ms (id=${requestId})`, 'McpTimeout'));
+        reject(
+          new ErrorWithDetails(`Request timeout after ${this.timeoutMs}ms (id=${requestId})`, 'McpTimeout'),
+        );
       }, this.timeoutMs);
 
       this.pendingRequests.set(requestId, { resolve, reject, timeout });
@@ -590,7 +602,9 @@ export class MnemosyneClient implements OnApplicationBootstrap {
 
       const req = lib.request(options, res => {
         let body = '';
-        res.on('data', (chunk: Buffer) => { body += chunk; });
+        res.on('data', (chunk: Buffer) => {
+          body += chunk;
+        });
         res.on('end', () => {
           // MCP SSE transport returns 202 Accepted, actual response comes via SSE
           if (res.statusCode === 202 || res.statusCode === 200) {
