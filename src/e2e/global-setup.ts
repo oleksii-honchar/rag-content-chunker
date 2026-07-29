@@ -19,7 +19,7 @@ module.exports = async (): Promise<void> => {
 
   // Write dynamic test config that watches the temp directory.
   // This must happen here because Jest caches required modules, and
-  // ConfigurationModule reads RAG_CONTENT_CHUNKER_CONFIG at bootstrap time.
+  // ConfigurationModule reads APP_CONFIG_PATH at bootstrap time.
   const dynamicConfigPath = path.join(e2eRoot, 'test-config.yaml');
   const dynamicConfig = {
     mcp: {
@@ -59,7 +59,7 @@ module.exports = async (): Promise<void> => {
   console.log(`[E2E-GlobalSetup] Dynamic config written: ${dynamicConfigPath}`);
 
   // Set env vars BEFORE any modules load
-  process.env.RAG_CONTENT_CHUNKER_CONFIG = dynamicConfigPath;
+  process.env.APP_CONFIG_PATH = dynamicConfigPath;
   process.env.E2E_TEMP_ROOT = e2eRoot;
   process.env.E2E_WATCH_DIR = watchDir;
   process.env.NODE_ENV = 'test';

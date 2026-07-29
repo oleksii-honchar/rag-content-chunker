@@ -11,7 +11,7 @@ import * as path from 'path';
  * This replaces direct process.env access in configuration.module.ts and cli-args.service.ts.
  */
 export const AppConfig = registerAs('app', () => {
-  const envAppConfigPath = process.env.APP_CONFIG_PATH; // RAG_CONTENT_CHUNKER_CONFIG is deprecated
+  const envAppConfigPath = process.env.APP_CONFIG_PATH;
   const envLogVerbose = process.env.LOG_VERBOSE;
   const envFile = process.env.ENV_FILE;
 

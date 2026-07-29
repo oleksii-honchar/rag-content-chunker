@@ -14,11 +14,23 @@ interface McpToolRequest {
   params: Record<string, unknown>;
 }
 
+interface MnemosyneRecallResult {
+  id?: string;
+  content?: string;
+  source?: string;
+  score?: number;
+}
+
 interface McpToolResponse {
   jsonrpc?: string;
   id?: number;
   result?: {
+    // Legacy/text content format
     content?: { type?: string; text?: string }[];
+    // Mnemosyne recall response format
+    results?: MnemosyneRecallResult[];
+    // Fallback: allow any shape
+    [key: string]: unknown;
   };
   error?: {
     code?: number;
@@ -103,9 +115,10 @@ export class MnemosyneClient implements OnApplicationBootstrap {
       id: Date.now(),
       method: 'tools/call',
       params: {
-        name: 'memory_remember',
+        name: 'mnemosyne_remember',
         arguments: {
-          text: chunk.text,
+          content: chunk.text,
+          source: 'chunk',
           metadata: {
             id: chunk.id,
             chunkIndex: chunk.chunkIndex,
@@ -224,8 +237,8 @@ export class MnemosyneClient implements OnApplicationBootstrap {
       id: Date.now(),
       method: 'tools/call',
       params: {
-        name: 'memory_retrieve',
-        arguments: { query },
+        name: 'mnemosyne_recall',
+        arguments: { query, limit: 20 },
       },
     };
 
@@ -245,21 +258,26 @@ export class MnemosyneClient implements OnApplicationBootstrap {
           return Result.ko(new ErrorWithDetails(`MCP error: ${response.error.message}`, 'McpToolError'));
         }
 
-        const textContent = response.result?.content
-          ?.filter(c => c.type === 'text')
-          .map(c => c.text ?? '')
-          .filter(t => t.length > 0);
-
-        const results = textContent ?? [];
+        // Mnemosyne returns: { status: 'ok', count: N, results: [{ id, content, source, ... }] }
+        const rawResults = response.result?.results;
+        const results = Array.isArray(rawResults)
+          ? rawResults.map(r => r?.content ?? '').filter(t => typeof t === 'string' && t.length > 0)
+          : [];
 
         // Filter out async "accepted" placeholders — retry if all results are just "accepted"
         const actualResults = results.filter(r => r.toLowerCase() !== 'accepted');
 
-        if (actualResults.length > 0 || attempt === maxRetries) {
+        if (actualResults.length > 0) {
+          this.logger.debug(`Recall returned ${actualResults.length} results for query="${query}"`);
           return Result.ok(actualResults);
         }
 
-        this.logger.debug(`Recall returned async accepted, retrying: attempt=${attempt}/${maxRetries}`);
+        if (attempt === maxRetries) {
+          this.logger.debug(`Recall returned 0 results after ${maxRetries} attempts for query="${query}"`);
+          return Result.ok([]);
+        }
+
+        this.logger.debug(`Recall returned empty, retrying: attempt=${attempt}/${maxRetries}`);
         await this.delay(retryDelayMs * attempt);
       }
 
