@@ -22,7 +22,7 @@ export class AppBootstrapService implements OnApplicationBootstrap {
 
     this.logger.info('📋 Configuration Summary:');
     this.logger.info(`  Config file: ${this.configFilePath}`);
-    this.logger.info(`  Log file: ${logFile}`);
+    this.logger.info(`  Log file: ${logFile} (symlink → current.log)`);
     const watchSources = this.configService.getWatchSources();
     this.logger.info(`  Watch sources: ${watchSources.length}`);
     for (const source of watchSources) {
