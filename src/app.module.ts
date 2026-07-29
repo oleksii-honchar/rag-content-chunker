@@ -80,4 +80,4 @@ const configLoader = (): Record<string, unknown> => {
     MnemosyneClient,
   ],
 })
-export class AppModule { }
+export class AppModule {}

@@ -1,9 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigurationService } from './config/configuration.service';
-import { BasePinoLogger } from './logging/base-pino-logger';
-import { MnemosyneClient } from './mnemosyne-client.service';
 import { aConfigService } from './config/configuration.test-utils';
+import { BasePinoLogger } from './logging/base-pino-logger';
 import { aLogger } from './logging/logger.test-utils';
+import { MnemosyneClient } from './mnemosyne-client.service';
 
 describe('MnemosyneClient (config)', () => {
   let configService: jest.Mocked<ConfigurationService>;

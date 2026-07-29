@@ -1,6 +1,5 @@
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import * as path from 'path';
 import { AppModule } from '../app.module';
 
 export interface TestApplicationOptions {

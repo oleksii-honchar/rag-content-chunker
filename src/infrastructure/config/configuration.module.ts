@@ -15,4 +15,4 @@ import { ConfigurationService } from './configuration.service';
   ],
   exports: [ConfigurationService, 'CONFIG_FILE_PATH'],
 })
-export class ConfigurationModule { }
+export class ConfigurationModule {}

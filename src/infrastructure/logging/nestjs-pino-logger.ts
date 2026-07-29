@@ -5,7 +5,7 @@ import { BasePinoLogger } from './base-pino-logger';
 
 @Injectable({ scope: Scope.TRANSIENT })
 export class NestjsPinoLogger implements BasePinoLogger {
-  constructor(private readonly pinoLogger: pino.Logger) { }
+  constructor(private readonly pinoLogger: pino.Logger) {}
 
   setContext(_context: string): void {
     // Context is managed via bindings in child loggers

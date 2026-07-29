@@ -26,7 +26,7 @@ describe('[E2E] Chunking and Mnemosyne Ingestion Flow', () => {
   afterAll(async () => {
     await cleanupTempDir(tempDir);
     // Graceful close with 30s timeout; force exit if it hangs
-    const closePromise = app.close().catch(() => { });
+    const closePromise = app.close().catch(() => {});
     const timeoutPromise = new Promise(resolve => setTimeout(resolve, 30000));
     await Promise.race([closePromise, timeoutPromise]);
   });
@@ -52,8 +52,8 @@ describe('[E2E] Chunking and Mnemosyne Ingestion Flow', () => {
     const results = recallResult.getValue();
     expect(results.length).toBeGreaterThan(0);
     // At least one result should contain content related to our source
-    const hasRelevantResult = results.some(r =>
-      r.toLowerCase().includes('chunking') || r.toLowerCase().includes('strategy'),
+    const hasRelevantResult = results.some(
+      r => r.toLowerCase().includes('chunking') || r.toLowerCase().includes('strategy'),
     );
     expect(hasRelevantResult).toBe(true);
   }, 60000);
@@ -77,8 +77,8 @@ describe('[E2E] Chunking and Mnemosyne Ingestion Flow', () => {
     expect(recallResult.isOk()).toBe(true);
     const results = recallResult.getValue();
     expect(results.length).toBeGreaterThan(0);
-    const hasRelevantResult = results.some(r =>
-      r.includes('ContentChunkerService') || r.includes('chunkContent'),
+    const hasRelevantResult = results.some(
+      r => r.includes('ContentChunkerService') || r.includes('chunkContent'),
     );
     expect(hasRelevantResult).toBe(true);
   }, 60000);
