@@ -19,7 +19,6 @@ export function pinoLoggerConfigFactory(configService: ConfigService): Params {
   const serviceName = pkg.name;
 
   const environment = configService.get<string>('nodeEnv') ?? process.env.NODE_ENV ?? 'development';
-  const isTestEnv = environment === 'test';
 
   const logLevel = configService.get<string>('logging.level') ?? process.env.LOG_LEVEL ?? 'info';
 
@@ -30,9 +29,7 @@ export function pinoLoggerConfigFactory(configService: ConfigService): Params {
     String(verboseFromConfig).toLowerCase() === 'true' ||
     process.env.VERBOSE?.toLowerCase() === 'true';
 
-  if (!isTestEnv) {
-    ensureLogDir();
-  }
+  ensureLogDir();
 
   const pinoHttpOptions: {
     level: string;
@@ -55,13 +52,6 @@ export function pinoLoggerConfigFactory(configService: ConfigService): Params {
   const transports: { target: string; options: Record<string, unknown>; level?: string }[] = [];
 
   // Console transport: pretty-printed for terminal
-  const msgFormat = isLocalLogVerbose
-    ? {}
-    : {
-        messageFormat: '{if component}[{component}] {end}{msg}',
-        include: 'level,name,time',
-      };
-
   transports.push({
     target: 'pino-pretty',
     options: {
@@ -71,24 +61,27 @@ export function pinoLoggerConfigFactory(configService: ConfigService): Params {
       translateTime: 'yyyy-mm-dd HH:MM:ss',
       singleLine: false,
       ignore: 'pid,hostname',
-      ...msgFormat,
+      ...(isLocalLogVerbose
+        ? {}
+        : {
+            messageFormat: '{if component}[{component}] {end}{msg}',
+            include: 'level,name,time',
+          }),
     },
   });
 
   // File transport: JSON, line-delimited, with rotation (1000 lines, 10 files)
-  if (!isTestEnv) {
-    transports.push({
-      target: 'pino-roll',
-      options: {
-        file: LOG_FILE,
-        size: '1000',
-        maxFiles: 10,
-        sync: false,
-        mkdir: true,
-      },
-      level: logLevel,
-    });
-  }
+  transports.push({
+    target: 'pino-roll',
+    options: {
+      file: LOG_FILE,
+      size: '1000',
+      maxFiles: 10,
+      sync: false,
+      mkdir: true,
+    },
+    level: logLevel,
+  });
 
   pinoHttpOptions.transport = { targets: transports };
 
