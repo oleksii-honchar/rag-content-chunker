@@ -7,15 +7,20 @@ import { startMnemosyneDocker } from './env-setup/mnemosyne-docker-setup';
 let stopMnemosyne: () => Promise<void> | undefined;
 
 module.exports = async (): Promise<void> => {
-  // Create temp watch directory BEFORE any NestJS modules are loaded.
-  // This directory will be configured as a watch source for FileWatcher e2e tests.
-  const watchDir = await fs.mkdtemp(path.join(os.tmpdir(), 'rag-e2e-watch'));
+  // Create a shared temp root for all e2e artifacts (config + watch dir).
+  // This avoids writing generated files into the source tree.
+  const e2eRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'rag-e2e-'));
+  console.log(`[E2E-GlobalSetup] E2E temp root created: ${e2eRoot}`);
+
+  // Create watch directory inside temp root.
+  const watchDir = path.join(e2eRoot, 'watch');
+  await fs.mkdir(watchDir, { recursive: true });
   console.log(`[E2E-GlobalSetup] Watch directory created: ${watchDir}`);
 
   // Write dynamic test config that watches the temp directory.
   // This must happen here because Jest caches required modules, and
-  // AppModule imports ConfigurationModule which reads this env var.
-  const dynamicConfigPath = path.resolve(__dirname, 'test-config.yaml');
+  // ConfigurationModule reads RAG_CONTENT_CHUNKER_CONFIG at bootstrap time.
+  const dynamicConfigPath = path.join(e2eRoot, 'test-config.yaml');
   const dynamicConfig = {
     mcp: {
       url: 'http://localhost:8765',
@@ -55,10 +60,9 @@ module.exports = async (): Promise<void> => {
 
   // Set env vars BEFORE any modules load
   process.env.RAG_CONTENT_CHUNKER_CONFIG = dynamicConfigPath;
-  process.env.NODE_ENV = 'test';
-
-  // Store watch dir path as env var — shared across Jest workers (unlike globalThis)
+  process.env.E2E_TEMP_ROOT = e2eRoot;
   process.env.E2E_WATCH_DIR = watchDir;
+  process.env.NODE_ENV = 'test';
 
   stopMnemosyne = await startMnemosyneDocker();
   // Store cleanup reference in global state for teardown

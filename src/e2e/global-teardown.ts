@@ -10,15 +10,16 @@ module.exports = async (): Promise<void> => {
   }
   delete (globalThis as unknown as Record<string, unknown>).__MNEMOSYNE_STOP__;
 
-  // Clean up watch directory
-  const watchDir = (globalThis as unknown as Record<string, unknown>).__E2E_WATCH_DIR__ as string | undefined;
-  if (watchDir != null) {
+  // Clean up temp root (contains config + watch dir) — set by global-setup.ts
+  const e2eRoot = process.env.E2E_TEMP_ROOT;
+  if (e2eRoot != null) {
     try {
-      await fs.rm(watchDir, { recursive: true, force: true });
-      console.log(`[E2E-GlobalTeardown] Watch directory cleaned up: ${watchDir}`);
+      await fs.rm(e2eRoot, { recursive: true, force: true });
+      console.log(`[E2E-GlobalTeardown] Temp root cleaned up: ${e2eRoot}`);
     } catch {
       // Ignore cleanup errors
     }
   }
-  delete (globalThis as unknown as Record<string, unknown>).__E2E_WATCH_DIR__;
+  delete process.env.E2E_TEMP_ROOT;
+  delete process.env.E2E_WATCH_DIR;
 };
