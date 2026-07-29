@@ -23,7 +23,10 @@
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
     "format": "prettier --write \"src/**/*.ts\"",
-    "format:check": "prettier --check \"src/**/*.ts\""
+    "format:check": "prettier --check \"src/**/*.ts\"",
+    "mnemosyne:start": "docker compose -p rag-e2e-mnemosyne -f src/e2e/env-setup/docker-compose.mnemosyne.yml up -d --wait",
+    "mnemosyne:stop": "docker compose -p rag-e2e-mnemosyne -f src/e2e/env-setup/docker-compose.mnemosyne.yml down -v",
+    "mnemosyne:logs": "docker compose -p rag-e2e-mnemosyne -f src/e2e/env-setup/docker-compose.mnemosyne.yml logs -f"
   },
   "dependencies": {
     "@dotenvx/dotenvx": "2.19.0",

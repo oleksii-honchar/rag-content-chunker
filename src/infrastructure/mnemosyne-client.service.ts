@@ -29,12 +29,13 @@ interface McpToolResponse {
 @Injectable()
 export class MnemosyneClient implements OnApplicationBootstrap {
   private logger!: BasePinoLogger;
-  private baseUrl: string = '';
+  private baseUrl = '';
   private apiKey: string | undefined;
-  private timeoutMs: number = 30000;
-  private maxRetries: number = 3;
-  private retryDelayMs: number = 1000;
+  private timeoutMs = 30000;
+  private maxRetries = 3;
+  private retryDelayMs = 1000;
   private sessionId: string | null = null;
+  private sseRequest: http.ClientRequest | null = null;
 
   constructor(
     private readonly configService: ConfigurationService,
@@ -212,8 +213,9 @@ export class MnemosyneClient implements OnApplicationBootstrap {
 
   /**
    * Recalls/searches stored memories — used for e2e verification that chunks were actually stored.
+   * Retries if Mnemosyne returns async "accepted" response (queued retrieval).
    */
-  async recall(query: string): Promise<Result<string[]>> {
+  async recall(query: string, maxRetries = 5, retryDelayMs = 1000): Promise<Result<string[]>> {
     this.ensureConfigLoaded();
     this.logger.debug(`Recalling memories; query="${query}"`);
 
@@ -236,18 +238,32 @@ export class MnemosyneClient implements OnApplicationBootstrap {
         }
       }
 
-      const response = await this.sendRequest(request);
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        const response = await this.sendRequest(request);
 
-      if (response.error) {
-        return Result.ko(new ErrorWithDetails(`MCP error: ${response.error.message}`, 'McpToolError'));
+        if (response.error) {
+          return Result.ko(new ErrorWithDetails(`MCP error: ${response.error.message}`, 'McpToolError'));
+        }
+
+        const textContent = response.result?.content
+          ?.filter(c => c.type === 'text')
+          .map(c => c.text ?? '')
+          .filter(t => t.length > 0);
+
+        const results = textContent ?? [];
+
+        // Filter out async "accepted" placeholders — retry if all results are just "accepted"
+        const actualResults = results.filter(r => r.toLowerCase() !== 'accepted');
+
+        if (actualResults.length > 0 || attempt === maxRetries) {
+          return Result.ok(actualResults);
+        }
+
+        this.logger.debug(`Recall returned async accepted, retrying: attempt=${attempt}/${maxRetries}`);
+        await this.delay(retryDelayMs * attempt);
       }
 
-      const textContent = response.result?.content
-        ?.filter(c => c.type === 'text')
-        .map(c => c.text ?? '')
-        .filter(t => t.length > 0);
-
-      return Result.ok(textContent ?? []);
+      return Result.ok([]);
     } catch (error) {
       return Result.ko(
         new ErrorWithDetails(error instanceof Error ? error.message : String(error), 'RecallError'),
@@ -278,6 +294,7 @@ export class MnemosyneClient implements OnApplicationBootstrap {
       let request: http.ClientRequest | null = null;
       request = lib.get(options, res => {
         let buffer = '';
+        let sessionResolved = false;
 
         res.on('data', (chunk: Buffer) => {
           buffer += chunk.toString();
@@ -288,9 +305,11 @@ export class MnemosyneClient implements OnApplicationBootstrap {
             if (line.startsWith('data: /messages/?session_id=')) {
               const endpoint = line.slice(5).trim();
               const sessionId = this.extractSessionId(endpoint);
-              if (sessionId) {
+              if (sessionId && !sessionResolved) {
+                sessionResolved = true;
                 this.sessionId = sessionId;
-                request?.destroy(); // Close SSE connection after getting session_id
+                // Keep SSE connection alive — session may be invalidated if closed
+                this.sseRequest = request;
                 resolve(Result.ok(sessionId));
                 return;
               }
@@ -299,23 +318,41 @@ export class MnemosyneClient implements OnApplicationBootstrap {
         });
 
         res.on('end', () => {
-          if (!this.sessionId) {
+          this.sseRequest = null;
+          if (!this.sessionId && !sessionResolved) {
             resolve(
               Result.ko(new ErrorWithDetails('No session_id received from SSE endpoint', 'SseSessionError')),
+            );
+          }
+        });
+
+        res.on('error', error => {
+          this.sseRequest = null;
+          if (!this.sessionId && !sessionResolved) {
+            resolve(
+              Result.ko(
+                new ErrorWithDetails(
+                  error instanceof Error ? error.message : String(error),
+                  'SseStreamError',
+                ),
+              ),
             );
           }
         });
       });
 
       request.on('error', error => {
-        resolve(
-          Result.ko(
-            new ErrorWithDetails(
-              error instanceof Error ? error.message : String(error),
-              'SseConnectionError',
+        // sessionResolved check moved inside callback to be in scope
+        if (!this.sessionId) {
+          resolve(
+            Result.ko(
+              new ErrorWithDetails(
+                error instanceof Error ? error.message : String(error),
+                'SseConnectionError',
+              ),
             ),
-          ),
-        );
+          );
+        }
       });
 
       request?.setTimeout(this.timeoutMs, () => {
@@ -369,11 +406,29 @@ export class MnemosyneClient implements OnApplicationBootstrap {
         });
 
         res.on('end', () => {
+          // Non-2xx: reject with status + body snippet
+          if (res.statusCode === undefined || res.statusCode < 200 || res.statusCode >= 300) {
+            const snippet = responseData.slice(0, 200).replace(/\n/g, ' ');
+            reject(new ErrorWithDetails(`HTTP ${res.statusCode}: ${snippet}`, 'McpHttpError'));
+            return;
+          }
+          // Handle async Accepted response — Mnemosyne may return plain text "Accepted" instead of JSON-RPC
+          if (responseData.trim().toLowerCase() === 'accepted') {
+            this.logger.debug(`Received Accepted response (HTTP ${res.statusCode}) for async operation`);
+            resolve({ result: { content: [{ type: 'text', text: 'accepted' }] } });
+            return;
+          }
           try {
             const response = JSON.parse(responseData) as McpToolResponse;
             resolve(response);
           } catch (error) {
-            reject(new ErrorWithDetails(`Failed to parse MCP response: ${error}`, 'McpParseError'));
+            const snippet = responseData.slice(0, 200).replace(/\n/g, ' ');
+            reject(
+              new ErrorWithDetails(
+                `Failed to parse MCP response (HTTP ${res.statusCode}): ${error}. Body: "${snippet}"`,
+                'McpParseError',
+              ),
+            );
           }
         });
       });
@@ -388,6 +443,19 @@ export class MnemosyneClient implements OnApplicationBootstrap {
       req.write(data);
       req.end();
     });
+  }
+
+  /**
+   * Closes the SSE connection and clears session state.
+   */
+  async close(): Promise<void> {
+    this.logger.info('Closing Mnemosyne MCP client');
+    if (this.sseRequest) {
+      this.sseRequest.destroy();
+      this.sseRequest = null;
+    }
+    this.sessionId = null;
+    this.logger.info('Mnemosyne MCP client closed');
   }
 
   private delay(ms: number): Promise<void> {

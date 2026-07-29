@@ -46,9 +46,9 @@ export class GracefulShutdownService implements OnApplicationShutdown {
       await this.waitForQueue();
       this.safeLog('info', 'Processing queue drained');
 
-      // 3. Close MCP client
+      // 3. Close MCP client (cleans up SSE connection)
       this.safeLog('info', 'Closing MCP client');
-      // MCP uses HTTP, no explicit close needed but log it
+      await this.mnemosyneClient.close();
       this.safeLog('info', 'MCP client closed');
 
       this.safeLog('info', 'Graceful shutdown completed');

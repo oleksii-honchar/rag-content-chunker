@@ -61,7 +61,10 @@ class MockFileProcessingQueue {
 }
 
 class MockMnemosyneClient {
-  // HTTP-based client, no explicit close needed
+  closeCalled = false;
+  async close(): Promise<void> {
+    this.closeCalled = true;
+  }
 }
 
 describe('GracefulShutdownService', () => {
