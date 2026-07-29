@@ -1,8 +1,9 @@
 mcp:
   url: "http://localhost:8765"
+  apiKey: "e2e-test-token"
   timeoutMs: 30000
-  maxRetries: 2
-  retryDelayMs: 500
+  maxRetries: 3
+  retryDelayMs: 1000
 
 watchSources:
   - id: "e2e-test-source"

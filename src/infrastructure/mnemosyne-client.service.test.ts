@@ -36,8 +36,8 @@ describe('MnemosyneClient (config)', () => {
     } as unknown as jest.Mocked<BasePinoLogger>;
   });
 
-  it('reads MCP config from ConfigurationService', async () => {
-    await Test.createTestingModule({
+  it('reads MCP config from ConfigurationService lazily on first use', async () => {
+    const module: TestingModule = await Test.createTestingModule({
       providers: [
         MnemosyneClient,
         { provide: ConfigurationService, useValue: configService },
@@ -45,6 +45,12 @@ describe('MnemosyneClient (config)', () => {
       ],
     }).compile();
 
+    const client = module.get(MnemosyneClient);
+    // Config is not read in constructor anymore — read lazily on first use
+    expect(configService.getMcpConfig).not.toHaveBeenCalled();
+
+    // Trigger lazy config load via initialize()
+    await client.initialize();
     expect(configService.getMcpConfig).toHaveBeenCalled();
   });
 

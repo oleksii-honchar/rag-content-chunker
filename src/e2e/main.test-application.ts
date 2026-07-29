@@ -10,8 +10,8 @@ export interface TestApplicationOptions {
 export const createTestApplication = async (
   options: TestApplicationOptions = {},
 ): Promise<INestApplication> => {
-  process.env.RAG_CONTENT_CHUNKER_CONFIG = path.resolve(__dirname, 'test-config.yaml');
-  process.env.NODE_ENV = 'test';
+  // Env vars (RAG_CONTENT_CHUNKER_CONFIG, NODE_ENV) are set in global-setup.ts
+  // before any modules are loaded, so they're available here.
 
   const moduleBuilder = Test.createTestingModule({
     imports: [AppModule],

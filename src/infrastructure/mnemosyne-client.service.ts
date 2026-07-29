@@ -29,11 +29,11 @@ interface McpToolResponse {
 @Injectable()
 export class MnemosyneClient implements OnApplicationBootstrap {
   private readonly logger: BasePinoLogger;
-  private readonly baseUrl: string;
-  private readonly apiKey: string | undefined;
-  private readonly timeoutMs: number;
-  private readonly maxRetries: number;
-  private readonly retryDelayMs: number;
+  private baseUrl: string = '';
+  private apiKey: string | undefined;
+  private timeoutMs: number = 30000;
+  private maxRetries: number = 3;
+  private retryDelayMs: number = 1000;
   private sessionId: string | null = null;
 
   constructor(
@@ -41,13 +41,25 @@ export class MnemosyneClient implements OnApplicationBootstrap {
     logger: BasePinoLogger,
   ) {
     this.logger = logger.child({ component: '[MnemosyneClient]' });
-    const mcpConfig = configService.getMcpConfig();
-    // Strip trailing /messages/ or /mcp if present — config should be base URL
-    this.baseUrl = mcpConfig.url.replace(/(\/messages\/?|\/mcp\/?)$/, '');
-    this.apiKey = mcpConfig.apiKey;
-    this.timeoutMs = mcpConfig.timeoutMs;
-    this.maxRetries = mcpConfig.maxRetries;
-    this.retryDelayMs = mcpConfig.retryDelayMs;
+    // Defer config reading to onApplicationBootstrap, after ConfigurationService has loaded.
+    // Reading here would get DEFAULT_CONFIG because ConfigurationService.load() hasn't run yet.
+    this.baseUrl = '';
+    this.apiKey = undefined;
+    this.timeoutMs = 30000;
+    this.maxRetries = 3;
+    this.retryDelayMs = 1000;
+  }
+
+  private ensureConfigLoaded(): void {
+    if (!this.baseUrl) {
+      const mcpConfig = this.configService.getMcpConfig();
+      // Strip trailing /messages/ or /mcp if present — config should be base URL
+      this.baseUrl = mcpConfig.url.replace(/(\/messages\/?|\/mcp\/?)$/, '');
+      this.apiKey = mcpConfig.apiKey;
+      this.timeoutMs = mcpConfig.timeoutMs;
+      this.maxRetries = mcpConfig.maxRetries;
+      this.retryDelayMs = mcpConfig.retryDelayMs;
+    }
   }
 
   async onApplicationBootstrap(): Promise<void> {
@@ -55,6 +67,7 @@ export class MnemosyneClient implements OnApplicationBootstrap {
   }
 
   async initialize(): Promise<Result<void>> {
+    this.ensureConfigLoaded();
     this.logger.info('Initializing Mnemosyne MCP client (SSE)', {
       baseUrl: this.baseUrl,
       timeoutMs: this.timeoutMs,
@@ -116,6 +129,7 @@ export class MnemosyneClient implements OnApplicationBootstrap {
 
     let lastError: Error | null = null;
 
+    this.ensureConfigLoaded();
     for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
       try {
         // Ensure we have a session
@@ -178,6 +192,7 @@ export class MnemosyneClient implements OnApplicationBootstrap {
   }
 
   async healthCheck(): Promise<Result<boolean>> {
+    this.ensureConfigLoaded();
     this.logger.debug('Health checking Mnemosyne MCP (SSE)', { baseUrl: this.baseUrl });
 
     try {
@@ -211,6 +226,7 @@ export class MnemosyneClient implements OnApplicationBootstrap {
    * Recalls/searches stored memories — used for e2e verification that chunks were actually stored.
    */
   async recall(query: string): Promise<Result<string[]>> {
+    this.ensureConfigLoaded();
     this.logger.debug('Recalling memories', { query });
 
     const request: McpToolRequest = {
