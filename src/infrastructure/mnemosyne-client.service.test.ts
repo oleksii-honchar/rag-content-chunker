@@ -76,7 +76,9 @@ describe('MnemosyneClient (SSE)', () => {
   };
 
   const invokeHandlers = (obj: unknown, event: string, ...args: unknown[]) => {
-    const handlers = (obj as unknown as Record<string, unknown>)?.__handlers as Record<string, (...args: unknown[]) => void> | undefined;
+    const handlers = (obj as unknown as Record<string, unknown>)?.__handlers as
+      | Record<string, (...args: unknown[]) => void>
+      | undefined;
     const handler = handlers?.[event];
     if (typeof handler === 'function') {
       handler(...args);
@@ -195,7 +197,11 @@ describe('MnemosyneClient (SSE)', () => {
         const callback = typeof _optionsOrCb === 'function' ? _optionsOrCb : _cb;
         if (typeof callback === 'function') {
           callback(mockGetRes);
-          invokeHandlers(mockGetRes, 'data', Buffer.from('event: endpoint\ndata: /messages/?session_id=test\n\n'));
+          invokeHandlers(
+            mockGetRes,
+            'data',
+            Buffer.from('event: endpoint\ndata: /messages/?session_id=test\n\n'),
+          );
         }
         return mockGetRes;
       });
@@ -216,7 +222,11 @@ describe('MnemosyneClient (SSE)', () => {
         const callback = typeof _optionsOrCb === 'function' ? _optionsOrCb : _cb;
         if (typeof callback === 'function') {
           callback(mockGetRes);
-          invokeHandlers(mockGetRes, 'data', Buffer.from('event: endpoint\ndata: /messages/?session_id=test-session-123\n\n'));
+          invokeHandlers(
+            mockGetRes,
+            'data',
+            Buffer.from('event: endpoint\ndata: /messages/?session_id=test-session-123\n\n'),
+          );
         }
         return mockGetRes;
       });
@@ -237,14 +247,21 @@ describe('MnemosyneClient (SSE)', () => {
         const callback = typeof _optionsOrCb === 'function' ? _optionsOrCb : _cb;
         if (typeof callback === 'function') {
           callback(mockGetRes);
-          invokeHandlers(mockGetRes, 'data', Buffer.from('event: endpoint\ndata: /messages/?session_id=parsed-session-id\n\n'));
+          invokeHandlers(
+            mockGetRes,
+            'data',
+            Buffer.from('event: endpoint\ndata: /messages/?session_id=parsed-session-id\n\n'),
+          );
         }
         return mockGetRes;
       });
 
       await client.initialize();
 
-      expect(mockLogger.info).toHaveBeenCalledWith('Mnemosyne MCP client initialized successfully', expect.any(Object));
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        'Mnemosyne MCP client initialized successfully',
+        expect.any(Object),
+      );
     });
 
     it('includes Authorization header in SSE request when apiKey is set', async () => {
@@ -254,7 +271,11 @@ describe('MnemosyneClient (SSE)', () => {
         const callback = typeof optionsOrCb === 'function' ? optionsOrCb : _cb;
         if (typeof callback === 'function') {
           callback(mockGetRes);
-          invokeHandlers(mockGetRes, 'data', Buffer.from('event: endpoint\ndata: /messages/?session_id=test\n\n'));
+          invokeHandlers(
+            mockGetRes,
+            'data',
+            Buffer.from('event: endpoint\ndata: /messages/?session_id=test\n\n'),
+          );
         }
         return mockGetRes;
       });
@@ -293,19 +314,25 @@ describe('MnemosyneClient (SSE)', () => {
         const callback = typeof _optionsOrCb === 'function' ? _optionsOrCb : _cb;
         if (typeof callback === 'function') {
           callback(mockGetRes);
-          invokeHandlers(mockGetRes, 'data', Buffer.from('event: endpoint\ndata: /messages/?session_id=health-session\n\n'));
+          invokeHandlers(
+            mockGetRes,
+            'data',
+            Buffer.from('event: endpoint\ndata: /messages/?session_id=health-session\n\n'),
+          );
         }
         return mockGetRes;
       });
 
       // POST ping with session_id
-      mockHttpReq.mockImplementationOnce((_options: unknown, callback?: (res: http.IncomingMessage) => void) => {
-        const req = createMockRequest();
-        if (typeof callback === 'function') {
-          callback(createMockPostResponse(200, { jsonrpc: '2.0', id: 1, result: {} }));
-        }
-        return req;
-      });
+      mockHttpReq.mockImplementationOnce(
+        (_options: unknown, callback?: (res: http.IncomingMessage) => void) => {
+          const req = createMockRequest();
+          if (typeof callback === 'function') {
+            callback(createMockPostResponse(200, { jsonrpc: '2.0', id: 1, result: {} }));
+          }
+          return req;
+        },
+      );
 
       const result = await client.healthCheck();
 
@@ -324,18 +351,24 @@ describe('MnemosyneClient (SSE)', () => {
         const callback = typeof _optionsOrCb === 'function' ? _optionsOrCb : _cb;
         if (typeof callback === 'function') {
           callback(mockGetRes);
-          invokeHandlers(mockGetRes, 'data', Buffer.from('event: endpoint\ndata: /messages/?session_id=test\n\n'));
+          invokeHandlers(
+            mockGetRes,
+            'data',
+            Buffer.from('event: endpoint\ndata: /messages/?session_id=test\n\n'),
+          );
         }
         return mockGetRes;
       });
 
-      mockHttpReq.mockImplementationOnce((_options: unknown, callback?: (res: http.IncomingMessage) => void) => {
-        const req = createMockRequest();
-        if (typeof callback === 'function') {
-          callback(createMockPostResponse(200, { jsonrpc: '2.0', id: 1, result: {} }));
-        }
-        return req;
-      });
+      mockHttpReq.mockImplementationOnce(
+        (_options: unknown, callback?: (res: http.IncomingMessage) => void) => {
+          const req = createMockRequest();
+          if (typeof callback === 'function') {
+            callback(createMockPostResponse(200, { jsonrpc: '2.0', id: 1, result: {} }));
+          }
+          return req;
+        },
+      );
 
       const result = await client.healthCheck();
 
@@ -367,18 +400,30 @@ describe('MnemosyneClient (SSE)', () => {
         const callback = typeof _optionsOrCb === 'function' ? _optionsOrCb : _cb;
         if (typeof callback === 'function') {
           callback(mockGetRes);
-          invokeHandlers(mockGetRes, 'data', Buffer.from('event: endpoint\ndata: /messages/?session_id=remember-session\n\n'));
+          invokeHandlers(
+            mockGetRes,
+            'data',
+            Buffer.from('event: endpoint\ndata: /messages/?session_id=remember-session\n\n'),
+          );
         }
         return mockGetRes;
       });
 
-      mockHttpReq.mockImplementationOnce((_options: unknown, callback?: (res: http.IncomingMessage) => void) => {
-        const req = createMockRequest();
-        if (typeof callback === 'function') {
-          callback(createMockPostResponse(200, { jsonrpc: '2.0', id: 1, result: { content: [{ type: 'text', text: 'OK' }] } }));
-        }
-        return req;
-      });
+      mockHttpReq.mockImplementationOnce(
+        (_options: unknown, callback?: (res: http.IncomingMessage) => void) => {
+          const req = createMockRequest();
+          if (typeof callback === 'function') {
+            callback(
+              createMockPostResponse(200, {
+                jsonrpc: '2.0',
+                id: 1,
+                result: { content: [{ type: 'text', text: 'OK' }] },
+              }),
+            );
+          }
+          return req;
+        },
+      );
 
       const chunk = aChunk();
       const result = await client.remember(chunk);
@@ -398,18 +443,30 @@ describe('MnemosyneClient (SSE)', () => {
         const callback = typeof _optionsOrCb === 'function' ? _optionsOrCb : _cb;
         if (typeof callback === 'function') {
           callback(mockGetRes);
-          invokeHandlers(mockGetRes, 'data', Buffer.from('event: endpoint\ndata: /messages/?session_id=test\n\n'));
+          invokeHandlers(
+            mockGetRes,
+            'data',
+            Buffer.from('event: endpoint\ndata: /messages/?session_id=test\n\n'),
+          );
         }
         return mockGetRes;
       });
 
-      mockHttpReq.mockImplementationOnce((_options: unknown, callback?: (res: http.IncomingMessage) => void) => {
-        const req = createMockRequest();
-        if (typeof callback === 'function') {
-          callback(createMockPostResponse(200, { jsonrpc: '2.0', id: 1, result: { content: [{ type: 'text', text: 'OK' }] } }));
-        }
-        return req;
-      });
+      mockHttpReq.mockImplementationOnce(
+        (_options: unknown, callback?: (res: http.IncomingMessage) => void) => {
+          const req = createMockRequest();
+          if (typeof callback === 'function') {
+            callback(
+              createMockPostResponse(200, {
+                jsonrpc: '2.0',
+                id: 1,
+                result: { content: [{ type: 'text', text: 'OK' }] },
+              }),
+            );
+          }
+          return req;
+        },
+      );
 
       const chunk = aChunk();
       await client.remember(chunk);
@@ -429,18 +486,30 @@ describe('MnemosyneClient (SSE)', () => {
         const callback = typeof _optionsOrCb === 'function' ? _optionsOrCb : _cb;
         if (typeof callback === 'function') {
           callback(mockGetRes);
-          invokeHandlers(mockGetRes, 'data', Buffer.from('event: endpoint\ndata: /messages/?session_id=test\n\n'));
+          invokeHandlers(
+            mockGetRes,
+            'data',
+            Buffer.from('event: endpoint\ndata: /messages/?session_id=test\n\n'),
+          );
         }
         return mockGetRes;
       });
 
-      mockHttpReq.mockImplementationOnce((_options: unknown, callback?: (res: http.IncomingMessage) => void) => {
-        const req = createMockRequest();
-        if (typeof callback === 'function') {
-          callback(createMockPostResponse(200, { jsonrpc: '2.0', id: 1, result: { content: [{ type: 'text', text: 'OK' }] } }));
-        }
-        return req;
-      });
+      mockHttpReq.mockImplementationOnce(
+        (_options: unknown, callback?: (res: http.IncomingMessage) => void) => {
+          const req = createMockRequest();
+          if (typeof callback === 'function') {
+            callback(
+              createMockPostResponse(200, {
+                jsonrpc: '2.0',
+                id: 1,
+                result: { content: [{ type: 'text', text: 'OK' }] },
+              }),
+            );
+          }
+          return req;
+        },
+      );
 
       const chunk = aChunk();
       await client.remember(chunk);
@@ -469,22 +538,30 @@ describe('MnemosyneClient (SSE)', () => {
         const callback = typeof _optionsOrCb === 'function' ? _optionsOrCb : _cb;
         if (typeof callback === 'function') {
           callback(mockGetRes);
-          invokeHandlers(mockGetRes, 'data', Buffer.from('event: endpoint\ndata: /messages/?session_id=test\n\n'));
+          invokeHandlers(
+            mockGetRes,
+            'data',
+            Buffer.from('event: endpoint\ndata: /messages/?session_id=test\n\n'),
+          );
         }
         return mockGetRes;
       });
 
-      mockHttpReq.mockImplementationOnce((_options: unknown, callback?: (res: http.IncomingMessage) => void) => {
-        const req = createMockRequest();
-        if (typeof callback === 'function') {
-          callback(createMockPostResponse(200, {
-            jsonrpc: '2.0',
-            id: 1,
-            result: { content: [{ type: 'text', text: 'OK' }] },
-          }));
-        }
-        return req;
-      });
+      mockHttpReq.mockImplementationOnce(
+        (_options: unknown, callback?: (res: http.IncomingMessage) => void) => {
+          const req = createMockRequest();
+          if (typeof callback === 'function') {
+            callback(
+              createMockPostResponse(200, {
+                jsonrpc: '2.0',
+                id: 1,
+                result: { content: [{ type: 'text', text: 'OK' }] },
+              }),
+            );
+          }
+          return req;
+        },
+      );
 
       const chunk = aChunk();
       const result = await client.remember(chunk);
@@ -500,7 +577,11 @@ describe('MnemosyneClient (SSE)', () => {
         const callback = typeof _optionsOrCb === 'function' ? _optionsOrCb : _cb;
         if (typeof callback === 'function') {
           callback(mockGetRes);
-          invokeHandlers(mockGetRes, 'data', Buffer.from('event: endpoint\ndata: /messages/?session_id=test\n\n'));
+          invokeHandlers(
+            mockGetRes,
+            'data',
+            Buffer.from('event: endpoint\ndata: /messages/?session_id=test\n\n'),
+          );
         }
         return mockGetRes;
       });
@@ -531,7 +612,11 @@ describe('MnemosyneClient (SSE)', () => {
         const callback = typeof _optionsOrCb === 'function' ? _optionsOrCb : _cb;
         if (typeof callback === 'function') {
           callback(mockGetRes);
-          invokeHandlers(mockGetRes, 'data', Buffer.from('event: endpoint\ndata: /messages/?session_id=test\n\n'));
+          invokeHandlers(
+            mockGetRes,
+            'data',
+            Buffer.from('event: endpoint\ndata: /messages/?session_id=test\n\n'),
+          );
         }
         return mockGetRes;
       });
@@ -565,7 +650,11 @@ describe('MnemosyneClient (SSE)', () => {
         const callback = typeof _optionsOrCb === 'function' ? _optionsOrCb : _cb;
         if (typeof callback === 'function') {
           callback(mockGetRes);
-          invokeHandlers(mockGetRes, 'data', Buffer.from('event: endpoint\ndata: /messages/?session_id=test\n\n'));
+          invokeHandlers(
+            mockGetRes,
+            'data',
+            Buffer.from('event: endpoint\ndata: /messages/?session_id=test\n\n'),
+          );
         }
         return mockGetRes;
       });
@@ -598,7 +687,11 @@ describe('MnemosyneClient (SSE)', () => {
         const callback = typeof _optionsOrCb === 'function' ? _optionsOrCb : _cb;
         if (typeof callback === 'function') {
           callback(mockGetRes);
-          invokeHandlers(mockGetRes, 'data', Buffer.from('event: endpoint\ndata: /messages/?session_id=test\n\n'));
+          invokeHandlers(
+            mockGetRes,
+            'data',
+            Buffer.from('event: endpoint\ndata: /messages/?session_id=test\n\n'),
+          );
         }
         return mockGetRes;
       });
@@ -606,11 +699,13 @@ describe('MnemosyneClient (SSE)', () => {
       mockHttpReq.mockImplementation((_options: unknown, callback?: (res: http.IncomingMessage) => void) => {
         const req = createMockRequest();
         if (typeof callback === 'function') {
-          callback(createMockPostResponse(200, {
-            jsonrpc: '2.0',
-            id: 1,
-            error: { code: -32603, message: 'Internal error' },
-          }));
+          callback(
+            createMockPostResponse(200, {
+              jsonrpc: '2.0',
+              id: 1,
+              error: { code: -32603, message: 'Internal error' },
+            }),
+          );
         }
         return req;
       });
@@ -648,7 +743,11 @@ describe('MnemosyneClient (SSE)', () => {
         const callback = typeof _optionsOrCb === 'function' ? _optionsOrCb : _cb;
         if (typeof callback === 'function') {
           callback(mockGetRes);
-          invokeHandlers(mockGetRes, 'data', Buffer.from('event: endpoint\ndata: /messages/?session_id=test\n\n'));
+          invokeHandlers(
+            mockGetRes,
+            'data',
+            Buffer.from('event: endpoint\ndata: /messages/?session_id=test\n\n'),
+          );
         }
         return mockGetRes;
       });
@@ -664,7 +763,11 @@ describe('MnemosyneClient (SSE)', () => {
         const callback = typeof optionsOrCb === 'function' ? optionsOrCb : _cb;
         if (typeof callback === 'function') {
           callback(mockGetRes);
-          invokeHandlers(mockGetRes, 'data', Buffer.from('event: endpoint\ndata: /messages/?session_id=test\n\n'));
+          invokeHandlers(
+            mockGetRes,
+            'data',
+            Buffer.from('event: endpoint\ndata: /messages/?session_id=test\n\n'),
+          );
         }
         return mockGetRes;
       });
@@ -701,7 +804,11 @@ describe('MnemosyneClient (SSE)', () => {
         const callback = typeof optionsOrCb === 'function' ? optionsOrCb : _cb;
         if (typeof callback === 'function') {
           callback(mockGetRes);
-          invokeHandlers(mockGetRes, 'data', Buffer.from('event: endpoint\ndata: /messages/?session_id=test\n\n'));
+          invokeHandlers(
+            mockGetRes,
+            'data',
+            Buffer.from('event: endpoint\ndata: /messages/?session_id=test\n\n'),
+          );
         }
         return mockGetRes;
       });
@@ -720,7 +827,11 @@ describe('MnemosyneClient (SSE)', () => {
         const callback = typeof _optionsOrCb === 'function' ? _optionsOrCb : _cb;
         if (typeof callback === 'function') {
           callback(mockGetRes);
-          invokeHandlers(mockGetRes, 'data', Buffer.from('event: endpoint\ndata: /messages/?session_id=test\n\n'));
+          invokeHandlers(
+            mockGetRes,
+            'data',
+            Buffer.from('event: endpoint\ndata: /messages/?session_id=test\n\n'),
+          );
         }
         return mockGetRes;
       });
@@ -739,20 +850,23 @@ describe('MnemosyneClient (SSE)', () => {
         const callback = typeof _optionsOrCb === 'function' ? _optionsOrCb : _cb;
         if (typeof callback === 'function') {
           callback(mockGetRes);
-          invokeHandlers(mockGetRes, 'data', Buffer.from('event: endpoint\ndata: /messages/?session_id=test\n\n'));
+          invokeHandlers(
+            mockGetRes,
+            'data',
+            Buffer.from('event: endpoint\ndata: /messages/?session_id=test\n\n'),
+          );
         }
         return mockGetRes;
       });
 
-      let savedReq: jest.Mocked<http.ClientRequest> | null = null;
       mockHttpReq.mockImplementation((_options: unknown, _callback: unknown) => {
-        savedReq = createMockRequest();
-        setImmediate(() => {
-          if (savedReq) {
-            invokeHandlers(savedReq, 'timeout');
-          }
-        });
-        return savedReq;
+        const req = createMockRequest();
+        // Trigger timeout via the timeout handler registered by setTimeout
+        const timeoutHandler = (req.setTimeout as jest.Mock).mock.calls[0]?.[1];
+        if (typeof timeoutHandler === 'function') {
+          setImmediate(timeoutHandler);
+        }
+        return req;
       });
 
       const result = await client.healthCheck();
@@ -767,14 +881,18 @@ describe('MnemosyneClient (SSE)', () => {
         const callback = typeof _optionsOrCb === 'function' ? _optionsOrCb : _cb;
         if (typeof callback === 'function') {
           callback(mockGetRes);
-          invokeHandlers(mockGetRes, 'data', Buffer.from('event: endpoint\ndata: /messages/?session_id=test\n\n'));
+          invokeHandlers(
+            mockGetRes,
+            'data',
+            Buffer.from('event: endpoint\ndata: /messages/?session_id=test\n\n'),
+          );
         }
         return mockGetRes;
       });
 
       mockHttpReq.mockImplementation((_options: unknown, callback?: (res: http.IncomingMessage) => void) => {
         const req = createMockRequest();
-        const mockRes = {} as jest.Mocked<http.IncomingMessage>;
+        const mockRes = {} as Record<string, unknown>;
         mockRes.on = jest.fn((event: string | symbol, handler: (...args: unknown[]) => void) => {
           if (event === 'data') {
             handler(Buffer.from('not json'));
@@ -785,7 +903,7 @@ describe('MnemosyneClient (SSE)', () => {
           return mockRes;
         });
         if (typeof callback === 'function') {
-          callback(mockRes);
+          callback(mockRes as unknown as http.IncomingMessage);
         }
         return req;
       });
