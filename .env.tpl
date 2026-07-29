@@ -1,3 +1,3 @@
-VERBOSE=false
+LOG_VERBOSE=false
 LOG_LEVEL=debug
-RAG_CONTENT_CHUNKER_CONFIG=dev.yaml
+APP_CONFIG_PATH=dev.yaml

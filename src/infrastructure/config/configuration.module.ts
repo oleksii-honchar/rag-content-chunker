@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AppConfig } from '../../app.config';
 import { LoggerModule } from '../logging/logger.module';
 import { ConfigurationService } from './configuration.service';
 
@@ -8,18 +9,8 @@ import { ConfigurationService } from './configuration.service';
     ConfigurationService,
     {
       provide: 'CONFIG_FILE_PATH',
-      useFactory: () => {
-        const path =
-          process.env.RAG_CONTENT_CHUNKER_CONFIG ||
-          `${process.env.HOME || ''}/.config/rag-content-chunker.yaml`;
-        console.error(
-          '[CONFIG_MODULE] RAG_CONTENT_CHUNKER_CONFIG:',
-          process.env.RAG_CONTENT_CHUNKER_CONFIG,
-          '→ using:',
-          path,
-        );
-        return path;
-      },
+      useFactory: (appConfig: AppConfig) => appConfig.appConfigPath,
+      inject: [AppConfig.KEY],
     },
   ],
   exports: [ConfigurationService, 'CONFIG_FILE_PATH'],

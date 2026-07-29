@@ -41,13 +41,15 @@ Options:
   constructor(private readonly logger: BasePinoLogger) { }
 
   parse(args: string[]): ParsedCliArgs {
+    // CLI args take precedence; otherwise fall back to env-based bootstrap config default
+    // Note: before NestJS bootstrap we still read env directly here; after bootstrap
+    // configuration.module.ts uses AppConfig from ConfigService.
     const defaultConfig =
-      process.env.RAG_CONTENT_CHUNKER_CONFIG ??
-      path.join(os.homedir(), '.config', 'rag-content-chunker.yaml');
+      process.env.APP_CONFIG_PATH ?? path.join(os.homedir(), '.config', 'rag-content-chunker.yaml');
 
     const result: ParsedCliArgs = {
       config: defaultConfig,
-      verbose: false,
+      verbose: process.env.LOG_VERBOSE === 'true',
       help: false,
       version: false,
       dryRun: false,

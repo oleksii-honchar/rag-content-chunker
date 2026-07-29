@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { AppBootstrapService } from './app-bootstrap.service';
+import { AppConfig } from './app.config';
+import { validateAppEnv } from './app.env.validation';
 import { ForceReprocessService } from './application/force-reprocess.service';
 import { CodeChunker } from './application/strategies/code-chunker.service';
 import { ConfigChunker } from './application/strategies/config-chunker.service';
@@ -20,31 +22,12 @@ import { ChunkContentUseCase } from './use-cases/chunk-content.use-case';
 import { IngestChunkUseCase } from './use-cases/ingest-chunk.use-case';
 import { ProcessFileUseCase } from './use-cases/process-file.use-case';
 
-const configLoader = (): Record<string, unknown> => {
-  const configPath = process.env.RAG_CONTENT_CHUNKER_CONFIG || '~/.config/rag-content-chunker.yaml';
-  const resolvedPath = configPath.startsWith('~')
-    ? require('path').join(require('os').homedir(), configPath.slice(1))
-    : configPath;
-
-  try {
-    const yaml = require('js-yaml');
-    const fs = require('fs');
-    if (fs.existsSync(resolvedPath)) {
-      const content = fs.readFileSync(resolvedPath, 'utf-8');
-      return yaml.load(content) as Record<string, unknown>;
-    }
-  } catch (error) {
-    // Config will be created by ConfigurationService
-  }
-  return {};
-};
-
 @Module({
   imports: [
     ConfigModule.forRoot({
-      load: [configLoader],
+      load: [AppConfig],
       isGlobal: true,
-      envFilePath: process.env.ENV_FILE || '.env',
+      validate: validateAppEnv,
     }),
     EventEmitterModule.forRoot({
       wildcard: false,
