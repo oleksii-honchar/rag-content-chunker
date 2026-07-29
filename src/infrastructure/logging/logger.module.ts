@@ -27,15 +27,8 @@ export class LoggerModule {
             const params = pinoLoggerConfigFactory(configService);
             const pinoHttpConfig = params.pinoHttp as Record<string, unknown>;
 
-            const isTest = process.env.NODE_ENV === 'test';
             const level = String(pinoHttpConfig?.level ?? 'info');
             const base = pinoHttpConfig?.base ?? { service: 'rag-content-chunker' };
-
-            // In test env: simple logger, no transports (avoids worker thread issues)
-            // if (isTest) {
-            //   const logger = pino({ level, base });
-            //   return new NestjsPinoLogger(logger);
-            // }
 
             // Production: include transport config
             const logger = pino({

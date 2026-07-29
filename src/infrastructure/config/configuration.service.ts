@@ -200,8 +200,23 @@ export class ConfigurationService implements OnApplicationBootstrap {
     const loadResult = await this.load();
 
     if (loadResult.isKo()) {
-      this.logger.warn(`Configuration load failed: ${loadResult.getError().message}. Using defaults.`);
-      this.config = DEFAULT_CONFIG;
+      const err = loadResult.getError();
+      if (err.code === 'ConfigFileNotFound') {
+        this.logger.info(`Creating default configuration at ${this.configFilePath}...`);
+        const initResult = await this.initializeDefaultConfig();
+        if (initResult.isOk()) {
+          this.config = DEFAULT_CONFIG;
+          this.logger.info('Default configuration created and loaded.');
+        } else {
+          this.logger.warn(
+            `Failed to create config file: ${initResult.getError().message}. Using in-memory defaults.`,
+          );
+          this.config = DEFAULT_CONFIG;
+        }
+      } else {
+        this.logger.warn(`Configuration load failed: ${err.message}. Using defaults.`);
+        this.config = DEFAULT_CONFIG;
+      }
     }
 
     // Watch config file for changes (hot-reload)

@@ -34,17 +34,6 @@ export function pinoLoggerConfigFactory(configService: ConfigService): Params {
     ensureLogDir();
   }
 
-  // Test env: simple JSON logger without transports (avoids worker thread issues)
-  if (isTestEnv) {
-    return {
-      pinoHttp: {
-        level: 'warn',
-        messageKey: 'message',
-        base: { service: serviceName, environment },
-      },
-    } as Params;
-  }
-
   const pinoHttpOptions: {
     level: string;
     messageKey: string;
@@ -55,7 +44,7 @@ export function pinoLoggerConfigFactory(configService: ConfigService): Params {
     };
   } = {
     level: isLocalLogVerbose ? 'debug' : logLevel,
-    messageKey: 'message',
+    messageKey: 'msg',
     timestamp: () => `,"timestamp":"${new Date(Date.now()).toISOString()}"`,
     base: {
       environment,
@@ -70,26 +59,34 @@ export function pinoLoggerConfigFactory(configService: ConfigService): Params {
     target: 'pino-pretty',
     options: {
       colorize: true,
+      autoLogging: false,
       messageKey: 'message',
       translateTime: 'yyyy-mm-dd HH:MM:ss',
       singleLine: false,
       ignore: 'pid,hostname',
-      ...(isLocalLogVerbose ? {} : { include: 'level,name,message,timestamp' }),
+      ...(isLocalLogVerbose
+        ? {}
+        : {
+          messageFormat: '{component ? "[" + component + "] " : ""}{msg}',
+          include: 'level,name,time',
+        }),
     },
   });
 
   // File transport: JSON, line-delimited, with rotation (1000 lines, 10 files)
-  transports.push({
-    target: 'pino-roll',
-    options: {
-      file: LOG_FILE,
-      size: '1000',
-      maxFiles: 10,
-      sync: false,
-      mkdir: true,
-    },
-    level: logLevel,
-  });
+  if (!isTestEnv) {
+    transports.push({
+      target: 'pino-roll',
+      options: {
+        file: LOG_FILE,
+        size: '1000',
+        maxFiles: 10,
+        sync: false,
+        mkdir: true,
+      },
+      level: logLevel,
+    });
+  }
 
   pinoHttpOptions.transport = { targets: transports };
 
