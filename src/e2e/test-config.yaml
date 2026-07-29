@@ -1,39 +1,26 @@
-# E2E test configuration for rag-content-chunker
-# Points to local Mnemosyne MCP mock (started by mnemosyne-setup.ts)
+mcp:
+  url: "http://localhost:8765/mcp"
+  timeoutMs: 30000
+  maxRetries: 2
+  retryDelayMs: 500
 
 watchSources:
-  - id: e2e-test-source
-    path: ./e2e-test-files
-    include:
-      - '*.md'
-      - '*.ts'
-      - '*.json'
-      - '*.yaml'
-      - '*.txt'
-    exclude:
-      - '**/node_modules/**'
+  - id: "e2e-test-source"
+    path: "/tmp"
+    include: ["*.md"]
+    exclude: []
     debounceMs: 500
-    ignorePatterns: []
 
 chunking:
-  strategy: content-aware
+  strategy: "content-aware"
   maxSizes:
     agentSessions: 400
     obsidianNotes: 500
     codeFiles: 400
-    configuration: per-key
+    configuration: "per-key"
     plainText: 450
   overlap: 50
   hardCap: 600
-
-enrichment:
-  enabled: false
-
-mcp:
-  url: http://127.0.0.1:8765/mcp
-  timeoutMs: 3000
-  maxRetries: 1
-  retryDelayMs: 100
 
 telemetry:
   enabled: false

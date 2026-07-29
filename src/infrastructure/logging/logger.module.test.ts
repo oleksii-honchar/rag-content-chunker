@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { LoggerModule as PinoLoggerModule } from 'nestjs-pino';
 
 import { BasePinoLogger } from './base-pino-logger';
 import { LoggingModule } from './logger.module';
@@ -10,7 +11,13 @@ describe('LoggingModule', () => {
 
   beforeEach(async () => {
     module = await Test.createTestingModule({
-      imports: [LoggingModule],
+      imports: [
+        // Minimal PinoLoggerModule setup so NestjsPinoLogger can inject PinoLogger
+        PinoLoggerModule.forRoot({
+          pinoHttp: { level: 'silent' },
+        }),
+        LoggingModule,
+      ],
     }).compile();
 
     logger = await module.resolve<BasePinoLogger>(BasePinoLogger);
