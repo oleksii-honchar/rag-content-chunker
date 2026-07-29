@@ -137,6 +137,10 @@ export class FileWatcherService implements OnApplicationBootstrap, OnApplication
   private buildIgnorePatterns(source: WatchSourceConfig): (string | RegExp)[] {
     return [
       ...source.exclude,
+      '.git/**',
+      '**/.git/**',
+      'node_modules/**',
+      '**/node_modules/**',
       '**/.DS_Store',
       '**/Thumbs.db',
       '**/.env*',

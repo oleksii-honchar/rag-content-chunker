@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const watchSourceConfigSchema = z.object({
   id: z.string(),
   path: z.string(),
-  exclude: z.array(z.string()).default(['**/.git/**', '**/node_modules/**']),
+  exclude: z.array(z.string()).default(['.git/**', '**/.git/**', 'node_modules/**', '**/node_modules/**']),
   debounceMs: z.number().positive().default(3000),
 });
 
