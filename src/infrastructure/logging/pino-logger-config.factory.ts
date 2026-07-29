@@ -82,7 +82,7 @@ export function pinoLoggerConfigFactory(configService: ConfigService): Params {
   transports.push({
     target: 'pino-roll',
     options: {
-      destination: LOG_FILE,
+      file: LOG_FILE,
       size: '1000',
       maxFiles: 10,
       sync: false,
