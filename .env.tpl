@@ -1,2 +1,3 @@
 VERBOSE=false
 LOG_LEVEL=debug
+RAG_CONTENT_CHUNKER_CONFIG=dev.yaml

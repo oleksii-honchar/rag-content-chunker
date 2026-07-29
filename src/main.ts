@@ -34,8 +34,10 @@ async function bootstrap(): Promise<void> {
     process.exit(0);
   }
 
-  // Set env vars for config and logging
-  process.env.RAG_CONTENT_CHUNKER_CONFIG = args.config;
+  // Only override env var if user explicitly provided --config
+  if (process.argv.some((a) => a === '-c' || a === '--config')) {
+    process.env.RAG_CONTENT_CHUNKER_CONFIG = args.config;
+  }
   process.env.RAG_CONTENT_CHUNKER_VERBOSE = String(args.verbose);
 
   const loggerLevel: ('log' | 'debug' | 'verbose' | 'warn' | 'error')[] = args.verbose

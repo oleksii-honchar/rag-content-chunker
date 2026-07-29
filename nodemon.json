@@ -7,7 +7,8 @@
   "verbose": true,
   "ext": "js json ts",
   "watch": [
-    "src"
+    "src",
+    "dev.yaml"
   ],
   "exec": "npm run ts-node"
 }

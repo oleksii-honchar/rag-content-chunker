@@ -22,7 +22,7 @@ const DEFAULT_CONFIG: Configuration = {
     {
       id: 'agent-sessions',
       path: '~/.agent-sessions',
-      exclude: ['**/archive/**', '**/.git/**', '**/.smart-env/**'],
+      exclude: ['archive/**', '**/archive/**', ' .smart-env/**'],
       debounceMs: 5000,
     },
   ],

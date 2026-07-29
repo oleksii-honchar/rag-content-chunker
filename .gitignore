@@ -3,4 +3,5 @@ node_modules/
 coverage/
 data/
 .env
+.env.*
 watch-folder-dev/

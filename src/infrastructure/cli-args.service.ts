@@ -38,11 +38,15 @@ Options:
 
   private static readonly VERSION = packageJson.version;
 
-  constructor(private readonly logger: BasePinoLogger) {}
+  constructor(private readonly logger: BasePinoLogger) { }
 
   parse(args: string[]): ParsedCliArgs {
+    const defaultConfig =
+      process.env.RAG_CONTENT_CHUNKER_CONFIG ??
+      path.join(os.homedir(), '.config', 'rag-content-chunker.yaml');
+
     const result: ParsedCliArgs = {
-      config: path.join(os.homedir(), '.config', 'rag-content-chunker.yaml'),
+      config: defaultConfig,
       verbose: false,
       help: false,
       version: false,
