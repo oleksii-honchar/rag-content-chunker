@@ -64,19 +64,21 @@ export function pinoLoggerConfigFactory(configService: ConfigService): Params {
       ...(isLocalLogVerbose
         ? {}
         : {
-            messageFormat: '{if component}[{component}] {end}{msg}',
-            include: 'level,name,time',
-          }),
+          messageFormat: '{if component}[{component}] {end}{msg}',
+          include: 'level,name,time',
+        }),
     },
   });
 
-  // File transport: JSON, line-delimited, with rotation (1000 lines, 10 files)
+  // File transport: JSON, line-delimited, with rotation (10MB per file, 10 files max)
+  // symlink=true creates rag-content-chunker.log → current active file
   transports.push({
     target: 'pino-roll',
     options: {
       file: LOG_FILE,
-      size: '1000',
+      size: '100k',
       maxFiles: 10,
+      symlink: true,
       sync: false,
       mkdir: true,
     },
