@@ -26,5 +26,7 @@ module.exports = tseslint.config(...eslintConfigBase, {
   },
   rules: {
     'prettier/prettier': 'error',
+    // Prefer Prettier's `{}` for empty blocks over ESLint's `{ }`
+    'brace-style': 'off',
   },
 });

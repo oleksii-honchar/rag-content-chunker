@@ -38,7 +38,7 @@ describe('[E2E] FileWatcher Flow — file creation → watch → chunk → inges
 
     // Graceful close with 30s timeout; force exit if it hangs
     if (app) {
-      const closePromise = app.close().catch(() => { });
+      const closePromise = app.close();
       const timeoutPromise = new Promise(resolve => setTimeout(resolve, 30000));
       await Promise.race([closePromise, timeoutPromise]);
     }

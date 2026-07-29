@@ -35,7 +35,7 @@ async function bootstrap(): Promise<void> {
   }
 
   // Configure bootstrap env vars so AppConfig picks them up at NestJS bootstrap
-  if (process.argv.some((a) => a === '-c' || a === '--config')) {
+  if (process.argv.some(a => a === '-c' || a === '--config')) {
     process.env.APP_CONFIG_PATH = args.config;
   }
   process.env.LOG_VERBOSE = String(args.verbose) as 'true' | 'false';

@@ -3,7 +3,7 @@ import { Test } from '@nestjs/testing';
 import { AppModule } from '../app.module';
 
 export interface TestApplicationOptions {
-  overrides?: ReadonlyArray<{ provide: unknown; useValue: unknown }>;
+  overrides?: readonly { provide: unknown; useValue: unknown }[];
 }
 
 export const createTestApplication = async (

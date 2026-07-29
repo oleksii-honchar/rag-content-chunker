@@ -1,7 +1,7 @@
 import * as fs from 'fs/promises';
+import * as yaml from 'js-yaml';
 import * as os from 'os';
 import * as path from 'path';
-import * as yaml from 'js-yaml';
 import { startMnemosyneDocker } from './env-setup/mnemosyne-docker-setup';
 
 let stopMnemosyne: () => Promise<void> | undefined;

@@ -64,9 +64,9 @@ export function pinoLoggerConfigFactory(configService: ConfigService): Params {
       ...(isLocalLogVerbose
         ? {}
         : {
-          messageFormat: '{if component}[{component}] {end}{msg}',
-          include: 'level,name,time',
-        }),
+            messageFormat: '{if component}[{component}] {end}{msg}',
+            include: 'level,name,time',
+          }),
     },
   });
 

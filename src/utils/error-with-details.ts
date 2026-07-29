@@ -3,9 +3,7 @@
  * Pattern copied from voqaria typescript-common.
  */
 
-export interface StringIndex {
-  [key: string]: string;
-}
+export type StringIndex = Record<string, string>;
 
 export class ErrorWithDetails extends Error {
   constructor(

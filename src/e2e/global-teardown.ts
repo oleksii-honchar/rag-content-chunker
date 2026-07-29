@@ -3,8 +3,7 @@ import * as fs from 'fs/promises';
 module.exports = async (): Promise<void> => {
   // Stop Mnemosyne
   const stopMnemosyne = (globalThis as unknown as Record<string, unknown>).__MNEMOSYNE_STOP__ as
-    | (() => Promise<void>)
-    | undefined;
+    (() => Promise<void>) | undefined;
   if (stopMnemosyne != null) {
     await stopMnemosyne();
   }

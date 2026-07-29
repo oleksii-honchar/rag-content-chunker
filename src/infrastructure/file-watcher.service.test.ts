@@ -170,8 +170,7 @@ describe('FileWatcherService', () => {
       await service.start();
 
       const addHandler = mockWatcher.on.mock.calls.find(call => call[0] === 'add')?.[1] as
-        | ((filePath: string) => void)
-        | undefined;
+        ((filePath: string) => void) | undefined;
 
       addHandler?.('/test/new-file.md');
 
@@ -192,8 +191,7 @@ describe('FileWatcherService', () => {
       await service.start();
 
       const changeHandler = mockWatcher.on.mock.calls.find(call => call[0] === 'change')?.[1] as
-        | ((filePath: string) => void)
-        | undefined;
+        ((filePath: string) => void) | undefined;
 
       changeHandler?.('/test/changed-file.md');
 
@@ -214,8 +212,7 @@ describe('FileWatcherService', () => {
       await service.start();
 
       const unlinkHandler = mockWatcher.on.mock.calls.find(call => call[0] === 'unlink')?.[1] as
-        | ((filePath: string) => void)
-        | undefined;
+        ((filePath: string) => void) | undefined;
 
       unlinkHandler?.('/test/deleted-file.md');
 
