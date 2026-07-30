@@ -33,7 +33,7 @@ enrichment:
   enabled: false
 
 mcp:
-  url: http://localhost:8765
+  url: http://localhost:3000
   apiKey: e2e-test-token
   timeoutMs: 30000
   maxRetries: 3

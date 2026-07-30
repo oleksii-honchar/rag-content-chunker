@@ -1,21 +1,18 @@
-# mcp-proxy → Mnemosyne stdio bridge for e2e tests.
+# Better Mnemosyne — multi-tenant namespace-aware MCP server for e2e tests.
 # Usage:
 #   docker compose -f docker-compose.mnemosyne.yml -p rag-e2e-mnemosyne up -d --wait
 #   docker compose -f docker-compose.mnemosyne.yml -p rag-e2e-mnemosyne down -v
 
 services:
   mnemosyne-mcp:
-    build:
-      context: .
-      dockerfile: ./Dockerfile.mnemosyne
+    image: tuiteraz/better-mnemosyne:latest
     ports:
-      - "8765:3000"
+      - '3000:3000'
     volumes:
-      - ../../../data/e2e:/data
-    environment:
-      - PROXY_HOST=0.0.0.0
+      - ../../../data/e2e:/data/mnemosyne/data
+    command: ['python', 'main.py', '--log-level', 'DEBUG']
     healthcheck:
-      test: ["CMD", "python3", "-c", "import socket; s=socket.socket(); s.settimeout(1); r=s.connect_ex(('127.0.0.1',3000)); s.close(); exit(0 if r==0 else 1)"]
+      test: ['CMD', 'curl', '-f', 'http://localhost:3000/health']
       interval: 5s
       timeout: 3s
       retries: 6
