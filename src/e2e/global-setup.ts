@@ -36,6 +36,7 @@ module.exports = async (): Promise<void> => {
         include: ['*.md', '*.ts', '*.json'],
         exclude: [],
         debounceMs: 500,
+        namespace: 'test',
       },
     ],
     chunking: {
