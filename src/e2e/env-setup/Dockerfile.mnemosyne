@@ -1,67 +1,53 @@
-# Mnemosyne MCP Server — Docker Image
+# mcp-proxy → Mnemosyne stdio bridge
 #
-# Run the Mnemosyne MCP server in a container for easy deployment
-# with any MCP-compatible client.
+# Uses mcp-proxy to expose Mnemosyne (stdio MCP server) via HTTP.
+# No client code changes required — same MCP JSON-RPC protocol.
 #
 # Build:
-#   docker build -t mnemosyne-mcp .
+#   docker build -f Dockerfile.mnemosyne-proxy -t rag-mnemosyne-proxy .
 #
-# Run (stdio — for Claude Desktop, Cursor, etc.):
-#   docker run -i --rm -v mnemosyne-data:/data mnemosyne-mcp
-#
-# Run (SSE — for web clients):
-#   docker run -d --rm -p 8080:8080 \
-#     -v mnemosyne-data:/data \
-#     -e MNEMOSYNE_MCP_TOKEN=my-secret \
-#     mnemosyne-mcp --transport sse --host 0.0.0.0 --port 8080
-#
-# With custom data directory:
-#   docker run -i --rm \
-#     -v /host/path/to/data:/data \
-#     -e MNEMOSYNE_DATA_DIR=/data \
-#     mnemosyne-mcp
+# Run:
+#   docker run -d --rm -p 3000:3000 -v mnemosyne-data:/data rag-mnemosyne-proxy
 
-FROM python:3.11-slim
+FROM ghcr.io/sparfenyuk/mcp-proxy:0.12.0
 
-LABEL org.opencontainers.image.title="Mnemosyne MCP Server"
-LABEL org.opencontainers.image.description="Universal memory layer MCP server for any AI agent"
-LABEL org.opencontainers.image.source="https://github.com/mnemosyne-oss/mnemosyne"
-LABEL org.opencontainers.image.licenses="MIT"
+# Install Python for Mnemosyne (Alpine packages)
+RUN apk add --no-cache \
+    python3 py3-pip py3-wheel \
+    git curl \
+    && rm -rf /var/cache/apk/*
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    git \
-    && rm -rf /var/lib/apt/lists/*
+# Install Mnemosyne from source
+ARG MNEMOSYNE_REPO_URL=https://github.com/mnemosyne-oss/mnemosyne.git
+ARG MNEMOSYNE_COMMIT=33540d2213c83fb2d5a0e004aef1fce78e5dbd76
 
-# Source code configuration (pin to specific commit)
-ARG REPO_URL=https://github.com/mnemosyne-oss/mnemosyne.git
-ARG REPO_COMMIT=33540d2213c83fb2d5a0e004aef1fce78e5dbd76
+RUN git clone --depth 1 ${MNEMOSYNE_REPO_URL} /tmp/mnemosyne && \
+    cd /tmp/mnemosyne && \
+    git fetch --depth 1 origin ${MNEMOSYNE_COMMIT} && \
+    git checkout ${MNEMOSYNE_COMMIT} && \
+    pip install --no-cache-dir "mcp>=1.0.0,<2.0.0" && \
+    pip install --no-cache-dir ".[mcp]" && \
+    rm -rf /tmp/mnemosyne
 
-WORKDIR /mnemosyne-src
-
-# Clone source to temporary location, checkout pinned commit, copy to working directory
-RUN git clone --depth 1 ${REPO_URL} /tmp/source && \
-    cd /tmp/source && \
-    git fetch --depth 1 origin ${REPO_COMMIT} && \
-    git checkout ${REPO_COMMIT} && \
-    cd / && \
-    cp -r /tmp/source/. /mnemosyne-src && \
-    rm -rf /tmp/source
-
-# Install Mnemosyne from cloned source with MCP extras
-# Pin mcp<2.0 to avoid breaking API changes (Server.list_tools removed in 2.0)
-RUN pip install --no-cache-dir "mcp>=1.0.0,<2.0.0" && pip install --no-cache-dir ".[mcp]"
-
+# Data directory
 WORKDIR /data
-
-# Default data directory (overridable via MNEMOSYNE_DATA_DIR env var)
 ENV MNEMOSYNE_DATA_DIR=/data
 VOLUME /data
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-    CMD python -c "from mnemosyne import recall; recall('health', top_k=1)" || exit 1
+# Default port
+ENV PROXY_PORT=3000
+ENV PROXY_HOST=0.0.0.0
 
-# Default: stdio transport (for Claude Desktop, Cursor, etc.)
-ENTRYPOINT ["mnemosyne", "mcp"]
-CMD []
+# Authentication handled by LiteLLM (no token needed)
+
+# Health check — probe proxy HTTP endpoint
+HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=6 \
+    CMD curl -sf http://localhost:3000/sse -o /dev/null || exit 1
+
+# Expose port
+EXPOSE ${PROXY_PORT}
+
+# Run mcp-proxy in server mode
+# Listens on HTTP port, spawns mnemosyne mcp as subprocess
+ENTRYPOINT ["mcp-proxy", "--port", "3000", "--host", "0.0.0.0", "--"]
+CMD ["mnemosyne", "mcp"]
