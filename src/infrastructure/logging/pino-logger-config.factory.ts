@@ -70,15 +70,17 @@ export function pinoLoggerConfigFactory(configService: ConfigService): Params {
     },
   });
 
-  // File transport: JSON, line-delimited, with rotation (10MB per file, 10 files max)
+  // File transport: JSON, line-delimited, with rotation
+  // period=daily + maxFiles=10 → keeps 10 days of logs, rotates at 200k within each day
   // symlink=true creates rag-content-chunker.log → current active file
   transports.push({
     target: 'pino-roll',
     options: {
       file: LOG_FILE,
-      size: '100k',
-      maxFiles: 10,
-      symlink: true,
+      period: '1d',
+      size: '10m',
+      keep: 3,
+      symlink: 'rag-content-chunker.log',
       sync: false,
       mkdir: true,
     },
