@@ -59,6 +59,9 @@ describe('[E2E] FileWatcher Flow — file creation → watch → chunk → inges
     // Verify recall call succeeds (Mnemosyne session shared with MnemosyneClient)
     // Mnemosyne uses semantic search, so use a broad query that matches sample.md content
     const recallResult = await mnemosyneClient!.recall('chunking');
+    if (!recallResult.isOk()) {
+      console.log(`[E2E-FileWatcher] Recall("chunking") FAILED:`, recallResult.getError());
+    }
     expect(recallResult.isOk()).toBe(true);
     const results = recallResult.getValue();
     console.log(`[E2E-FileWatcher] Recall("chunking") returned ${results.length} results`);

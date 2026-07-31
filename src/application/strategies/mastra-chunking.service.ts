@@ -2,6 +2,7 @@ import { MDocument } from '@mastra/rag';
 import { Injectable } from '@nestjs/common';
 import { Chunk, FILE_ROLES, FileRole } from '../../domain/chunk.entity';
 import { ConfigurationService } from '../../infrastructure/config/configuration.service';
+import { BasePinoLogger } from '../../infrastructure/logging/base-pino-logger';
 import { ErrorWithDetails } from '../../utils/error-with-details';
 import { Result } from '../../utils/result';
 
@@ -10,7 +11,10 @@ type MastraDocumentType = 'markdown' | 'json' | 'html' | 'text';
 
 @Injectable()
 export class MastraChunkingService {
-  constructor(private readonly configService: ConfigurationService) {}
+  constructor(
+    private readonly configService: ConfigurationService,
+    private readonly logger: BasePinoLogger,
+  ) {}
   /**
    * Get max characters limit for a given file role from enhancement config.
    */
@@ -50,11 +54,19 @@ export class MastraChunkingService {
       // Apply chunking strategy with size config from enhancement.maxCharacters
       await this.applyChunking(document, strategy, fileRole);
 
-      // Extract metadata
-      const enrichedDoc = await document.extractMetadata({
-        title: true,
-        keywords: true,
-      });
+      // Extract metadata (optional — may fail if no OpenAI API key; chunks still work)
+      let enrichedDoc = document;
+      try {
+        enrichedDoc = await document.extractMetadata({
+          title: true,
+          keywords: true,
+        });
+      } catch (metadataError) {
+        // Graceful degradation: continue without LLM-enhanced metadata
+        this.logger.debug(
+          `Metadata extraction failed (chunks still generated): ${metadataError instanceof Error ? metadataError.message : String(metadataError)}`,
+        );
+      }
 
       // Get chunks from MDocument using getDocs()
       const mastraChunks = enrichedDoc.getDocs();

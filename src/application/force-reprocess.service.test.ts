@@ -36,17 +36,20 @@ jest.mock('fs/promises');
 const fsMock = fsPromises as jest.Mocked<typeof fsPromises>;
 
 // Helper to create mock Dirent compatible with fs/promises readdir
-const mockDirent = (name: string, isDir: boolean) =>
-  ({
-    name,
-    isDirectory: () => isDir,
-    isFile: () => !isDir,
-    isBlockDevice: () => false,
-    isCharacterDevice: () => false,
-    isSymbolicLink: () => false,
-    isFIFO: () => false,
-    isSocket: () => false,
-  }) as unknown as fs.Dirent;
+// @ts-ignore — Dirent mock type incompatibility between fs/promises Dirent<NonSharedBuffer> and runtime
+const mockDirent = (name: string, isDir: boolean): any => ({
+  name,
+  parentPath: null as unknown as Buffer,
+  isDirectory: () => isDir,
+  isFile: () => !isDir,
+  isBlockDevice: () => false,
+  isCharacterDevice: () => false,
+  isSymbolicLink: () => false,
+  isFIFO: () => false,
+  isSocket: () => false,
+});
+
+
 
 const mockStats = { isDirectory: () => true } as fs.Stats;
 

@@ -51,6 +51,14 @@ module.exports = async (): Promise<void> => {
       overlap: 50,
       hardCap: 600,
     },
+    enhancement: {
+      maxCharacters: {
+        prose: 2000,
+        code: 3000,
+        configuration: 1000,
+        documentation: 2000,
+      },
+    },
     telemetry: {
       enabled: false,
     },

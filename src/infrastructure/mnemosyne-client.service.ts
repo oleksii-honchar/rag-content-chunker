@@ -218,7 +218,6 @@ export class MnemosyneClient implements OnApplicationBootstrap {
           content: chunk.text,
           namespace: chunk.namespace,
           importance: chunk.importance,
-          tags: chunk.tags,
           source: chunk.namespace,
           metadata: {
             id: chunk.id,
@@ -457,9 +456,13 @@ export class MnemosyneClient implements OnApplicationBootstrap {
             return;
           }
 
+          // Determine if response is SSE or JSON
+          const contentType = (res.headers['content-type'] as string | undefined) ?? '';
+          const responseBody = this.parseResponse(body, contentType);
+
           // Parse JSON-RPC response from body
           try {
-            const response = JSON.parse(body) as McpToolResponse;
+            const response = JSON.parse(responseBody) as McpToolResponse;
             resolve({ ...response, _sessionId: sessionId ?? null });
           } catch (error) {
             reject(
@@ -486,6 +489,32 @@ export class MnemosyneClient implements OnApplicationBootstrap {
       req.write(data);
       req.end();
     });
+  }
+
+  /**
+   * Parse response body — handles both JSON and SSE formats.
+   *
+   * Streamable HTTP uses SSE (`event: message\ndata: {...}`) underneath
+   * even though the transport is HTTP. Extract JSON from `data:` lines
+   * when SSE format is detected.
+   *
+   * @param body - Raw response body string
+   * @param contentType - Content-Type header value
+   * @returns Parsed JSON string to be consumed by JSON.parse()
+   */
+  private parseResponse(body: string, contentType: string): string {
+    // If it's SSE, extract the JSON from data: lines
+    if (contentType.includes('text/event-stream') || body.startsWith('event:')) {
+      const lines = body.split('\n');
+      let jsonFragments = '';
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          jsonFragments += line.slice(6);
+        }
+      }
+      return jsonFragments || body;
+    }
+    return body;
   }
 
   /**

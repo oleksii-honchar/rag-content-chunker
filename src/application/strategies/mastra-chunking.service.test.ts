@@ -1,5 +1,6 @@
 import { FILE_ROLES } from '../../domain/chunk.entity';
 import { ConfigurationService } from '../../infrastructure/config/configuration.service';
+import { BasePinoLogger } from '../../infrastructure/logging/base-pino-logger';
 
 // Mock @mastra/rag BEFORE importing the service
 jest.mock('@mastra/rag', () => ({
@@ -43,11 +44,23 @@ const createMockConfigService = (overrides?: { maxCharacters?: Record<string, nu
 describe('MastraChunkingService', () => {
   let service: MastraChunkingService;
   let configService: ConfigurationService;
+  let mockLogger: BasePinoLogger;
+
+  const createMockLogger = (): BasePinoLogger => ({
+    info: jest.fn(),
+    error: jest.fn(),
+    warn: jest.fn(),
+    debug: jest.fn(),
+    log: jest.fn(),
+    child: jest.fn().mockReturnThis(),
+    setContext: jest.fn(),
+  });
 
   beforeEach(() => {
     jest.clearAllMocks();
     configService = createMockConfigService();
-    service = new MastraChunkingService(configService);
+    mockLogger = createMockLogger();
+    service = new MastraChunkingService(configService, mockLogger);
   });
 
   describe('determineStrategy', () => {
@@ -328,7 +341,7 @@ describe('MastraChunkingService', () => {
 
     it('should use custom maxCharacters when config is overridden', async () => {
       configService = createMockConfigService({ maxCharacters: { prose: 300, code: 500 } });
-      service = new MastraChunkingService(configService);
+      service = new MastraChunkingService(configService, mockLogger);
 
       const mockDoc = {
         extractMetadata: jest.fn().mockResolvedValue({
@@ -644,19 +657,22 @@ describe('MastraChunkingService', () => {
       expect(result.getError().message).toContain('Chunking failed');
     });
 
-    it('should return Result.ko when extractMetadata throws', async () => {
+    it('should gracefully continue when extractMetadata throws', async () => {
       const mockDoc = {
         extractMetadata: jest.fn(() => {
           throw new Error('Metadata extraction failed');
         }),
         chunkMarkdown: jest.fn(),
+        getDocs: jest.fn().mockReturnValue([{ text: 'content', metadata: {} }]),
       };
       MDocument.fromMarkdown.mockReturnValue(mockDoc);
 
       const result = await service.chunkFile('# Title', 'README.md', 'test-source');
 
-      expect(result.isKo()).toBe(true);
-      expect(result.getError().message).toContain('Metadata extraction failed');
+      expect(result.isOk()).toBe(true);
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        expect.stringContaining('Metadata extraction failed'),
+      );
     });
 
     it('should map chunks with sequential indices', async () => {

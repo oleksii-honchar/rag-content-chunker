@@ -291,7 +291,6 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
       expect(body.params.arguments.content).toBe('test content');
       expect(body.params.arguments.namespace).toBe('default');
       expect(body.params.arguments.importance).toBe(0.5);
-      expect(body.params.arguments.tags).toEqual([]);
       expect(body.params.arguments.source).toBe('default');
       expect(body.params.arguments.metadata.id).toBe('6ba7b810-9dad-11d1-80b4-00c04fd430c8');
       expect(body.params.arguments.metadata.chunkIndex).toBe(0);
@@ -464,7 +463,6 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
       expect(result.isOk()).toBe(true);
 
       const body = JSON.parse(lastReq!.write.mock.calls[0][0]);
-      expect(body.params.arguments.tags).toEqual(['important', 'breaking-change', 'api']);
       expect(body.params.arguments.metadata.tags).toEqual(['important', 'breaking-change', 'api']);
     });
 
@@ -544,7 +542,6 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
       const body = JSON.parse(lastReq!.write.mock.calls[0][0]);
       expect(body.params.arguments.namespace).toBe('default');
       expect(body.params.arguments.importance).toBe(0.5);
-      expect(body.params.arguments.tags).toEqual([]);
       expect(body.params.arguments.source).toBe('default');
       expect(body.params.arguments.metadata.namespace).toBe('default');
       expect(body.params.arguments.metadata.importance).toBe(0.5);
