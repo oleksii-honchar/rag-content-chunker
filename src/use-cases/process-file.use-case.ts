@@ -20,6 +20,7 @@ const processFileParamsSchema = z.object({
   filePath: z.string().min(1),
   eventType: z.enum(['add', 'change', 'delete']),
   sourceId: z.string().min(1),
+  namespace: z.string().min(1),
 });
 
 export type ProcessFileParams = z.infer<typeof processFileParamsSchema>;
@@ -103,6 +104,7 @@ export class ProcessFileUseCase extends BaseUseCase<ProcessFileParams, void> {
       content,
       filePath: params.filePath,
       sourceId: params.sourceId,
+      namespace: params.namespace,
     });
 
     if (chunksResult.isKo()) {
@@ -156,6 +158,7 @@ export class ProcessFileUseCase extends BaseUseCase<ProcessFileParams, void> {
       filePath: event.path,
       eventType: 'add',
       sourceId: 'default',
+      namespace: 'default',
     });
   }
 
@@ -165,6 +168,7 @@ export class ProcessFileUseCase extends BaseUseCase<ProcessFileParams, void> {
       filePath: event.path,
       eventType: 'change',
       sourceId: 'default',
+      namespace: 'default',
     });
   }
 
@@ -174,6 +178,7 @@ export class ProcessFileUseCase extends BaseUseCase<ProcessFileParams, void> {
       filePath: event.path,
       eventType: 'delete',
       sourceId: 'default',
+      namespace: 'default',
     });
   }
 }

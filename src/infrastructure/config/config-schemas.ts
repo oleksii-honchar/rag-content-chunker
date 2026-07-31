@@ -1,11 +1,91 @@
 import { z } from 'zod';
 
-export const watchSourceConfigSchema = z.object({
-  id: z.string(),
-  path: z.string(),
-  exclude: z.array(z.string()).default(['.git/**', '**/.git/**', 'node_modules/**', '**/node_modules/**']),
-  debounceMs: z.number().positive().default(3000),
+export const watchSourceConfigSchema = z
+  .object({
+    id: z.string(),
+    path: z.string(),
+    namespace: z.string().optional(),
+    exclude: z.array(z.string()).default(['.git/**', '**/.git/**', 'node_modules/**', '**/node_modules/**']),
+    debounceMs: z.number().positive().default(3000),
+  })
+  .transform(data => ({
+    ...data,
+    namespace: data.namespace ?? data.id,
+  }));
+
+export const importanceFactorConfigSchema = z.object({
+  name: z.string(),
+  weight: z.number().default(1.0),
 });
+
+export const enhancementConfigSchema = z
+  .object({
+    maxCharacters: z
+      .object({
+        prose: z.number().positive(),
+        code: z.number().positive(),
+        configuration: z.number().positive(),
+        documentation: z.number().positive(),
+      })
+      .optional(),
+    importance: z
+      .object({
+        enabled: z.boolean(),
+        defaultScore: z.number().min(0).max(1),
+        factors: z.array(importanceFactorConfigSchema).optional(),
+      })
+      .transform(data => ({
+        enabled: data.enabled ?? true,
+        defaultScore: data.defaultScore ?? 0.5,
+        factors: data.factors ?? [
+          { name: 'fileRole', weight: 0.4 },
+          { name: 'length', weight: 0.2 },
+          { name: 'keywords', weight: 0.3 },
+          { name: 'header', weight: 0.1 },
+        ],
+      }))
+      .optional(),
+    tags: z
+      .object({
+        enabled: z.boolean(),
+        maxTags: z.number().positive(),
+      })
+      .optional(),
+    source: z
+      .object({
+        includePath: z.boolean(),
+        includeSection: z.boolean(),
+        includeMetadata: z.boolean(),
+      })
+      .optional(),
+  })
+  .transform(data => ({
+    maxCharacters: {
+      prose: data.maxCharacters?.prose ?? 200,
+      code: data.maxCharacters?.code ?? 400,
+      configuration: data.maxCharacters?.configuration ?? 300,
+      documentation: data.maxCharacters?.documentation ?? 300,
+    },
+    importance: data.importance ?? {
+      enabled: true,
+      defaultScore: 0.5,
+      factors: [
+        { name: 'fileRole', weight: 0.4 },
+        { name: 'length', weight: 0.2 },
+        { name: 'keywords', weight: 0.3 },
+        { name: 'header', weight: 0.1 },
+      ],
+    },
+    tags: {
+      enabled: data.tags?.enabled ?? true,
+      maxTags: data.tags?.maxTags ?? 10,
+    },
+    source: {
+      includePath: data.source?.includePath ?? true,
+      includeSection: data.source?.includeSection ?? true,
+      includeMetadata: data.source?.includeMetadata ?? false,
+    },
+  }));
 
 export const chunkingConfigSchema = z
   .object({
@@ -102,6 +182,7 @@ export const configurationSchema = z
     watchSources: z.array(watchSourceConfigSchema).optional().default([]),
     chunking: chunkingConfigSchema.optional(),
     enrichment: enrichmentConfigSchema.optional(),
+    enhancement: enhancementConfigSchema.optional(),
     mcp: mcpConfigSchema.optional(),
     telemetry: telemetryConfigSchema.optional(),
   })
@@ -128,6 +209,33 @@ export const configurationSchema = z
       timeoutMs: data.enrichment?.timeoutMs ?? 15000,
       docMaxTokens: data.enrichment?.docMaxTokens ?? 16000,
     },
+    enhancement: {
+      maxCharacters: {
+        prose: data.enhancement?.maxCharacters?.prose ?? 200,
+        code: data.enhancement?.maxCharacters?.code ?? 400,
+        configuration: data.enhancement?.maxCharacters?.configuration ?? 300,
+        documentation: data.enhancement?.maxCharacters?.documentation ?? 300,
+      },
+      importance: {
+        enabled: data.enhancement?.importance?.enabled ?? true,
+        defaultScore: data.enhancement?.importance?.defaultScore ?? 0.5,
+        factors: data.enhancement?.importance?.factors ?? [
+          { name: 'fileRole', weight: 0.4 },
+          { name: 'length', weight: 0.2 },
+          { name: 'keywords', weight: 0.3 },
+          { name: 'header', weight: 0.1 },
+        ],
+      },
+      tags: {
+        enabled: data.enhancement?.tags?.enabled ?? true,
+        maxTags: data.enhancement?.tags?.maxTags ?? 10,
+      },
+      source: {
+        includePath: data.enhancement?.source?.includePath ?? true,
+        includeSection: data.enhancement?.source?.includeSection ?? true,
+        includeMetadata: data.enhancement?.source?.includeMetadata ?? false,
+      },
+    },
     mcp: {
       url: data.mcp?.url ?? 'https://lite-llm.lan/mcp/mnemosyne',
       apiKey: data.mcp?.apiKey,
@@ -150,6 +258,7 @@ export const configurationSchema = z
 export type Configuration = z.infer<typeof configurationSchema>;
 export type WatchSourceConfig = z.infer<typeof watchSourceConfigSchema>;
 export type ChunkingConfig = z.infer<typeof chunkingConfigSchema>;
+export type EnhancementConfig = z.infer<typeof enhancementConfigSchema>;
 export type EnrichmentConfig = z.infer<typeof enrichmentConfigSchema>;
 export type McpConfig = z.infer<typeof mcpConfigSchema>;
 export type TelemetryConfig = z.infer<typeof telemetryConfigSchema>;

@@ -1,6 +1,6 @@
+import { Test, TestingModule } from '@nestjs/testing';
 import * as http from 'http';
 import * as https from 'https';
-import { Test, TestingModule } from '@nestjs/testing';
 import { Chunk } from '../domain/chunk.entity';
 import { ConfigurationService } from './config/configuration.service';
 import { aConfigService } from './config/configuration.test-utils';
@@ -17,22 +17,26 @@ jest.mock('https', () => ({
   get: jest.fn(),
 }));
 
-type MockReq = {
+interface MockReq {
   on: jest.Mock;
   write: jest.Mock;
   end: jest.Mock;
   setTimeout: jest.Mock;
   destroy: jest.Mock;
-};
+}
 
-type MockRes = {
+interface MockRes {
   statusCode: number;
   headers: Record<string, string | undefined>;
   on: jest.Mock;
   destroy: jest.Mock;
-};
+}
 
-function createMockResponse(statusCode: number, body: string, headers: Record<string, string | undefined> = {}): MockRes {
+function createMockResponse(
+  statusCode: number,
+  body: string,
+  headers: Record<string, string | undefined> = {},
+): MockRes {
   const res: MockRes = {
     statusCode,
     headers,
@@ -63,6 +67,9 @@ function testChunk(text = 'Test chunk content'): Chunk {
     startLine: 1,
     endLine: 10,
     metadata: {},
+    importance: 0.5,
+    tags: [],
+    namespace: 'default',
   }).getValue();
 }
 
@@ -166,7 +173,9 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
           body = JSON.stringify({
             jsonrpc: '2.0',
             id: 3,
-            result: { content: [{ type: 'text', text: JSON.stringify({ status: 'stored', memory_id: 'mem-1' }) }] },
+            result: {
+              content: [{ type: 'text', text: JSON.stringify({ status: 'stored', memory_id: 'mem-1' }) }],
+            },
           });
           headers = {};
         }
@@ -191,12 +200,14 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
     });
 
     it('returns ok even when initialize fails', async () => {
-      (http.request as jest.Mock).mockImplementation((_options: unknown, callback: (res: MockRes) => void) => {
-        const req = createMockReq();
-        const res = createMockResponse(500, 'Internal Server Error');
-        process.nextTick(() => callback(res));
-        return req;
-      });
+      (http.request as jest.Mock).mockImplementation(
+        (_options: unknown, callback: (res: MockRes) => void) => {
+          const req = createMockReq();
+          const res = createMockResponse(500, 'Internal Server Error');
+          process.nextTick(() => callback(res));
+          return req;
+        },
+      );
 
       const client = await createClient();
       const result = await client.initialize();
@@ -240,7 +251,9 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
           JSON.stringify({
             jsonrpc: '2.0',
             id: 3,
-            result: { content: [{ type: 'text', text: JSON.stringify({ status: 'stored', memory_id: 'mem-123' }) }] },
+            result: {
+              content: [{ type: 'text', text: JSON.stringify({ status: 'stored', memory_id: 'mem-123' }) }],
+            },
           }),
         );
         process.nextTick(() => callback(res));
@@ -259,6 +272,9 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
         oversized: false,
         startLine: 1,
         endLine: 10,
+        importance: 0.5,
+        tags: [],
+        namespace: 'default',
       }).getValue();
 
       const result = await client.remember(chunk);
@@ -273,6 +289,10 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
       expect(body.method).toBe('tools/call');
       expect(body.params.name).toBe('mnemosyne_remember');
       expect(body.params.arguments.content).toBe('test content');
+      expect(body.params.arguments.namespace).toBe('default');
+      expect(body.params.arguments.importance).toBe(0.5);
+      expect(body.params.arguments.tags).toEqual([]);
+      expect(body.params.arguments.source).toBe('default');
       expect(body.params.arguments.metadata.id).toBe('6ba7b810-9dad-11d1-80b4-00c04fd430c8');
       expect(body.params.arguments.metadata.chunkIndex).toBe(0);
       expect(body.params.arguments.metadata.totalChunks).toBe(2);
@@ -282,37 +302,267 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
       expect(body.params.arguments.metadata.language).toBe('typescript');
       expect(body.params.arguments.metadata.startLine).toBe(1);
       expect(body.params.arguments.metadata.endLine).toBe(10);
+      expect(body.params.arguments.metadata.importance).toBe(0.5);
+      expect(body.params.arguments.metadata.tags).toEqual([]);
+      expect(body.params.arguments.metadata.namespace).toBe('default');
     });
 
     it('parses stored response and returns ok', async () => {
-      (http.request as jest.Mock).mockImplementation((_options: unknown, callback: (res: MockRes) => void) => {
-        const req = createMockReq();
-        const res = createMockResponse(
-          200,
-          JSON.stringify({
-            jsonrpc: '2.0',
-            id: 3,
-            result: { content: [{ type: 'text', text: JSON.stringify({ status: 'stored', memory_id: 'mem-456' }) }] },
-          }),
-        );
-        process.nextTick(() => callback(res));
-        return req;
-      });
+      (http.request as jest.Mock).mockImplementation(
+        (_options: unknown, callback: (res: MockRes) => void) => {
+          const req = createMockReq();
+          const res = createMockResponse(
+            200,
+            JSON.stringify({
+              jsonrpc: '2.0',
+              id: 3,
+              result: {
+                content: [{ type: 'text', text: JSON.stringify({ status: 'stored', memory_id: 'mem-456' }) }],
+              },
+            }),
+          );
+          process.nextTick(() => callback(res));
+          return req;
+        },
+      );
 
       const result = await client.remember(testChunk());
       expect(result.isOk()).toBe(true);
     });
 
+    it('includes namespace in both top-level args and metadata', async () => {
+      let lastReq: MockReq | null = null;
+
+      (http.request as jest.Mock).mockImplementation(
+        (_options: unknown, callback: (res: MockRes) => void) => {
+          const req = createMockReq();
+          lastReq = req;
+          const res = createMockResponse(
+            200,
+            JSON.stringify({
+              jsonrpc: '2.0',
+              id: 3,
+              result: {
+                content: [{ type: 'text', text: JSON.stringify({ status: 'stored', memory_id: 'mem-1' }) }],
+              },
+            }),
+          );
+          process.nextTick(() => callback(res));
+          return req;
+        },
+      );
+
+      const chunk = Chunk.of({
+        id: '550e8400-e29b-41d4-a716-446655440001',
+        text: 'namespace test',
+        chunkIndex: 0,
+        totalChunks: 1,
+        sectionHeader: 'Test',
+        breadcrumb: 'test',
+        fileRole: 'docs' as const,
+        oversized: false,
+        startLine: 1,
+        endLine: 5,
+        importance: 0.7,
+        tags: ['vault', 'session'],
+        namespace: 'vault-knowledge',
+      }).getValue();
+
+      const result = await client.remember(chunk);
+      expect(result.isOk()).toBe(true);
+
+      const body = JSON.parse(lastReq!.write.mock.calls[0][0]);
+      expect(body.params.arguments.namespace).toBe('vault-knowledge');
+      expect(body.params.arguments.metadata.namespace).toBe('vault-knowledge');
+    });
+
+    it('includes importance in both top-level args and metadata', async () => {
+      let lastReq: MockReq | null = null;
+
+      (http.request as jest.Mock).mockImplementation(
+        (_options: unknown, callback: (res: MockRes) => void) => {
+          const req = createMockReq();
+          lastReq = req;
+          const res = createMockResponse(
+            200,
+            JSON.stringify({
+              jsonrpc: '2.0',
+              id: 3,
+              result: {
+                content: [{ type: 'text', text: JSON.stringify({ status: 'stored', memory_id: 'mem-1' }) }],
+              },
+            }),
+          );
+          process.nextTick(() => callback(res));
+          return req;
+        },
+      );
+
+      const chunk = Chunk.of({
+        id: '550e8400-e29b-41d4-a716-446655440002',
+        text: 'importance test',
+        chunkIndex: 0,
+        totalChunks: 1,
+        sectionHeader: 'Test',
+        breadcrumb: 'test',
+        fileRole: 'docs' as const,
+        oversized: false,
+        startLine: 1,
+        endLine: 5,
+        importance: 0.9,
+        tags: [],
+        namespace: 'default',
+      }).getValue();
+
+      const result = await client.remember(chunk);
+      expect(result.isOk()).toBe(true);
+
+      const body = JSON.parse(lastReq!.write.mock.calls[0][0]);
+      expect(body.params.arguments.importance).toBe(0.9);
+      expect(body.params.arguments.metadata.importance).toBe(0.9);
+    });
+
+    it('includes tags in both top-level args and metadata', async () => {
+      let lastReq: MockReq | null = null;
+
+      (http.request as jest.Mock).mockImplementation(
+        (_options: unknown, callback: (res: MockRes) => void) => {
+          const req = createMockReq();
+          lastReq = req;
+          const res = createMockResponse(
+            200,
+            JSON.stringify({
+              jsonrpc: '2.0',
+              id: 3,
+              result: {
+                content: [{ type: 'text', text: JSON.stringify({ status: 'stored', memory_id: 'mem-1' }) }],
+              },
+            }),
+          );
+          process.nextTick(() => callback(res));
+          return req;
+        },
+      );
+
+      const chunk = Chunk.of({
+        id: '550e8400-e29b-41d4-a716-446655440003',
+        text: 'tags test',
+        chunkIndex: 0,
+        totalChunks: 1,
+        sectionHeader: 'Test',
+        breadcrumb: 'test',
+        fileRole: 'docs' as const,
+        oversized: false,
+        startLine: 1,
+        endLine: 5,
+        importance: 0.5,
+        tags: ['important', 'breaking-change', 'api'],
+        namespace: 'default',
+      }).getValue();
+
+      const result = await client.remember(chunk);
+      expect(result.isOk()).toBe(true);
+
+      const body = JSON.parse(lastReq!.write.mock.calls[0][0]);
+      expect(body.params.arguments.tags).toEqual(['important', 'breaking-change', 'api']);
+      expect(body.params.arguments.metadata.tags).toEqual(['important', 'breaking-change', 'api']);
+    });
+
+    it('sets source equal to namespace not chunk', async () => {
+      let lastReq: MockReq | null = null;
+
+      (http.request as jest.Mock).mockImplementation(
+        (_options: unknown, callback: (res: MockRes) => void) => {
+          const req = createMockReq();
+          lastReq = req;
+          const res = createMockResponse(
+            200,
+            JSON.stringify({
+              jsonrpc: '2.0',
+              id: 3,
+              result: {
+                content: [{ type: 'text', text: JSON.stringify({ status: 'stored', memory_id: 'mem-1' }) }],
+              },
+            }),
+          );
+          process.nextTick(() => callback(res));
+          return req;
+        },
+      );
+
+      const chunk = Chunk.of({
+        id: '550e8400-e29b-41d4-a716-446655440004',
+        text: 'source test',
+        chunkIndex: 0,
+        totalChunks: 1,
+        sectionHeader: 'Test',
+        breadcrumb: 'test',
+        fileRole: 'docs' as const,
+        oversized: false,
+        startLine: 1,
+        endLine: 5,
+        importance: 0.5,
+        tags: [],
+        namespace: 'obsidian-notes',
+      }).getValue();
+
+      const result = await client.remember(chunk);
+      expect(result.isOk()).toBe(true);
+
+      const body = JSON.parse(lastReq!.write.mock.calls[0][0]);
+      expect(body.params.arguments.source).toBe('obsidian-notes');
+      expect(body.params.arguments.source).not.toBe('chunk');
+    });
+
+    it('is backward compatible with chunk using default values', async () => {
+      let lastReq: MockReq | null = null;
+
+      (http.request as jest.Mock).mockImplementation(
+        (_options: unknown, callback: (res: MockRes) => void) => {
+          const req = createMockReq();
+          lastReq = req;
+          const res = createMockResponse(
+            200,
+            JSON.stringify({
+              jsonrpc: '2.0',
+              id: 3,
+              result: {
+                content: [{ type: 'text', text: JSON.stringify({ status: 'stored', memory_id: 'mem-1' }) }],
+              },
+            }),
+          );
+          process.nextTick(() => callback(res));
+          return req;
+        },
+      );
+
+      const chunk = Chunk.create('default values test', 0, 1, 'Test', 'test').getValue();
+
+      const result = await client.remember(chunk);
+      expect(result.isOk()).toBe(true);
+
+      const body = JSON.parse(lastReq!.write.mock.calls[0][0]);
+      expect(body.params.arguments.namespace).toBe('default');
+      expect(body.params.arguments.importance).toBe(0.5);
+      expect(body.params.arguments.tags).toEqual([]);
+      expect(body.params.arguments.source).toBe('default');
+      expect(body.params.arguments.metadata.namespace).toBe('default');
+      expect(body.params.arguments.metadata.importance).toBe(0.5);
+      expect(body.params.arguments.metadata.tags).toEqual([]);
+    });
+
     it('returns ko on JSON-RPC error response', async () => {
-      (http.request as jest.Mock).mockImplementation((_options: unknown, callback: (res: MockRes) => void) => {
-        const req = createMockReq();
-        const res = createMockResponse(
-          200,
-          JSON.stringify({ jsonrpc: '2.0', id: 3, error: { code: -32603, message: 'Internal error' } }),
-        );
-        process.nextTick(() => callback(res));
-        return req;
-      });
+      (http.request as jest.Mock).mockImplementation(
+        (_options: unknown, callback: (res: MockRes) => void) => {
+          const req = createMockReq();
+          const res = createMockResponse(
+            200,
+            JSON.stringify({ jsonrpc: '2.0', id: 3, error: { code: -32603, message: 'Internal error' } }),
+          );
+          process.nextTick(() => callback(res));
+          return req;
+        },
+      );
 
       const result = await client.remember(testChunk());
       expect(result.isKo()).toBe(true);
@@ -320,12 +570,14 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
     });
 
     it('returns ko on HTTP error', async () => {
-      (http.request as jest.Mock).mockImplementation((_options: unknown, callback: (res: MockRes) => void) => {
-        const req = createMockReq();
-        const res = createMockResponse(503, 'Service Unavailable');
-        process.nextTick(() => callback(res));
-        return req;
-      });
+      (http.request as jest.Mock).mockImplementation(
+        (_options: unknown, callback: (res: MockRes) => void) => {
+          const req = createMockReq();
+          const res = createMockResponse(503, 'Service Unavailable');
+          process.nextTick(() => callback(res));
+          return req;
+        },
+      );
 
       const result = await client.remember(testChunk());
       expect(result.isKo()).toBe(true);
@@ -334,21 +586,25 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
     it('retries on failure up to maxRetries', async () => {
       let attemptCount = 0;
 
-      (http.request as jest.Mock).mockImplementation((_options: unknown, callback: (res: MockRes) => void) => {
-        attemptCount++;
-        const req = createMockReq();
-        const isOk = attemptCount >= 3;
-        const body = isOk
-          ? JSON.stringify({
-              jsonrpc: '2.0',
-              id: 3,
-              result: { content: [{ type: 'text', text: JSON.stringify({ status: 'stored', memory_id: 'mem-1' }) }] },
-            })
-          : 'Service Unavailable';
-        const res = createMockResponse(isOk ? 200 : 503, body);
-        process.nextTick(() => callback(res));
-        return req;
-      });
+      (http.request as jest.Mock).mockImplementation(
+        (_options: unknown, callback: (res: MockRes) => void) => {
+          attemptCount++;
+          const req = createMockReq();
+          const isOk = attemptCount >= 3;
+          const body = isOk
+            ? JSON.stringify({
+                jsonrpc: '2.0',
+                id: 3,
+                result: {
+                  content: [{ type: 'text', text: JSON.stringify({ status: 'stored', memory_id: 'mem-1' }) }],
+                },
+              })
+            : 'Service Unavailable';
+          const res = createMockResponse(isOk ? 200 : 503, body);
+          process.nextTick(() => callback(res));
+          return req;
+        },
+      );
 
       const result = await client.remember(testChunk());
       expect(result.isOk()).toBe(true);
@@ -421,19 +677,23 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
     });
 
     it('returns empty array when no results found', async () => {
-      (http.request as jest.Mock).mockImplementation((_options: unknown, callback: (res: MockRes) => void) => {
-        const req = createMockReq();
-        const res = createMockResponse(
-          200,
-          JSON.stringify({
-            jsonrpc: '2.0',
-            id: 3,
-            result: { content: [{ type: 'text', text: JSON.stringify({ status: 'success', results: [] }) }] },
-          }),
-        );
-        process.nextTick(() => callback(res));
-        return req;
-      });
+      (http.request as jest.Mock).mockImplementation(
+        (_options: unknown, callback: (res: MockRes) => void) => {
+          const req = createMockReq();
+          const res = createMockResponse(
+            200,
+            JSON.stringify({
+              jsonrpc: '2.0',
+              id: 3,
+              result: {
+                content: [{ type: 'text', text: JSON.stringify({ status: 'success', results: [] }) }],
+              },
+            }),
+          );
+          process.nextTick(() => callback(res));
+          return req;
+        },
+      );
 
       // recall retries on empty results by default — use maxRetries=1 to avoid timeout
       const result = await client.recall('no results query', 1, 10);
@@ -442,21 +702,28 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
     });
 
     it('returns ko on recall error response', async () => {
-      (http.request as jest.Mock).mockImplementation((_options: unknown, callback: (res: MockRes) => void) => {
-        const req = createMockReq();
-        const res = createMockResponse(
-          200,
-          JSON.stringify({
-            jsonrpc: '2.0',
-            id: 3,
-            result: {
-              content: [{ type: 'text', text: JSON.stringify({ status: 'error', message: 'Vector search failed' }) }],
-            },
-          }),
-        );
-        process.nextTick(() => callback(res));
-        return req;
-      });
+      (http.request as jest.Mock).mockImplementation(
+        (_options: unknown, callback: (res: MockRes) => void) => {
+          const req = createMockReq();
+          const res = createMockResponse(
+            200,
+            JSON.stringify({
+              jsonrpc: '2.0',
+              id: 3,
+              result: {
+                content: [
+                  {
+                    type: 'text',
+                    text: JSON.stringify({ status: 'error', message: 'Vector search failed' }),
+                  },
+                ],
+              },
+            }),
+          );
+          process.nextTick(() => callback(res));
+          return req;
+        },
+      );
 
       const result = await client.recall('test query');
       expect(result.isKo()).toBe(true);
@@ -488,13 +755,15 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
     it('sends ping request and returns true on success', async () => {
       let lastReq: MockReq | null = null;
 
-      (http.request as jest.Mock).mockImplementation((_options: unknown, callback: (res: MockRes) => void) => {
-        const req = createMockReq();
-        lastReq = req;
-        const res = createMockResponse(200, JSON.stringify({ jsonrpc: '2.0', id: 3, result: {} }));
-        process.nextTick(() => callback(res));
-        return req;
-      });
+      (http.request as jest.Mock).mockImplementation(
+        (_options: unknown, callback: (res: MockRes) => void) => {
+          const req = createMockReq();
+          lastReq = req;
+          const res = createMockResponse(200, JSON.stringify({ jsonrpc: '2.0', id: 3, result: {} }));
+          process.nextTick(() => callback(res));
+          return req;
+        },
+      );
 
       const result = await client.healthCheck();
       expect(result.isOk()).toBe(true);
@@ -505,15 +774,17 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
     });
 
     it('returns false on ping error', async () => {
-      (http.request as jest.Mock).mockImplementation((_options: unknown, callback: (res: MockRes) => void) => {
-        const req = createMockReq();
-        const res = createMockResponse(
-          200,
-          JSON.stringify({ jsonrpc: '2.0', id: 3, error: { code: -32600, message: 'Not found' } }),
-        );
-        process.nextTick(() => callback(res));
-        return req;
-      });
+      (http.request as jest.Mock).mockImplementation(
+        (_options: unknown, callback: (res: MockRes) => void) => {
+          const req = createMockReq();
+          const res = createMockResponse(
+            200,
+            JSON.stringify({ jsonrpc: '2.0', id: 3, error: { code: -32600, message: 'Not found' } }),
+          );
+          process.nextTick(() => callback(res));
+          return req;
+        },
+      );
 
       const result = await client.healthCheck();
       expect(result.isOk()).toBe(true);
@@ -674,12 +945,14 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
       const testClient = module.get(MnemosyneClient);
       expect(configService.getMcpConfig).not.toHaveBeenCalled();
 
-      (http.request as jest.Mock).mockImplementation((_options: unknown, callback: (res: MockRes) => void) => {
-        const req = createMockReq();
-        const res = createMockResponse(200, getInitResponse(), { 'mcp-session-id': 'session-abc' });
-        process.nextTick(() => callback(res));
-        return req;
-      });
+      (http.request as jest.Mock).mockImplementation(
+        (_options: unknown, callback: (res: MockRes) => void) => {
+          const req = createMockReq();
+          const res = createMockResponse(200, getInitResponse(), { 'mcp-session-id': 'session-abc' });
+          process.nextTick(() => callback(res));
+          return req;
+        },
+      );
 
       await testClient.initialize();
       expect(configService.getMcpConfig).toHaveBeenCalled();
@@ -737,18 +1010,20 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
       } as never);
 
       let callIndex = 0;
-      (https.request as jest.Mock).mockImplementation((options: unknown, callback: (res: MockRes) => void) => {
-        const req = createMockReq();
-        const idx = callIndex++;
-        const body =
-          idx === 0
-            ? getInitResponse()
-            : JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' });
-        const headers = idx === 0 ? { 'mcp-session-id': 'session-abc' } : {};
-        const res = createMockResponse(200, body, headers);
-        process.nextTick(() => callback(res));
-        return req;
-      });
+      (https.request as jest.Mock).mockImplementation(
+        (options: unknown, callback: (res: MockRes) => void) => {
+          const req = createMockReq();
+          const idx = callIndex++;
+          const body =
+            idx === 0
+              ? getInitResponse()
+              : JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' });
+          const headers = idx === 0 ? { 'mcp-session-id': 'session-abc' } : {};
+          const res = createMockResponse(200, body, headers);
+          process.nextTick(() => callback(res));
+          return req;
+        },
+      );
 
       const module: TestingModule = await Test.createTestingModule({
         providers: [

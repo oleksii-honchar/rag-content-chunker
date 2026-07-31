@@ -233,6 +233,73 @@ describe('ConfigurationService', () => {
     });
   });
 
+  describe('getEnhancementConfig()', () => {
+    it('returns enhancement config with defaults', async () => {
+      await fs.writeFile(configPath, '{}');
+      await createModule();
+      await service.load();
+
+      const config = service.getEnhancementConfig();
+      expect(config.maxCharacters.prose).toBe(200);
+      expect(config.maxCharacters.code).toBe(400);
+      expect(config.importance.enabled).toBe(true);
+      expect(config.tags.enabled).toBe(true);
+      expect(config.source.includePath).toBe(true);
+    });
+
+    it('returns loaded enhancement config after load', async () => {
+      const validConfig = {
+        enhancement: {
+          maxCharacters: { prose: 250, code: 500, configuration: 350, documentation: 350 },
+          importance: { enabled: false, defaultScore: 0.3 },
+          tags: { enabled: true, maxTags: 5 },
+          source: { includePath: true, includeSection: false, includeMetadata: true },
+        },
+      };
+
+      await fs.writeFile(configPath, yaml.dump(validConfig));
+      await createModule();
+      await service.load();
+
+      const config = service.getEnhancementConfig();
+      expect(config.maxCharacters.prose).toBe(250);
+      expect(config.maxCharacters.code).toBe(500);
+      expect(config.importance.enabled).toBe(false);
+      expect(config.importance.defaultScore).toBe(0.3);
+      expect(config.tags.maxTags).toBe(5);
+      expect(config.source.includeSection).toBe(false);
+      expect(config.source.includeMetadata).toBe(true);
+    });
+  });
+
+  describe('watch source namespace', () => {
+    it('defaults namespace to source id when not provided', async () => {
+      const validConfig = {
+        watchSources: [{ id: 'my-source', path: '/path' }],
+      };
+
+      await fs.writeFile(configPath, yaml.dump(validConfig));
+      await createModule();
+      await service.load();
+
+      const sources = service.getWatchSources();
+      expect(sources[0].namespace).toBe('my-source');
+    });
+
+    it('uses explicit namespace when provided', async () => {
+      const validConfig = {
+        watchSources: [{ id: 'my-source', path: '/path', namespace: 'custom-ns' }],
+      };
+
+      await fs.writeFile(configPath, yaml.dump(validConfig));
+      await createModule();
+      await service.load();
+
+      const sources = service.getWatchSources();
+      expect(sources[0].namespace).toBe('custom-ns');
+    });
+  });
+
   describe('initializeDefaultConfig()', () => {
     it('creates config directory if it does not exist', async () => {
       const newDir = path.join(testDir, 'new-config-dir');
@@ -248,7 +315,7 @@ describe('ConfigurationService', () => {
       expect(exists).toBe(true);
     });
 
-    it('creates default YAML with 3 example watch sources', async () => {
+    it('creates default YAML with watch sources', async () => {
       await createModule();
       const result = await service.initializeDefaultConfig();
 
@@ -258,12 +325,10 @@ describe('ConfigurationService', () => {
       const parsed = yaml.load(content) as unknown as Configuration;
 
       expect(parsed.watchSources).toBeDefined();
-      expect(parsed.watchSources?.length).toBe(3);
+      expect(parsed.watchSources?.length).toBeGreaterThan(0);
 
       const sourceIds = parsed.watchSources?.map(s => s.id) ?? [];
-      expect(sourceIds).toContain('obsidian-vault');
       expect(sourceIds).toContain('agent-sessions');
-      expect(sourceIds).toContain('codebase');
     });
 
     it('includes default chunking configuration', async () => {

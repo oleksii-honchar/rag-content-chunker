@@ -1,0 +1,341 @@
+import { MDocument } from '@mastra/rag';
+import { Injectable } from '@nestjs/common';
+import { Chunk, FILE_ROLES, FileRole } from '../../domain/chunk.entity';
+import { ConfigurationService } from '../../infrastructure/config/configuration.service';
+import { ErrorWithDetails } from '../../utils/error-with-details';
+import { Result } from '../../utils/result';
+
+type MastraChunkStrategy = 'markdown' | 'recursive' | 'json' | 'sentence';
+type MastraDocumentType = 'markdown' | 'json' | 'html' | 'text';
+
+@Injectable()
+export class MastraChunkingService {
+  constructor(private readonly configService: ConfigurationService) {}
+  /**
+   * Get max characters limit for a given file role from enhancement config.
+   */
+  private getMaxCharacters(fileRole: FileRole): number {
+    const maxChars = this.configService.getEnhancementConfig().maxCharacters;
+
+    switch (fileRole) {
+      case FILE_ROLES.DOCS:
+        return maxChars.prose;
+      case FILE_ROLES.CODE:
+        return maxChars.code;
+      case FILE_ROLES.CONFIG:
+        return maxChars.configuration;
+      case FILE_ROLES.AGENT_OUTPUT:
+        return maxChars.documentation;
+      default:
+        return maxChars.prose;
+    }
+  }
+
+  /**
+   * Chunk a file using Mastra MDocument with type-aware processing.
+   */
+  async chunkFile(content: string, filePath: string, sourceId: string): Promise<Result<Chunk[]>> {
+    try {
+      if (!content.trim()) {
+        return Result.ok([]);
+      }
+
+      const strategy = this.determineStrategy(filePath);
+      const docType = this.determineDocumentType(filePath);
+      const fileRole = this.determineFileRole(filePath);
+
+      // Create MDocument using type-aware factory
+      const document = this.createDocument(content, docType, filePath, sourceId);
+
+      // Apply chunking strategy with size config from enhancement.maxCharacters
+      await this.applyChunking(document, strategy, fileRole);
+
+      // Extract metadata
+      const enrichedDoc = await document.extractMetadata({
+        title: true,
+        keywords: true,
+      });
+
+      // Get chunks from MDocument using getDocs()
+      const mastraChunks = enrichedDoc.getDocs();
+
+      if (mastraChunks.length === 0) {
+        return Result.ok([]);
+      }
+
+      // Map Mastra chunks to domain Chunk entities
+      const chunks = this.mapToDomainChunks(mastraChunks, filePath, sourceId, fileRole, enrichedDoc);
+
+      return Result.ok(chunks);
+    } catch (error) {
+      return Result.ko(
+        new ErrorWithDetails(
+          error instanceof Error ? error.message : 'Unknown error during Mastra chunking',
+          'MastraChunkingError',
+          { filePath, sourceId },
+        ),
+      );
+    }
+  }
+
+  /**
+   * Determine chunking strategy based on file extension.
+   */
+  private determineStrategy(filePath: string): MastraChunkStrategy {
+    const ext = this.getExtension(filePath).toLowerCase();
+    const basename = filePath.split('/').pop()?.toLowerCase() ?? '';
+
+    // Markdown
+    if (['.md', '.mdx', '.markdown'].includes(ext)) {
+      return 'markdown';
+    }
+
+    // HTML — use markdown strategy (header-based splitting)
+    if (['.html', '.htm'].includes(ext)) {
+      return 'markdown';
+    }
+
+    // Code files — recursive chunking
+    if (this.isCodeExtension(ext)) {
+      return 'recursive';
+    }
+
+    // Config files — json strategy
+    if (this.isConfigExtension(ext) || basename === '.env' || basename.startsWith('.env.')) {
+      return 'json';
+    }
+
+    // Plain text — sentence-based
+    if (['.txt', '.text', '.log'].includes(ext)) {
+      return 'sentence';
+    }
+
+    // Fallback to sentence
+    return 'sentence';
+  }
+
+  /**
+   * Determine MDocument factory type based on file extension.
+   */
+  private determineDocumentType(filePath: string): MastraDocumentType {
+    const ext = this.getExtension(filePath).toLowerCase();
+
+    if (['.md', '.mdx', '.markdown'].includes(ext)) {
+      return 'markdown';
+    }
+
+    if (['.json'].includes(ext)) {
+      return 'json';
+    }
+
+    if (['.html', '.htm'].includes(ext)) {
+      return 'html';
+    }
+
+    // Default to text for everything else (including yaml, code, etc.)
+    return 'text';
+  }
+
+  /**
+   * Determine file role based on file path and extension.
+   */
+  private determineFileRole(filePath: string): FileRole {
+    const ext = this.getExtension(filePath).toLowerCase();
+    const lowerPath = filePath.toLowerCase();
+
+    // Agent output
+    if (lowerPath.includes('.agent-sessions') || lowerPath.includes('agent-meta-tool')) {
+      return FILE_ROLES.AGENT_OUTPUT;
+    }
+
+    // Config files
+    if (this.isConfigExtension(ext)) {
+      return FILE_ROLES.CONFIG;
+    }
+
+    // Code files
+    if (this.isCodeExtension(ext)) {
+      return FILE_ROLES.CODE;
+    }
+
+    // Default to docs
+    return FILE_ROLES.DOCS;
+  }
+
+  /**
+   * Create MDocument using type-aware factory.
+   */
+  private createDocument(
+    content: string,
+    docType: MastraDocumentType,
+    filePath: string,
+    sourceId: string,
+  ): MDocument {
+    const metadata = {
+      filePath,
+      sourceId,
+    };
+
+    switch (docType) {
+      case 'markdown':
+        return MDocument.fromMarkdown(content, metadata);
+      case 'json':
+        return MDocument.fromJSON(content, metadata);
+      case 'html':
+        return MDocument.fromHTML(content, metadata);
+      case 'text':
+      default:
+        return MDocument.fromText(content, metadata);
+    }
+  }
+
+  /**
+   * Apply chunking strategy to MDocument with size limits from enhancement config.
+   * No post-chunk truncation — Mastra handles splitting within limits natively.
+   */
+  private async applyChunking(
+    document: MDocument,
+    strategy: MastraChunkStrategy,
+    fileRole: FileRole,
+  ): Promise<void> {
+    const maxChars = this.getMaxCharacters(fileRole);
+    const minChars = Math.floor(maxChars * 0.5);
+    const targetChars = Math.floor(maxChars * 0.75);
+
+    switch (strategy) {
+      case 'markdown':
+        // MarkdownTransformer: use maxSize per section
+        await document.chunkMarkdown({ maxSize: maxChars });
+        break;
+      case 'recursive':
+        // RecursiveCharacterTransformer: use maxSize
+        await document.chunkRecursive({ maxSize: maxChars });
+        break;
+      case 'json':
+        // RecursiveJsonTransformer: use maxSize + minSize
+        await document.chunkJSON({ maxSize: maxChars, minSize: minChars });
+        break;
+      case 'sentence':
+        // SentenceTransformer: use maxSize, minSize, targetSize
+        await document.chunkSentence({
+          maxSize: maxChars,
+          minSize: minChars,
+          targetSize: targetChars,
+        });
+        break;
+    }
+  }
+
+  /**
+   * Map Mastra chunks to domain Chunk entities.
+   */
+  private mapToDomainChunks(
+    mastraChunks: any[],
+    filePath: string,
+    sourceId: string,
+    fileRole: FileRole,
+    enrichedDoc: any,
+  ): Chunk[] {
+    const totalChunks = mastraChunks.length;
+    const chunks: Chunk[] = [];
+
+    for (let i = 0; i < mastraChunks.length; i++) {
+      const mastraChunk = mastraChunks[i];
+      const chunkMetadata = mastraChunk.metadata ?? {};
+
+      // Build metadata record
+      const metadata: Record<string, string> = {
+        filePath,
+        sourceId,
+      };
+
+      // Include Mastra-extracted metadata if available
+      if (chunkMetadata.title) {
+        metadata.mastraTitle = chunkMetadata.title;
+      }
+      if (chunkMetadata.keywords) {
+        metadata.mastraKeywords = chunkMetadata.keywords;
+      }
+      if (enrichedDoc._metadata?.title) {
+        metadata.mastraDocTitle = enrichedDoc._metadata.title;
+      }
+      if (enrichedDoc._metadata?.keywords) {
+        metadata.mastraDocKeywords = enrichedDoc._metadata.keywords;
+      }
+
+      const chunkResult = Chunk.create(
+        mastraChunk.text,
+        i + 1,
+        totalChunks,
+        chunkMetadata.title || filePath,
+        filePath,
+        undefined,
+        fileRole,
+        false,
+        undefined,
+        undefined,
+        metadata,
+        0.5,
+        [],
+        'default',
+      );
+
+      if (chunkResult.isOk()) {
+        chunks.push(chunkResult.getValue());
+      }
+    }
+
+    return chunks;
+  }
+
+  /**
+   * Get file extension (lowercase).
+   */
+  private getExtension(filePath: string): string {
+    const parts = filePath.split('.');
+    return parts.length > 1 ? `.${parts[parts.length - 1]}` : '';
+  }
+
+  /**
+   * Check if extension is a code file.
+   */
+  private isCodeExtension(ext: string): boolean {
+    return [
+      '.ts',
+      '.tsx',
+      '.js',
+      '.jsx',
+      '.py',
+      '.go',
+      '.java',
+      '.rs',
+      '.cs',
+      '.php',
+      '.rb',
+      '.swift',
+      '.kt',
+      '.scala',
+      '.cpp',
+      '.c',
+      '.h',
+      '.hpp',
+      '.m',
+      '.mm',
+      '.ex',
+      '.exs',
+      '.hs',
+      '.pl',
+      '.r',
+      '.lua',
+      '.dart',
+      '.groovy',
+    ].includes(ext);
+  }
+
+  /**
+   * Check if extension is a config file.
+   */
+  private isConfigExtension(ext: string): boolean {
+    return ['.json', '.yaml', '.yml', '.toml', '.xml', '.ini', '.cfg', '.conf'].includes(ext);
+  }
+}

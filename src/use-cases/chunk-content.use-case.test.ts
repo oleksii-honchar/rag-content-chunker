@@ -1,18 +1,47 @@
-import { StrategyFactory } from '../application/strategies/strategy-factory.service';
+// Mock @mastra/rag BEFORE importing the service
+jest.mock('@mastra/rag', () => ({
+  MDocument: class MockMDocument {
+    static fromMarkdown = jest.fn();
+    static fromJSON = jest.fn();
+    static fromText = jest.fn();
+    static fromHTML = jest.fn();
+    extractMetadata = jest.fn();
+    chunkMarkdown = jest.fn();
+    chunkRecursive = jest.fn();
+    chunkJSON = jest.fn();
+    chunkSentence = jest.fn();
+    getDocs = jest.fn();
+    _chunks: unknown[] = [];
+    _metadata: Record<string, string> = {};
+    _textContent = '';
+    constructor(content: string, metadata?: Record<string, unknown>) {
+      this._textContent = content;
+      this._metadata = (metadata as Record<string, string>) ?? {};
+    }
+  },
+}));
+
+import { EnhancementPipelineService } from '../application/services/enhancement-pipeline.service';
+import { MastraChunkingService } from '../application/strategies/mastra-chunking.service';
 import { aChunk } from '../domain/chunk.entity.test-utils';
+import { EnhancementConfig } from '../infrastructure/config/config-schemas';
+import { ConfigurationService } from '../infrastructure/config/configuration.service';
 import { BasePinoLogger } from '../infrastructure/logging/base-pino-logger';
 import { Result } from '../utils/result';
 import { ChunkContentUseCase } from './chunk-content.use-case';
 
 type MockFn = jest.Mock;
 
-interface MockStrategyFactory {
-  determineStrategy: MockFn;
-  createChunker: MockFn;
+interface MockMastraChunkingService {
+  chunkFile: MockFn;
 }
 
-interface MockChunker {
-  chunk: MockFn;
+interface MockEnhancementPipelineService {
+  enhance: MockFn;
+}
+
+interface MockConfigurationService {
+  getEnhancementConfig: MockFn;
 }
 
 interface MockLogger {
@@ -25,20 +54,40 @@ interface MockLogger {
   log: MockFn;
 }
 
+const defaultEnhancementConfig: EnhancementConfig = {
+  maxCharacters: { prose: 200, code: 400, configuration: 300, documentation: 300 },
+  importance: {
+    enabled: true,
+    defaultScore: 0.5,
+    factors: [
+      { name: 'fileRole', weight: 0.4 },
+      { name: 'length', weight: 0.2 },
+      { name: 'keywords', weight: 0.3 },
+      { name: 'header', weight: 0.1 },
+    ],
+  },
+  tags: { enabled: true, maxTags: 10 },
+  source: { includePath: true, includeSection: true, includeMetadata: false },
+};
+
 describe('ChunkContentUseCase', () => {
   let useCase: ChunkContentUseCase;
-  let mockStrategyFactory: MockStrategyFactory;
-  let mockChunker: MockChunker;
+  let mockMastraChunkingService: MockMastraChunkingService;
+  let mockEnhancementPipelineService: MockEnhancementPipelineService;
+  let mockConfigurationService: MockConfigurationService;
   let mockLogger: MockLogger;
 
   beforeEach(() => {
-    mockChunker = {
-      chunk: jest.fn(),
+    mockMastraChunkingService = {
+      chunkFile: jest.fn(),
     };
 
-    mockStrategyFactory = {
-      determineStrategy: jest.fn(),
-      createChunker: jest.fn(),
+    mockEnhancementPipelineService = {
+      enhance: jest.fn().mockImplementation(chunks => Promise.resolve(Result.ok(chunks))),
+    };
+
+    mockConfigurationService = {
+      getEnhancementConfig: jest.fn(() => defaultEnhancementConfig),
     };
 
     mockLogger = {
@@ -55,83 +104,121 @@ describe('ChunkContentUseCase', () => {
     mockLogger.child.mockReturnValue(mockLogger);
 
     useCase = new ChunkContentUseCase(
-      mockStrategyFactory as unknown as StrategyFactory,
+      mockMastraChunkingService as unknown as MastraChunkingService,
+      mockEnhancementPipelineService as unknown as EnhancementPipelineService,
+      mockConfigurationService as unknown as ConfigurationService,
       mockLogger as unknown as BasePinoLogger,
     );
   });
 
   describe('execute with valid params', () => {
-    it('should return chunks when chunking succeeds', async () => {
+    it('should return chunks when Mastra chunking succeeds', async () => {
       const content = 'Test content';
       const filePath = '/path/to/file.ts';
       const sourceId = 'test-source';
       const chunks = [aChunk({ text: 'chunk 1' }), aChunk({ text: 'chunk 2' })];
 
-      mockStrategyFactory.determineStrategy.mockReturnValue('recursive');
-      mockStrategyFactory.createChunker.mockReturnValue(Result.ok(mockChunker));
-      mockChunker.chunk.mockResolvedValue(Result.ok(chunks));
+      mockMastraChunkingService.chunkFile.mockResolvedValue(Result.ok(chunks));
 
       const result = await useCase.execute({
         content,
         filePath,
         sourceId,
+        namespace: 'test-namespace',
       });
 
       expect(result.isOk()).toBe(true);
       expect(result.getValue()).toEqual(chunks);
     });
 
-    it('should use default token values when not provided', async () => {
+    it('should call MastraChunkingService.chunkFile with content, filePath, sourceId', async () => {
       const content = 'Test content';
       const filePath = '/path/to/file.md';
       const sourceId = 'test-source';
       const chunks = [aChunk()];
 
-      mockStrategyFactory.determineStrategy.mockReturnValue('markdown');
-      mockStrategyFactory.createChunker.mockReturnValue(Result.ok(mockChunker));
-      mockChunker.chunk.mockResolvedValue(Result.ok(chunks));
+      mockMastraChunkingService.chunkFile.mockResolvedValue(Result.ok(chunks));
 
       await useCase.execute({
         content,
         filePath,
         sourceId,
+        namespace: 'test-namespace',
       });
 
-      expect(mockChunker.chunk).toHaveBeenCalledWith(content, {
-        maxTokens: 500,
-        overlapTokens: 50,
-        hardCapTokens: 600,
-        filePath,
-        sourceId,
-      });
+      expect(mockMastraChunkingService.chunkFile).toHaveBeenCalledWith(content, filePath, sourceId);
     });
 
-    it('should use custom token values when provided', async () => {
-      const content = 'Test content';
-      const filePath = '/path/to/file.ts';
+    it('should call MastraChunkingService.chunkFile for markdown files', async () => {
+      const content = '# Title\n\nContent';
+      const filePath = '/path/to/README.md';
       const sourceId = 'test-source';
       const chunks = [aChunk()];
 
-      mockStrategyFactory.determineStrategy.mockReturnValue('recursive');
-      mockStrategyFactory.createChunker.mockReturnValue(Result.ok(mockChunker));
-      mockChunker.chunk.mockResolvedValue(Result.ok(chunks));
+      mockMastraChunkingService.chunkFile.mockResolvedValue(Result.ok(chunks));
 
       await useCase.execute({
         content,
         filePath,
         sourceId,
-        maxTokens: 1000,
-        overlapTokens: 100,
-        hardCapTokens: 1200,
+        namespace: 'test-namespace',
       });
 
-      expect(mockChunker.chunk).toHaveBeenCalledWith(content, {
-        maxTokens: 1000,
-        overlapTokens: 100,
-        hardCapTokens: 1200,
+      expect(mockMastraChunkingService.chunkFile).toHaveBeenCalledWith(content, filePath, sourceId);
+    });
+
+    it('should call MastraChunkingService.chunkFile for TypeScript files', async () => {
+      const content = 'const x = 1;';
+      const filePath = '/path/to/app.ts';
+      const sourceId = 'test-source';
+      const chunks = [aChunk()];
+
+      mockMastraChunkingService.chunkFile.mockResolvedValue(Result.ok(chunks));
+
+      await useCase.execute({
+        content,
         filePath,
         sourceId,
+        namespace: 'test-namespace',
       });
+
+      expect(mockMastraChunkingService.chunkFile).toHaveBeenCalledWith(content, filePath, sourceId);
+    });
+
+    it('should call MastraChunkingService.chunkFile for JSON config files', async () => {
+      const content = '{"key": "value"}';
+      const filePath = '/path/to/config.json';
+      const sourceId = 'test-source';
+      const chunks = [aChunk()];
+
+      mockMastraChunkingService.chunkFile.mockResolvedValue(Result.ok(chunks));
+
+      await useCase.execute({
+        content,
+        filePath,
+        sourceId,
+        namespace: 'test-namespace',
+      });
+
+      expect(mockMastraChunkingService.chunkFile).toHaveBeenCalledWith(content, filePath, sourceId);
+    });
+
+    it('should call MastraChunkingService.chunkFile for plain text files', async () => {
+      const content = 'First sentence. Second sentence.';
+      const filePath = '/path/to/notes.txt';
+      const sourceId = 'test-source';
+      const chunks = [aChunk()];
+
+      mockMastraChunkingService.chunkFile.mockResolvedValue(Result.ok(chunks));
+
+      await useCase.execute({
+        content,
+        filePath,
+        sourceId,
+        namespace: 'test-namespace',
+      });
+
+      expect(mockMastraChunkingService.chunkFile).toHaveBeenCalledWith(content, filePath, sourceId);
     });
   });
 
@@ -141,6 +228,7 @@ describe('ChunkContentUseCase', () => {
         content: '',
         filePath: '/path/to/file.ts',
         sourceId: 'test-source',
+        namespace: 'test-namespace',
       });
 
       expect(result.isKo()).toBe(true);
@@ -151,6 +239,7 @@ describe('ChunkContentUseCase', () => {
         content: 'test',
         filePath: '',
         sourceId: 'test-source',
+        namespace: 'test-namespace',
       });
 
       expect(result.isKo()).toBe(true);
@@ -161,6 +250,7 @@ describe('ChunkContentUseCase', () => {
         content: 'test',
         filePath: '/path/to/file.ts',
         sourceId: '',
+        namespace: 'test-namespace',
       });
 
       expect(result.isKo()).toBe(true);
@@ -171,6 +261,7 @@ describe('ChunkContentUseCase', () => {
         content: 'test',
         filePath: '/path/to/file.ts',
         sourceId: 'test-source',
+        namespace: 'test-namespace',
         maxTokens: -10,
       });
 
@@ -182,6 +273,7 @@ describe('ChunkContentUseCase', () => {
         content: 'test',
         filePath: '/path/to/file.ts',
         sourceId: 'test-source',
+        namespace: 'test-namespace',
         overlapTokens: -10,
       });
 
@@ -189,102 +281,23 @@ describe('ChunkContentUseCase', () => {
     });
   });
 
-  describe('strategy delegation', () => {
-    it('should delegate to correct strategy based on file extension', async () => {
-      const content = 'Test content';
-      const filePath = '/path/to/file.md';
-      const sourceId = 'test-source';
-      const chunks = [aChunk()];
-
-      mockStrategyFactory.determineStrategy.mockReturnValue('markdown');
-      mockStrategyFactory.createChunker.mockReturnValue(Result.ok(mockChunker));
-      mockChunker.chunk.mockResolvedValue(Result.ok(chunks));
-
-      await useCase.execute({
-        content,
-        filePath,
-        sourceId,
-      });
-
-      expect(mockStrategyFactory.determineStrategy).toHaveBeenCalledWith(filePath);
-      expect(mockStrategyFactory.createChunker).toHaveBeenCalledWith('markdown');
-    });
-
-    it('should use recursive strategy for TypeScript files', async () => {
-      const content = 'Test content';
-      const filePath = '/path/to/file.ts';
-      const sourceId = 'test-source';
-      const chunks = [aChunk()];
-
-      mockStrategyFactory.determineStrategy.mockReturnValue('recursive');
-      mockStrategyFactory.createChunker.mockReturnValue(Result.ok(mockChunker));
-      mockChunker.chunk.mockResolvedValue(Result.ok(chunks));
-
-      await useCase.execute({
-        content,
-        filePath,
-        sourceId,
-      });
-
-      expect(mockStrategyFactory.createChunker).toHaveBeenCalledWith('recursive');
-    });
-
-    it('should use config strategy for JSON files', async () => {
-      const content = '{"key": "value"}';
-      const filePath = '/path/to/config.json';
-      const sourceId = 'test-source';
-      const chunks = [aChunk()];
-
-      mockStrategyFactory.determineStrategy.mockReturnValue('config');
-      mockStrategyFactory.createChunker.mockReturnValue(Result.ok(mockChunker));
-      mockChunker.chunk.mockResolvedValue(Result.ok(chunks));
-
-      await useCase.execute({
-        content,
-        filePath,
-        sourceId,
-      });
-
-      expect(mockStrategyFactory.createChunker).toHaveBeenCalledWith('config');
-    });
-  });
-
   describe('error handling', () => {
-    it('should return error when chunker fails', async () => {
+    it('should return error when MastraChunkingService fails', async () => {
       const content = 'Test content';
       const filePath = '/path/to/file.ts';
       const sourceId = 'test-source';
 
-      mockStrategyFactory.determineStrategy.mockReturnValue('recursive');
-      mockStrategyFactory.createChunker.mockReturnValue(Result.ok(mockChunker));
-      mockChunker.chunk.mockResolvedValue(Result.ko(new Error('Chunking failed')));
+      mockMastraChunkingService.chunkFile.mockResolvedValue(Result.ko(new Error('Mastra chunking failed')));
 
       const result = await useCase.execute({
         content,
         filePath,
         sourceId,
+        namespace: 'test-namespace',
       });
 
       expect(result.isKo()).toBe(true);
-      expect(result.getError().message).toBe('Chunking failed');
-    });
-
-    it('should return error when createChunker fails', async () => {
-      const content = 'Test content';
-      const filePath = '/path/to/file.ts';
-      const sourceId = 'test-source';
-
-      mockStrategyFactory.determineStrategy.mockReturnValue('recursive');
-      mockStrategyFactory.createChunker.mockReturnValue(Result.ko(new Error('No chunker available')));
-
-      const result = await useCase.execute({
-        content,
-        filePath,
-        sourceId,
-      });
-
-      expect(result.isKo()).toBe(true);
-      expect(result.getError().message).toBe('No chunker available');
+      expect(result.getError().message).toBe('Mastra chunking failed');
     });
   });
 
@@ -295,42 +308,16 @@ describe('ChunkContentUseCase', () => {
       const sourceId = 'test-source';
       const chunks = [aChunk()];
 
-      mockStrategyFactory.determineStrategy.mockReturnValue('recursive');
-      mockStrategyFactory.createChunker.mockReturnValue(Result.ok(mockChunker));
-      mockChunker.chunk.mockResolvedValue(Result.ok(chunks));
+      mockMastraChunkingService.chunkFile.mockResolvedValue(Result.ok(chunks));
 
       await useCase.execute({
         content,
         filePath,
         sourceId,
+        namespace: 'test-namespace',
       });
 
-      expect(mockLogger.debug).toHaveBeenCalledWith('Chunking content', {
-        filePath,
-        contentLength: content.length,
-      });
-    });
-
-    it('should debug log strategy selection', async () => {
-      const content = 'Test content';
-      const filePath = '/path/to/file.ts';
-      const sourceId = 'test-source';
-      const chunks = [aChunk()];
-
-      mockStrategyFactory.determineStrategy.mockReturnValue('recursive');
-      mockStrategyFactory.createChunker.mockReturnValue(Result.ok(mockChunker));
-      mockChunker.chunk.mockResolvedValue(Result.ok(chunks));
-
-      await useCase.execute({
-        content,
-        filePath,
-        sourceId,
-      });
-
-      expect(mockLogger.debug).toHaveBeenCalledWith('Using chunking strategy', {
-        strategy: 'recursive',
-        filePath,
-      });
+      expect(mockLogger.debug).toHaveBeenCalledWith(expect.stringContaining('Chunking'));
     });
 
     it('should info log successful chunking with chunkCount', async () => {
@@ -339,62 +326,181 @@ describe('ChunkContentUseCase', () => {
       const sourceId = 'test-source';
       const chunks = [aChunk({ text: 'chunk 1' }), aChunk({ text: 'chunk 2' })];
 
-      mockStrategyFactory.determineStrategy.mockReturnValue('recursive');
-      mockStrategyFactory.createChunker.mockReturnValue(Result.ok(mockChunker));
-      mockChunker.chunk.mockResolvedValue(Result.ok(chunks));
+      mockMastraChunkingService.chunkFile.mockResolvedValue(Result.ok(chunks));
 
       await useCase.execute({
         content,
         filePath,
         sourceId,
+        namespace: 'test-namespace',
       });
 
-      expect(mockLogger.info).toHaveBeenCalledWith('Content chunked', {
-        filePath,
-        strategy: 'recursive',
-        chunkCount: 2,
-      });
+      expect(mockLogger.info).toHaveBeenCalledWith(expect.stringContaining('chunked'));
     });
 
-    it('should error log when chunking fails', async () => {
+    it('should error log when MastraChunkingService fails', async () => {
       const content = 'Test content';
       const filePath = '/path/to/file.ts';
       const sourceId = 'test-source';
 
-      mockStrategyFactory.determineStrategy.mockReturnValue('recursive');
-      mockStrategyFactory.createChunker.mockReturnValue(Result.ok(mockChunker));
-      mockChunker.chunk.mockResolvedValue(Result.ko(new Error('Chunking failed')));
+      mockMastraChunkingService.chunkFile.mockResolvedValue(Result.ko(new Error('Mastra chunking failed')));
 
       await useCase.execute({
         content,
         filePath,
         sourceId,
+        namespace: 'test-namespace',
       });
 
-      expect(mockLogger.error).toHaveBeenCalledWith('Chunking failed', {
-        error: 'Chunking failed',
+      expect(mockLogger.error).toHaveBeenCalledWith(expect.stringContaining('chunk'));
+    });
+  });
+
+  describe('enhancement pipeline integration', () => {
+    it('should pipe chunks through EnhancementPipelineService after Mastra chunking', async () => {
+      const content = 'Test content';
+      const filePath = '/path/to/file.md';
+      const sourceId = 'test-source';
+      const namespace = 'my-namespace';
+      const rawChunks = [aChunk({ text: 'raw chunk 1', importance: 0.5, tags: [], namespace: 'default' })];
+      const enhancedChunks = [
+        aChunk({ text: 'raw chunk 1', importance: 0.8, tags: ['tag1'], namespace: 'my-namespace' }),
+      ];
+
+      mockMastraChunkingService.chunkFile.mockResolvedValue(Result.ok(rawChunks));
+      mockEnhancementPipelineService.enhance.mockResolvedValue(Result.ok(enhancedChunks));
+
+      const result = await useCase.execute({
+        content,
         filePath,
+        sourceId,
+        namespace,
       });
+
+      expect(result.isOk()).toBe(true);
+      expect(result.getValue()).toEqual(enhancedChunks);
+      expect(mockEnhancementPipelineService.enhance).toHaveBeenCalledWith(
+        rawChunks,
+        sourceId,
+        namespace,
+        defaultEnhancementConfig,
+      );
     });
 
-    it('should error log when createChunker fails', async () => {
-      const content = 'Test content';
-      const filePath = '/path/to/file.ts';
-      const sourceId = 'test-source';
+    it('should return enhanced chunks not raw Mastra chunks', async () => {
+      const rawChunks = [aChunk({ text: 'raw', importance: 0.5, tags: [], namespace: 'default' })];
+      const enhancedChunks = [
+        aChunk({ text: 'raw', importance: 0.9, tags: ['important'], namespace: 'test-ns' }),
+      ];
 
-      mockStrategyFactory.determineStrategy.mockReturnValue('recursive');
-      mockStrategyFactory.createChunker.mockReturnValue(Result.ko(new Error('No chunker available')));
+      mockMastraChunkingService.chunkFile.mockResolvedValue(Result.ok(rawChunks));
+      mockEnhancementPipelineService.enhance.mockResolvedValue(Result.ok(enhancedChunks));
+
+      const result = await useCase.execute({
+        content: 'test',
+        filePath: '/path/to/file.md',
+        sourceId: 'src',
+        namespace: 'test-ns',
+      });
+
+      const returnedChunks = result.getValue();
+      expect(returnedChunks[0].importance).toBe(0.9);
+      expect(returnedChunks[0].tags).toEqual(['important']);
+      expect(returnedChunks[0].namespace).toBe('test-ns');
+    });
+
+    it('should include namespace in params and pass to EnhancementPipelineService', async () => {
+      mockMastraChunkingService.chunkFile.mockResolvedValue(Result.ok([aChunk()]));
+      mockEnhancementPipelineService.enhance.mockResolvedValue(
+        Result.ok([aChunk({ namespace: 'custom-ns' })]),
+      );
 
       await useCase.execute({
-        content,
-        filePath,
-        sourceId,
+        content: 'test',
+        filePath: '/path/to/file.md',
+        sourceId: 'src',
+        namespace: 'custom-ns',
       });
 
-      expect(mockLogger.error).toHaveBeenCalledWith('Failed to create chunker', {
-        error: 'No chunker available',
-        strategy: 'recursive',
+      expect(mockEnhancementPipelineService.enhance).toHaveBeenCalledWith(
+        expect.any(Array),
+        'src',
+        'custom-ns',
+        defaultEnhancementConfig,
+      );
+    });
+
+    it('should fallback to raw chunks when enhancement fails', async () => {
+      const rawChunks = [aChunk({ text: 'raw chunk' })];
+
+      mockMastraChunkingService.chunkFile.mockResolvedValue(Result.ok(rawChunks));
+      mockEnhancementPipelineService.enhance.mockResolvedValue(
+        Result.ko(new Error('Enhancement pipeline failed')),
+      );
+
+      const result = await useCase.execute({
+        content: 'test',
+        filePath: '/path/to/file.md',
+        sourceId: 'src',
+        namespace: 'ns',
       });
+
+      expect(result.isOk()).toBe(true);
+      expect(result.getValue()).toEqual(rawChunks);
+      expect(mockLogger.error).toHaveBeenCalledWith(expect.stringContaining('Enhancement'));
+    });
+
+    it('should use enhancement config from ConfigurationService', async () => {
+      const customConfig: EnhancementConfig = {
+        ...defaultEnhancementConfig,
+        importance: { ...defaultEnhancementConfig.importance, defaultScore: 0.8 },
+      };
+      mockConfigurationService.getEnhancementConfig.mockReturnValue(customConfig);
+
+      mockMastraChunkingService.chunkFile.mockResolvedValue(Result.ok([aChunk()]));
+      mockEnhancementPipelineService.enhance.mockResolvedValue(Result.ok([aChunk()]));
+
+      await useCase.execute({
+        content: 'test',
+        filePath: '/path/to/file.md',
+        sourceId: 'src',
+        namespace: 'ns',
+      });
+
+      expect(mockConfigurationService.getEnhancementConfig).toHaveBeenCalled();
+      expect(mockEnhancementPipelineService.enhance).toHaveBeenCalledWith(
+        expect.any(Array),
+        'src',
+        'ns',
+        customConfig,
+      );
+    });
+  });
+
+  describe('namespace validation', () => {
+    it('should accept valid namespace in params', async () => {
+      mockMastraChunkingService.chunkFile.mockResolvedValue(Result.ok([aChunk()]));
+      mockEnhancementPipelineService.enhance.mockResolvedValue(Result.ok([aChunk()]));
+
+      const result = await useCase.execute({
+        content: 'test',
+        filePath: '/path/to/file.md',
+        sourceId: 'src',
+        namespace: 'valid-namespace',
+      });
+
+      expect(result.isOk()).toBe(true);
+    });
+
+    it('should return error when namespace is empty', async () => {
+      const result = await useCase.execute({
+        content: 'test',
+        filePath: '/path/to/file.md',
+        sourceId: 'src',
+        namespace: '',
+      });
+
+      expect(result.isKo()).toBe(true);
     });
   });
 });

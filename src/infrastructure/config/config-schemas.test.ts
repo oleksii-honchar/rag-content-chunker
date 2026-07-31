@@ -1,6 +1,7 @@
 import {
   chunkingConfigSchema,
   configurationSchema,
+  enhancementConfigSchema,
   enrichmentConfigSchema,
   mcpConfigSchema,
   telemetryConfigSchema,
@@ -13,10 +14,8 @@ describe('config-schemas', () => {
       const input = {
         id: 'test-source',
         path: '/some/path',
-        include: ['*.md'],
         exclude: ['**/.git/**'],
         debounceMs: 5000,
-        ignorePatterns: ['**/.DS_Store'],
       };
 
       const result = watchSourceConfigSchema.safeParse(input);
@@ -24,7 +23,6 @@ describe('config-schemas', () => {
       if (result.success) {
         expect(result.data.id).toBe('test-source');
         expect(result.data.path).toBe('/some/path');
-        expect(result.data.include).toEqual(['*.md']);
       }
     });
 
@@ -37,10 +35,13 @@ describe('config-schemas', () => {
       const result = watchSourceConfigSchema.safeParse(input);
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data.include).toEqual(['*.md']);
-        expect(result.data.exclude).toEqual(['**/.git/**', '**/node_modules/**']);
+        expect(result.data.exclude).toEqual([
+          '.git/**',
+          '**/.git/**',
+          'node_modules/**',
+          '**/node_modules/**',
+        ]);
         expect(result.data.debounceMs).toBe(3000);
-        expect(result.data.ignorePatterns).toEqual([]);
       }
     });
 
@@ -59,6 +60,115 @@ describe('config-schemas', () => {
     it('rejects negative debounceMs', () => {
       const input = { id: 'test', path: '/path', debounceMs: -100 };
       const result = watchSourceConfigSchema.safeParse(input);
+      expect(result.success).toBe(false);
+    });
+
+    it('accepts namespace field', () => {
+      const input = {
+        id: 'test-source',
+        path: '/path',
+        namespace: 'my-namespace',
+      };
+      const result = watchSourceConfigSchema.safeParse(input);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.namespace).toBe('my-namespace');
+      }
+    });
+
+    it('defaults namespace to source id when not provided', () => {
+      const input = { id: 'my-source', path: '/path' };
+      const result = watchSourceConfigSchema.safeParse(input);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.namespace).toBe('my-source');
+      }
+    });
+  });
+
+  describe('enhancementConfigSchema', () => {
+    it('parses valid enhancement config with all fields', () => {
+      const input = {
+        maxCharacters: {
+          prose: 200,
+          code: 400,
+          configuration: 300,
+          documentation: 300,
+        },
+        importance: {
+          enabled: true,
+          defaultScore: 0.5,
+          factors: [
+            { name: 'fileRole', weight: 0.4 },
+            { name: 'keywords', weight: 0.3 },
+          ],
+        },
+        tags: {
+          enabled: true,
+          maxTags: 10,
+        },
+        source: {
+          includePath: true,
+          includeSection: true,
+          includeMetadata: false,
+        },
+      };
+
+      const result = enhancementConfigSchema.safeParse(input);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.maxCharacters.prose).toBe(200);
+        expect(result.data.maxCharacters.code).toBe(400);
+        expect(result.data.importance.enabled).toBe(true);
+        expect(result.data.tags.enabled).toBe(true);
+        expect(result.data.source.includePath).toBe(true);
+      }
+    });
+
+    it('applies defaults for empty object', () => {
+      const result = enhancementConfigSchema.safeParse({});
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.maxCharacters.prose).toBe(200);
+        expect(result.data.maxCharacters.code).toBe(400);
+        expect(result.data.maxCharacters.configuration).toBe(300);
+        expect(result.data.maxCharacters.documentation).toBe(300);
+        expect(result.data.importance.enabled).toBe(true);
+        expect(result.data.importance.defaultScore).toBe(0.5);
+        expect(result.data.importance.factors).toBeDefined();
+        expect(result.data.tags.enabled).toBe(true);
+        expect(result.data.tags.maxTags).toBe(10);
+        expect(result.data.source.includePath).toBe(true);
+        expect(result.data.source.includeSection).toBe(true);
+        expect(result.data.source.includeMetadata).toBe(false);
+      }
+    });
+
+    it('validates maxCharacters values are positive numbers', () => {
+      const result = enhancementConfigSchema.safeParse({
+        maxCharacters: { prose: -10, code: 400, configuration: 300, documentation: 300 },
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('validates importance.defaultScore is between 0 and 1', () => {
+      const result = enhancementConfigSchema.safeParse({
+        importance: { enabled: true, defaultScore: 1.5 },
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('validates importance.factors have required fields', () => {
+      const result = enhancementConfigSchema.safeParse({
+        importance: { enabled: true, defaultScore: 0.5, factors: [{ name: 'test' }] },
+      });
+      expect(result.success).toBe(true); // weight is optional, defaults to 1.0
+    });
+
+    it('validates tags.maxTags is positive', () => {
+      const result = enhancementConfigSchema.safeParse({
+        tags: { enabled: true, maxTags: 0 },
+      });
       expect(result.success).toBe(false);
     });
   });
@@ -272,8 +382,30 @@ describe('config-schemas', () => {
         expect(result.data.watchSources).toEqual([]);
         expect(result.data.chunking.strategy).toBe('content-aware');
         expect(result.data.enrichment.enabled).toBe(false);
+        expect(result.data.enhancement.maxCharacters.prose).toBe(200);
+        expect(result.data.enhancement.importance.enabled).toBe(true);
+        expect(result.data.enhancement.tags.enabled).toBe(true);
         expect(result.data.mcp.url).toBe('https://lite-llm.lan/mcp/mnemosyne');
         expect(result.data.telemetry.enabled).toBe(true);
+      }
+    });
+
+    it('parses enhancement config in root schema', () => {
+      const input = {
+        enhancement: {
+          maxCharacters: { prose: 250, code: 500, configuration: 350, documentation: 350 },
+          importance: { enabled: false, defaultScore: 0.3 },
+          tags: { enabled: true, maxTags: 5 },
+          source: { includePath: true, includeSection: false, includeMetadata: true },
+        },
+      };
+      const result = configurationSchema.safeParse(input);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.enhancement.maxCharacters.prose).toBe(250);
+        expect(result.data.enhancement.importance.enabled).toBe(false);
+        expect(result.data.enhancement.tags.maxTags).toBe(5);
+        expect(result.data.enhancement.source.includeMetadata).toBe(true);
       }
     });
 

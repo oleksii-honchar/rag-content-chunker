@@ -11,6 +11,7 @@ import {
   ChunkingConfig,
   Configuration,
   configurationSchema,
+  EnhancementConfig,
   EnrichmentConfig,
   McpConfig,
   TelemetryConfig,
@@ -22,7 +23,8 @@ const DEFAULT_CONFIG: Configuration = {
     {
       id: 'agent-sessions',
       path: '~/.agent-sessions',
-      exclude: ['archive/**', '**/archive/**', ' .smart-env/**'],
+      namespace: 'agent-sessions',
+      exclude: ['archive/**', '**/archive/**', '.smart-env/**'],
       debounceMs: 5000,
     },
   ],
@@ -46,6 +48,33 @@ const DEFAULT_CONFIG: Configuration = {
     maxConcurrency: 1,
     timeoutMs: 15000,
     docMaxTokens: 16000,
+  },
+  enhancement: {
+    maxCharacters: {
+      prose: 200,
+      code: 400,
+      configuration: 300,
+      documentation: 300,
+    },
+    importance: {
+      enabled: true,
+      defaultScore: 0.5,
+      factors: [
+        { name: 'fileRole', weight: 0.4 },
+        { name: 'length', weight: 0.2 },
+        { name: 'keywords', weight: 0.3 },
+        { name: 'header', weight: 0.1 },
+      ],
+    },
+    tags: {
+      enabled: true,
+      maxTags: 10,
+    },
+    source: {
+      includePath: true,
+      includeSection: true,
+      includeMetadata: false,
+    },
   },
   mcp: {
     url: 'https://lite-llm.lan/mcp/mnemosyne',
@@ -141,6 +170,10 @@ export class ConfigurationService implements OnApplicationBootstrap {
 
   getTelemetryConfig(): TelemetryConfig {
     return this.config?.telemetry ?? DEFAULT_CONFIG.telemetry;
+  }
+
+  getEnhancementConfig(): EnhancementConfig {
+    return this.config?.enhancement ?? DEFAULT_CONFIG.enhancement;
   }
 
   async initializeDefaultConfig(): Promise<Result<void>> {

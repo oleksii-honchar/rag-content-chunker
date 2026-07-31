@@ -68,10 +68,7 @@ describe('FileProcessingQueue', () => {
     ]);
 
     expect(completed).toEqual([1, 3]);
-    expect(mockLogger.error).toHaveBeenCalledWith(
-      'Task failed in processing queue',
-      expect.objectContaining({ error: 'task 2 failed' }),
-    );
+    expect(mockLogger.error).toHaveBeenCalledWith('Task failed in processing queue: task 2 failed');
   });
 
   it('should report correct queue length', async () => {

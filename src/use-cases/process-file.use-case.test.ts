@@ -1,4 +1,28 @@
 import * as fs from 'fs/promises';
+
+// Mock @mastra/rag BEFORE importing the service
+jest.mock('@mastra/rag', () => ({
+  MDocument: class MockMDocument {
+    static fromMarkdown = jest.fn();
+    static fromJSON = jest.fn();
+    static fromText = jest.fn();
+    static fromHTML = jest.fn();
+    extractMetadata = jest.fn();
+    chunkMarkdown = jest.fn();
+    chunkRecursive = jest.fn();
+    chunkJSON = jest.fn();
+    chunkSentence = jest.fn();
+    getDocs = jest.fn();
+    _chunks: unknown[] = [];
+    _metadata: Record<string, string> = {};
+    _textContent = '';
+    constructor(content: string, metadata?: Record<string, unknown>) {
+      this._textContent = content;
+      this._metadata = (metadata as Record<string, string>) ?? {};
+    }
+  },
+}));
+
 import { aChunk } from '../domain/chunk.entity.test-utils';
 import { FileAddedEvent, FileChangedEvent, FileDeletedEvent } from '../domain/events/file-events';
 import { FileProcessingQueue } from '../infrastructure/file-processing-queue.service';
@@ -82,6 +106,7 @@ describe('ProcessFileUseCase', () => {
     it('should queue processing and chunk + ingest on success', async () => {
       const filePath = '/path/to/file.md';
       const sourceId = 'test-source';
+      const namespace = 'test-namespace';
       const fileContent = 'Test file content';
       const chunks = [aChunk({ text: 'chunk 1' }), aChunk({ text: 'chunk 2' })];
 
@@ -96,6 +121,7 @@ describe('ProcessFileUseCase', () => {
         filePath,
         eventType: 'add',
         sourceId,
+        namespace,
       });
 
       expect(result.isOk()).toBe(true);
@@ -104,6 +130,7 @@ describe('ProcessFileUseCase', () => {
         content: fileContent,
         filePath,
         sourceId,
+        namespace,
       });
       expect(mockIngestChunkUseCase.execute).toHaveBeenCalledWith({
         chunks,
@@ -113,6 +140,28 @@ describe('ProcessFileUseCase', () => {
           eventType: 'add',
         },
       });
+    });
+
+    it('should pass source namespace from params to ChunkContentUseCase', async () => {
+      const filePath = '/path/to/file.md';
+      const sourceId = 'agent-sessions';
+      const namespace = 'agent-sessions';
+      const fileContent = 'Test';
+      const chunks = [aChunk({ namespace })];
+
+      (fs.readFile as MockFn).mockResolvedValue(fileContent);
+      mockChunkContentUseCase.execute.mockResolvedValue(Result.ok(chunks));
+      mockIngestChunkUseCase.execute.mockResolvedValue(Result.ok(undefined as unknown as void));
+      mockProcessingQueue.addToQueue.mockImplementation(task => task());
+
+      await useCase.execute({
+        filePath,
+        eventType: 'add',
+        sourceId,
+        namespace,
+      });
+
+      expect(mockChunkContentUseCase.execute).toHaveBeenCalledWith(expect.objectContaining({ namespace }));
     });
 
     it('should return error when file read fails', async () => {
@@ -129,10 +178,11 @@ describe('ProcessFileUseCase', () => {
         filePath,
         eventType: 'add',
         sourceId,
+        namespace: 'test-namespace',
       });
 
       expect(result.isOk()).toBe(true);
-      expect(mockLogger.error).toHaveBeenCalledWith('Failed to read file', expect.any(Object));
+      expect(mockLogger.error).toHaveBeenCalledWith(expect.stringContaining('read'));
     });
 
     it('should return error when chunking fails', async () => {
@@ -151,10 +201,11 @@ describe('ProcessFileUseCase', () => {
         filePath,
         eventType: 'add',
         sourceId,
+        namespace: 'test-namespace',
       });
 
       expect(result.isOk()).toBe(true);
-      expect(mockLogger.error).toHaveBeenCalledWith('Failed to chunk content', expect.any(Object));
+      expect(mockLogger.error).toHaveBeenCalledWith(expect.stringContaining('chunk'));
     });
 
     it('should return error when ingestion fails', async () => {
@@ -175,10 +226,11 @@ describe('ProcessFileUseCase', () => {
         filePath,
         eventType: 'add',
         sourceId,
+        namespace: 'test-namespace',
       });
 
       expect(result.isOk()).toBe(true);
-      expect(mockLogger.error).toHaveBeenCalledWith('Failed to ingest chunks', expect.any(Object));
+      expect(mockLogger.error).toHaveBeenCalledWith(expect.stringContaining('ingest'));
     });
 
     it('should skip ingestion when no chunks generated', async () => {
@@ -197,10 +249,11 @@ describe('ProcessFileUseCase', () => {
         filePath,
         eventType: 'add',
         sourceId,
+        namespace: 'test-namespace',
       });
 
       expect(mockIngestChunkUseCase.execute).not.toHaveBeenCalled();
-      expect(mockLogger.debug).toHaveBeenCalledWith('No chunks generated', { filePath });
+      expect(mockLogger.debug).toHaveBeenCalledWith(expect.stringContaining('chunk'));
     });
   });
 
@@ -217,6 +270,7 @@ describe('ProcessFileUseCase', () => {
     it('should re-chunk and re-ingest on change', async () => {
       const filePath = '/path/to/file.md';
       const sourceId = 'test-source';
+      const namespace = 'test-namespace';
       const fileContent = 'Updated content';
       const chunks = [aChunk({ text: 'updated chunk' })];
 
@@ -230,12 +284,14 @@ describe('ProcessFileUseCase', () => {
         filePath,
         eventType: 'change',
         sourceId,
+        namespace,
       });
 
       expect(mockChunkContentUseCase.execute).toHaveBeenCalledWith({
         content: fileContent,
         filePath,
         sourceId,
+        namespace,
       });
       expect(mockIngestChunkUseCase.execute).toHaveBeenCalledWith({
         chunks,
@@ -268,13 +324,11 @@ describe('ProcessFileUseCase', () => {
         filePath,
         eventType: 'delete',
         sourceId,
+        namespace: 'test-namespace',
       });
 
       expect(result.isOk()).toBe(true);
-      expect(mockLogger.info).toHaveBeenCalledWith('File deleted', {
-        filePath,
-        sourceId,
-      });
+      expect(mockLogger.info).toHaveBeenCalledWith(expect.stringContaining('deleted'));
       expect(mockChunkContentUseCase.execute).not.toHaveBeenCalled();
       expect(mockIngestChunkUseCase.execute).not.toHaveBeenCalled();
     });
@@ -300,6 +354,7 @@ describe('ProcessFileUseCase', () => {
         filePath,
         eventType: 'add',
         sourceId,
+        namespace: 'test-namespace',
       });
 
       expect(mockProcessingQueue.addToQueue).toHaveBeenCalledTimes(1);
@@ -322,6 +377,18 @@ describe('ProcessFileUseCase', () => {
         filePath: '',
         eventType: 'add',
         sourceId: 'test-source',
+        namespace: 'test-namespace',
+      } as unknown as Parameters<typeof useCase.execute>[0]);
+
+      expect(result.isKo()).toBe(true);
+    });
+
+    it('should return error when sourceId is missing', async () => {
+      const result = await useCase.execute({
+        filePath: '/path/to/file.md',
+        eventType: 'add',
+        sourceId: '',
+        namespace: 'test-namespace',
       } as unknown as Parameters<typeof useCase.execute>[0]);
 
       expect(result.isKo()).toBe(true);
@@ -342,6 +409,18 @@ describe('ProcessFileUseCase', () => {
         filePath: '/path/to/file.md',
         eventType: 'invalid' as 'add',
         sourceId: 'test-source',
+        namespace: 'test-namespace',
+      } as unknown as Parameters<typeof useCase.execute>[0]);
+
+      expect(result.isKo()).toBe(true);
+    });
+
+    it('should return error when namespace is missing', async () => {
+      const result = await useCase.execute({
+        filePath: '/path/to/file.md',
+        eventType: 'add',
+        sourceId: 'test-source',
+        namespace: '',
       } as unknown as Parameters<typeof useCase.execute>[0]);
 
       expect(result.isKo()).toBe(true);

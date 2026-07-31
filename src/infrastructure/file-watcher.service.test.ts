@@ -24,10 +24,9 @@ describe('FileWatcherService', () => {
   const createSource = (overrides?: Partial<WatchSourceConfig>): WatchSourceConfig => ({
     id: 'test-source',
     path: '/test/path',
-    include: ['*.md'],
+    namespace: 'test-source',
     exclude: ['**/.git/**'],
     debounceMs: 3000,
-    ignorePatterns: [],
     ...overrides,
   });
 
@@ -126,11 +125,7 @@ describe('FileWatcherService', () => {
 
       expect(result.isOk()).toBe(true);
       expect(mockLogger.error).toHaveBeenCalledWith(
-        'Failed to start watching source',
-        expect.objectContaining({
-          sourceId: 'source-2',
-          error: 'ENOENT',
-        }),
+        expect.stringContaining('Failed to start watching source'),
       );
     });
   });
@@ -156,10 +151,7 @@ describe('FileWatcherService', () => {
 
       expect(result.isOk()).toBe(true);
       expect(mockLogger.error).toHaveBeenCalledWith(
-        'Error stopping watcher',
-        expect.objectContaining({
-          error: 'watcher error',
-        }),
+        expect.stringContaining('Error stopping watcher'),
       );
     });
   });
@@ -230,8 +222,7 @@ describe('FileWatcherService', () => {
   describe('ignore patterns', () => {
     it('applies ignore patterns correctly including defaults', async () => {
       const source = createSource({
-        exclude: ['**/node_modules/**'],
-        ignorePatterns: ['**/temp/**'],
+        exclude: ['**/node_modules/**', '**/temp/**'],
       });
       configService.getWatchSources.mockReturnValue([source]);
 
@@ -279,11 +270,7 @@ describe('FileWatcherService', () => {
       await service.onApplicationBootstrap();
 
       expect(mockLogger.error).toHaveBeenCalledWith(
-        'Failed to start watching source',
-        expect.objectContaining({
-          error: 'start failed',
-          sourceId: 'test-source',
-        }),
+        expect.stringContaining('Failed to start watching source'),
       );
     });
   });

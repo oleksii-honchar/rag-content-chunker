@@ -14,6 +14,9 @@ export function aChunk(overrides?: Partial<ChunkProps>): Chunk {
     startLine: 1,
     endLine: 10,
     metadata: {},
+    importance: 0.5,
+    tags: [],
+    namespace: 'default',
     ...overrides,
   };
   return Chunk.of(props).getValue();

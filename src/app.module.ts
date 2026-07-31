@@ -5,11 +5,10 @@ import { AppBootstrapService } from './app-bootstrap.service';
 import { AppConfig } from './app.config';
 import { validateAppEnv } from './app.env.validation';
 import { ForceReprocessService } from './application/force-reprocess.service';
-import { CodeChunker } from './application/strategies/code-chunker.service';
-import { ConfigChunker } from './application/strategies/config-chunker.service';
-import { MarkdownChunker } from './application/strategies/markdown-chunker.service';
-import { StrategyFactory } from './application/strategies/strategy-factory.service';
-import { TextChunker } from './application/strategies/text-chunker.service';
+import { EnhancementPipelineService } from './application/services/enhancement-pipeline.service';
+import { ImportanceScoringService } from './application/services/importance-scoring.service';
+import { TagExtractionService } from './application/services/tag-extraction.service';
+import { MastraChunkingService } from './application/strategies/mastra-chunking.service';
 import { DomainModule } from './domain/domain.module';
 import { AppEventEmitter } from './infrastructure/app-event-emitter';
 import { ConfigurationModule } from './infrastructure/config/configuration.module';
@@ -50,12 +49,12 @@ import { ProcessFileUseCase } from './use-cases/process-file.use-case';
     ChunkContentUseCase,
     ProcessFileUseCase,
     IngestChunkUseCase,
-    // Strategies
-    StrategyFactory,
-    MarkdownChunker,
-    CodeChunker,
-    TextChunker,
-    ConfigChunker,
+    // Chunking
+    MastraChunkingService,
+    // Enhancement pipeline
+    EnhancementPipelineService,
+    ImportanceScoringService,
+    TagExtractionService,
     // Application services
     ForceReprocessService,
     // Infrastructure
@@ -63,4 +62,4 @@ import { ProcessFileUseCase } from './use-cases/process-file.use-case';
     MnemosyneClient,
   ],
 })
-export class AppModule { }
+export class AppModule {}

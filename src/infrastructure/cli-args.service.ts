@@ -38,7 +38,7 @@ Options:
 
   private static readonly VERSION = packageJson.version;
 
-  constructor(private readonly logger: BasePinoLogger) { }
+  constructor(private readonly logger: BasePinoLogger) {}
 
   parse(args: string[]): ParsedCliArgs {
     // CLI args take precedence; otherwise fall back to env-based bootstrap config default

@@ -13,8 +13,11 @@ module.exports = {
     '^.+\\.(ts|tsx|js|jsx)$': 'ts-jest',
   },
   transformIgnorePatterns: [
-    'node_modules/(?!(chokidar|anymatch|readdirp|glob-parent|is-binary-path|fsevents)/)',
+    'node_modules/(?!(chokidar|anymatch|readdirp|glob-parent|is-binary-path|fsevents|nestjs-pino|pino-http|pino|pino-pretty|@mastra|@sindresorhus|escape-string-regexp|p-map|aggregate-error)/)',
   ],
+  moduleNameMapper: {
+    '^tokenx$': '<rootDir>/src/e2e/mocks/tokenx.js',
+  },
   testTimeout: 60000,
   verbose: true,
 };

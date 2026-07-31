@@ -216,7 +216,10 @@ export class MnemosyneClient implements OnApplicationBootstrap {
         name: 'mnemosyne_remember',
         arguments: {
           content: chunk.text,
-          source: 'chunk',
+          namespace: chunk.namespace,
+          importance: chunk.importance,
+          tags: chunk.tags,
+          source: chunk.namespace,
           metadata: {
             id: chunk.id,
             chunkIndex: chunk.chunkIndex,
@@ -227,6 +230,9 @@ export class MnemosyneClient implements OnApplicationBootstrap {
             language: chunk.language,
             startLine: chunk.startLine,
             endLine: chunk.endLine,
+            importance: chunk.importance,
+            tags: chunk.tags,
+            namespace: chunk.namespace,
             ...(chunk.metadata || {}),
           },
         },

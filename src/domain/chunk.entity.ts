@@ -21,10 +21,13 @@ export const chunkEntitySchema = z.object({
   breadcrumb: z.string(),
   language: z.string().optional(),
   fileRole: z.nativeEnum(FILE_ROLES),
-  oversized: z.boolean().optional().default(false),
+  oversized: z.boolean().default(false),
   startLine: z.number().optional(),
   endLine: z.number().optional(),
   metadata: z.record(z.string(), z.string()).optional(),
+  importance: z.number().min(0).max(1).default(0.5),
+  tags: z.array(z.string().min(1)).max(20).default([]),
+  namespace: z.string().min(1).default('default'),
 });
 
 export type ChunkProps = z.infer<typeof chunkEntitySchema>;
@@ -52,6 +55,9 @@ export class Chunk {
     startLine?: number,
     endLine?: number,
     metadata?: Record<string, string>,
+    importance = 0.5,
+    tags = [] as string[],
+    namespace = 'default',
   ): Result<Chunk> {
     return Chunk.of({
       id: crypto.randomUUID(),
@@ -66,6 +72,9 @@ export class Chunk {
       startLine,
       endLine,
       metadata,
+      importance,
+      tags,
+      namespace,
     });
   }
 
@@ -104,5 +113,14 @@ export class Chunk {
   }
   get metadata(): Record<string, string> | undefined {
     return this.props.metadata;
+  }
+  get importance(): number {
+    return this.props.importance;
+  }
+  get tags(): string[] {
+    return this.props.tags;
+  }
+  get namespace(): string {
+    return this.props.namespace;
   }
 }
