@@ -54,18 +54,21 @@ export class MastraChunkingService {
       // Apply chunking strategy with size config from enhancement.maxCharacters
       await this.applyChunking(document, strategy, fileRole);
 
-      // Extract metadata (optional — may fail if no OpenAI API key; chunks still work)
+      // Extract metadata (only if enrichment is enabled and LLM is configured)
       let enrichedDoc = document;
-      try {
-        enrichedDoc = await document.extractMetadata({
-          title: true,
-          keywords: true,
-        });
-      } catch (metadataError) {
-        // Graceful degradation: continue without LLM-enhanced metadata
-        this.logger.debug(
-          `Metadata extraction failed (chunks still generated): ${metadataError instanceof Error ? metadataError.message : String(metadataError)}`,
-        );
+      const enrichmentConfig = this.configService.getEnrichmentConfig();
+      if (enrichmentConfig.enabled && (enrichmentConfig.apiKey || enrichmentConfig.llmUrl)) {
+        try {
+          enrichedDoc = await document.extractMetadata({
+            title: true,
+            keywords: true,
+          });
+        } catch (metadataError) {
+          // Graceful degradation: continue without LLM-enhanced metadata
+          this.logger.debug(
+            `Metadata extraction failed (chunks still generated): ${metadataError instanceof Error ? metadataError.message : String(metadataError)}`,
+          );
+        }
       }
 
       // Get chunks from MDocument using getDocs()

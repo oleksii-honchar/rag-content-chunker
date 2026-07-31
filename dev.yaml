@@ -31,6 +31,12 @@ chunking:
 
 enrichment:
   enabled: false
+  # llmUrl: https://lite-llm.lan/v1
+  # llmModel: qwen3.6-27b-chat-q6
+  # apiKey: your-api-key-here
+  maxConcurrency: 1
+  timeoutMs: 15000
+  docMaxTokens: 16000
 
 enhancement:
   maxCharacters:
