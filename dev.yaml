@@ -32,6 +32,13 @@ chunking:
 enrichment:
   enabled: false
 
+enhancement:
+  maxCharacters:
+    prose: 2000
+    code: 3000
+    configuration: 1000
+    documentation: 2000
+
 mcp:
   url: http://localhost:3000
   apiKey: e2e-test-token

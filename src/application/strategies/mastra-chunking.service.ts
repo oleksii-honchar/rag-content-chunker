@@ -213,15 +213,17 @@ export class MastraChunkingService {
     const maxChars = this.getMaxCharacters(fileRole);
     const minChars = Math.floor(maxChars * 0.5);
     const targetChars = Math.floor(maxChars * 0.75);
+    // overlap must be < maxSize; use 25% of maxSize or 0 if too small
+    const overlap = maxChars > 4 ? Math.floor(maxChars * 0.25) : 0;
 
     switch (strategy) {
       case 'markdown':
         // MarkdownTransformer: use maxSize per section
-        await document.chunkMarkdown({ maxSize: maxChars });
+        await document.chunkMarkdown({ maxSize: maxChars, overlap });
         break;
       case 'recursive':
         // RecursiveCharacterTransformer: use maxSize
-        await document.chunkRecursive({ maxSize: maxChars });
+        await document.chunkRecursive({ maxSize: maxChars, overlap });
         break;
       case 'json':
         // RecursiveJsonTransformer: use maxSize + minSize
