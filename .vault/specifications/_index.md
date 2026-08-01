@@ -15,3 +15,4 @@ Structured feature and enhancement specifications for RAG Content Chunker.
 ### Active
 
 - [[0001-enhancement-specification]] — Enhancement features: character limits, importance scoring, tag generation, source extraction with Mastra RAG integration
+- [[0002-enrichment-pipeline]] — Enrichment pipeline: importance scoring, tag extraction, source attribution before Mnemosyne ingestion
