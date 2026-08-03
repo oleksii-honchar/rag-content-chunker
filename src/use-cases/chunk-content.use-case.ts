@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { z } from 'zod';
 import { EnhancementPipelineService } from '../application/services/enhancement-pipeline.service';
 import { MastraChunkingService } from '../application/strategies/mastra-chunking.service';
-import { Chunk } from '../domain/chunk.entity';
+import { Chunk } from '../domain/content-chunk.entity';
 import { ConfigurationService } from '../infrastructure/config/configuration.service';
 import { BasePinoLogger } from '../infrastructure/logging/base-pino-logger';
 import { BaseUseCase } from '../utils/base-use-case';

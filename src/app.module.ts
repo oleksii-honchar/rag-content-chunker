@@ -49,21 +49,27 @@ import { ProcessFileUseCase } from './use-cases/process-file.use-case';
     AppBootstrapService,
     FileWatcherService,
     GracefulShutdownService,
+
     // Use cases
     ChunkContentUseCase,
     ProcessFileUseCase,
     IngestChunkUseCase,
+
     // Chunking
     MastraChunkingService,
+
     // Enhancement pipeline
     EnhancementPipelineService,
     ImportanceScoringService,
     TagExtractionService,
+
     // Application services
     ForceReprocessService,
+
     // Infrastructure
     FileProcessingQueue,
     MnemosyneClient,
+
     // File→Memory tracking
     FileMemoryTrackerRepository,
     FileMemoryTrackerService,

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { z } from 'zod';
-import { Chunk } from '../domain/chunk.entity';
+import { Chunk } from '../domain/content-chunk.entity';
 import { FileMemoryTrackerService } from '../infrastructure/file-memory-tracker.service';
 import { BasePinoLogger } from '../infrastructure/logging/base-pino-logger';
 import { MnemosyneClient } from '../infrastructure/mnemosyne-client.service';

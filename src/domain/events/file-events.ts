@@ -1,3 +1,4 @@
+import { ValuesType } from '@/utils/values-type';
 import { DomainEvent } from '../../utils/domain-event';
 import { ErrorWithDetails } from '../../utils/error-with-details';
 import { Result } from '../../utils/result';
@@ -8,7 +9,7 @@ export const FILE_EVENTS = {
   DELETED: 'file.deleted' as const,
 } as const;
 
-export type FileEventType = (typeof FILE_EVENTS)[keyof typeof FILE_EVENTS];
+export type FileEventType = ValuesType<typeof FILE_EVENTS>;
 
 export class FileAddedEvent implements DomainEvent {
   readonly type: string;

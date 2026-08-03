@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { FileMemoryTracker } from '../domain/file-memory-tracker.aggregate';
 import { AggregateResult } from '../utils/aggregate-result';
+import { generateId } from '../utils/big-endian-id';
 import { ErrorWithDetails } from '../utils/error-with-details';
-import { generateId } from '../utils/id-generator';
 import { PrismaService } from './prisma/prisma.service';
 
 @Injectable()

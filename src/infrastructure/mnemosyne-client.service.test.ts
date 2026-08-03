@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import * as http from 'http';
 import * as https from 'https';
-import { Chunk } from '../domain/chunk.entity';
+import { Chunk } from '../domain/content-chunk.entity';
 import { ConfigurationService } from './config/configuration.service';
 import { aConfigService } from './config/configuration.test-utils';
 import { BasePinoLogger } from './logging/base-pino-logger';

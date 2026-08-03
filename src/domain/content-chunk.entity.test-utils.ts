@@ -1,4 +1,4 @@
-import { Chunk, ChunkProps, FILE_ROLES } from './chunk.entity';
+import { Chunk, ChunkProps, FILE_ROLES } from './content-chunk.entity';
 
 export function aChunk(overrides?: Partial<ChunkProps>): Chunk {
   const props: ChunkProps = {

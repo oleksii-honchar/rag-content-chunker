@@ -23,7 +23,7 @@ jest.mock('@mastra/rag', () => ({
   },
 }));
 
-import { aChunk } from '../domain/chunk.entity.test-utils';
+import { aChunk } from '../domain/content-chunk.entity.test-utils';
 import { FileAddedEvent, FileChangedEvent, FileDeletedEvent } from '../domain/events/file-events';
 import { FileMemoryTrackerService } from '../infrastructure/file-memory-tracker.service';
 import { aFileMemoryTrackerService } from '../infrastructure/file-memory-tracker.service.test-utils';

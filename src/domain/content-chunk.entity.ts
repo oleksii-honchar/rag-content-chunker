@@ -12,15 +12,15 @@ export const FILE_ROLES = {
 
 export type FileRole = ValuesType<typeof FILE_ROLES>;
 
-export const chunkEntitySchema = z.object({
-  id: z.string().uuid(),
+export const contentChunkSchema = z.object({
+  id: z.uuid(),
   text: z.string(),
   chunkIndex: z.number().nonnegative(),
   totalChunks: z.number().positive(),
   sectionHeader: z.string(),
   breadcrumb: z.string(),
   language: z.string().optional(),
-  fileRole: z.nativeEnum(FILE_ROLES),
+  fileRole: z.enum(Object.values(FILE_ROLES)),
   oversized: z.boolean().default(false),
   startLine: z.number().optional(),
   endLine: z.number().optional(),
@@ -30,13 +30,13 @@ export const chunkEntitySchema = z.object({
   namespace: z.string().min(1).default('default'),
 });
 
-export type ChunkProps = z.infer<typeof chunkEntitySchema>;
+export type ChunkProps = z.infer<typeof contentChunkSchema>;
 
 export class Chunk {
   private constructor(private readonly props: ChunkProps) {}
 
   static of(props: ChunkProps): Result<Chunk> {
-    const parsed = chunkEntitySchema.safeParse(props);
+    const parsed = contentChunkSchema.safeParse(props);
     if (!parsed.success) {
       return Result.ko(new ErrorWithDetails('Invalid chunk data: ' + parsed.error.message, 'InvalidChunk'));
     }

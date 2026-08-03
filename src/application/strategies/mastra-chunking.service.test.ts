@@ -1,4 +1,4 @@
-import { FILE_ROLES } from '../../domain/chunk.entity';
+import { FILE_ROLES } from '../../domain/content-chunk.entity';
 import { ConfigurationService } from '../../infrastructure/config/configuration.service';
 import { BasePinoLogger } from '../../infrastructure/logging/base-pino-logger';
 

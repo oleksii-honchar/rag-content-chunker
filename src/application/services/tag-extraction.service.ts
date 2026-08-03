@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Chunk } from '../../domain/chunk.entity';
+import { Chunk } from '../../domain/content-chunk.entity';
 import { EnhancementConfig } from '../../infrastructure/config/config-schemas';
 
 const STOPWORDS = new Set([

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Chunk, FILE_ROLES, FileRole } from '../../domain/chunk.entity';
+import { Chunk, FILE_ROLES, FileRole } from '../../domain/content-chunk.entity';
 import { EnhancementConfig } from '../../infrastructure/config/config-schemas';
 
 /**

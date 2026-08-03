@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { Chunk, FILE_ROLES } from '../../domain/chunk.entity';
+import { Chunk, FILE_ROLES } from '../../domain/content-chunk.entity';
 import { EnhancementConfig } from '../../infrastructure/config/config-schemas';
 import { TagExtractionService } from './tag-extraction.service';
 

@@ -23,7 +23,7 @@ jest.mock('@mastra/rag', () => ({
 
 import { EnhancementPipelineService } from '../application/services/enhancement-pipeline.service';
 import { MastraChunkingService } from '../application/strategies/mastra-chunking.service';
-import { aChunk } from '../domain/chunk.entity.test-utils';
+import { aChunk } from '../domain/content-chunk.entity.test-utils';
 import { EnhancementConfig } from '../infrastructure/config/config-schemas';
 import { ConfigurationService } from '../infrastructure/config/configuration.service';
 import { BasePinoLogger } from '../infrastructure/logging/base-pino-logger';

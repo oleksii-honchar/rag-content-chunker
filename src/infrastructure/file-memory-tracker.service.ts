@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { FileMemoryTracker } from '../domain/file-memory-tracker.aggregate';
-import { generateId } from '../utils/id-generator';
+import { generateId } from '../utils/big-endian-id';
 import { FileMemoryTrackerRepository } from './file-memory-tracker.repository';
 
 @Injectable()

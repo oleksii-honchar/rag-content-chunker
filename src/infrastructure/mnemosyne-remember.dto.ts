@@ -1,4 +1,4 @@
-import { Chunk } from '../domain/chunk.entity';
+import { Chunk } from '../domain/content-chunk.entity';
 
 /**
  * Payload shape for the mnemosyne_remember MCP tool call arguments.

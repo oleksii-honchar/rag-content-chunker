@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { Chunk, FILE_ROLES, FileRole } from '../../domain/chunk.entity';
+import { Chunk, FILE_ROLES, FileRole } from '../../domain/content-chunk.entity';
 import { EnhancementConfig } from '../../infrastructure/config/config-schemas';
 import { ImportanceScoringService } from './importance-scoring.service';
 

@@ -1,7 +1,7 @@
 import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
 import * as http from 'http';
 import * as https from 'https';
-import { Chunk } from '../domain/chunk.entity';
+import { Chunk } from '../domain/content-chunk.entity';
 import { ErrorWithDetails } from '../utils/error-with-details';
 import { Result } from '../utils/result';
 import { ConfigurationService } from './config/configuration.service';

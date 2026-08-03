@@ -1,4 +1,4 @@
-import { Chunk, FILE_ROLES } from './chunk.entity';
+import { Chunk, FILE_ROLES } from './content-chunk.entity';
 
 const VALID_CHUNK_PROPS = {
   id: '123e4567-e89b-12d3-a456-426614174000',

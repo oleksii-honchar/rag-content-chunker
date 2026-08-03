@@ -1,6 +1,6 @@
 import { MDocument } from '@mastra/rag';
 import { Injectable } from '@nestjs/common';
-import { Chunk, FILE_ROLES, FileRole } from '../../domain/chunk.entity';
+import { Chunk, FILE_ROLES, FileRole } from '../../domain/content-chunk.entity';
 import { ConfigurationService } from '../../infrastructure/config/configuration.service';
 import { BasePinoLogger } from '../../infrastructure/logging/base-pino-logger';
 import { ErrorWithDetails } from '../../utils/error-with-details';
