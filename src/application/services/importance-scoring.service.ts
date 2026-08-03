@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Chunk, FILE_ROLES, FileRole } from '../../domain/content-chunk.entity';
+import { ContentChunk, FILE_ROLES, FileRole } from '../../domain/content-chunk.entity';
 import { EnhancementConfig } from '../../infrastructure/config/config-schemas';
 
 /**
@@ -13,7 +13,7 @@ export class ImportanceScoringService {
    * Score a chunk based on configured importance factors.
    * If scoring is disabled, returns config.importance.defaultScore.
    */
-  score(chunk: Chunk, config: EnhancementConfig): number {
+  score(chunk: ContentChunk, config: EnhancementConfig): number {
     const importanceConfig = config.importance;
 
     if (!importanceConfig?.enabled) {
@@ -37,7 +37,7 @@ export class ImportanceScoringService {
   /**
    * Calculate the raw value (0-1) for a specific factor.
    */
-  private calculateFactorValue(factorName: string, chunk: Chunk): number {
+  private calculateFactorValue(factorName: string, chunk: ContentChunk): number {
     switch (factorName) {
       case 'fileRole':
         return this.fileRoleFactor(chunk.fileRole);

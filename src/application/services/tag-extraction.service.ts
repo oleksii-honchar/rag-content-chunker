@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Chunk } from '../../domain/content-chunk.entity';
+import { ContentChunk } from '../../domain/content-chunk.entity';
 import { EnhancementConfig } from '../../infrastructure/config/config-schemas';
 
 const STOPWORDS = new Set([
@@ -72,7 +72,7 @@ export class TagExtractionService {
    * Extract tags from a chunk based on configured rules.
    * If tagging is disabled, returns empty array.
    */
-  extract(chunk: Chunk, config: EnhancementConfig): string[] {
+  extract(chunk: ContentChunk, config: EnhancementConfig): string[] {
     const tagsConfig = config.tags;
 
     if (!tagsConfig?.enabled) {
@@ -116,7 +116,7 @@ export class TagExtractionService {
    * Extract file-type tag from chunk language or metadata extension.
    * Format: "file-type:{type}"
    */
-  private extractFileTypeTag(chunk: Chunk): string | null {
+  private extractFileTypeTag(chunk: ContentChunk): string | null {
     const type = chunk.language ?? chunk.metadata?.extension;
     if (!type || type.trim() === '') {
       return null;
@@ -128,7 +128,7 @@ export class TagExtractionService {
    * Extract location tag from chunk namespace.
    * Format: "location:{namespace}"
    */
-  private extractLocationTag(chunk: Chunk): string | null {
+  private extractLocationTag(chunk: ContentChunk): string | null {
     const namespace = chunk.namespace;
     if (!namespace || namespace.trim() === '') {
       return null;

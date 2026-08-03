@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { Chunk, FILE_ROLES } from '../../domain/content-chunk.entity';
+import { ContentChunk, FILE_ROLES } from '../../domain/content-chunk.entity';
 import { EnhancementConfig } from '../../infrastructure/config/config-schemas';
 import { TagExtractionService } from './tag-extraction.service';
 
@@ -45,7 +45,7 @@ describe('TagExtractionService', () => {
       namespace: 'default',
       ...overrides,
     };
-    return Chunk.of(props).getValue();
+    return ContentChunk.of(props).getValue();
   };
 
   beforeEach(async () => {

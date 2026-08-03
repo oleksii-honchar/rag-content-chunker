@@ -1,4 +1,4 @@
-import { Chunk, FILE_ROLES } from './content-chunk.entity';
+import { ContentChunk, FILE_ROLES } from './content-chunk.entity';
 
 const VALID_CHUNK_PROPS = {
   id: '123e4567-e89b-12d3-a456-426614174000',
@@ -17,7 +17,7 @@ const VALID_CHUNK_PROPS = {
 describe('Chunk', () => {
   describe('Chunk.of', () => {
     it('with valid props returns ok', () => {
-      const result = Chunk.of({
+      const result = ContentChunk.of({
         id: '123e4567-e89b-12d3-a456-426614174000',
         text: 'Test content',
         chunkIndex: 0,
@@ -42,7 +42,7 @@ describe('Chunk', () => {
     });
 
     it('with invalid id returns ko', () => {
-      const result = Chunk.of({
+      const result = ContentChunk.of({
         ...VALID_CHUNK_PROPS,
         id: 'not-a-uuid',
       });
@@ -51,7 +51,7 @@ describe('Chunk', () => {
     });
 
     it('with negative chunkIndex returns ko', () => {
-      const result = Chunk.of({
+      const result = ContentChunk.of({
         ...VALID_CHUNK_PROPS,
         chunkIndex: -1,
       });
@@ -60,7 +60,7 @@ describe('Chunk', () => {
     });
 
     it('with zero totalChunks returns ko', () => {
-      const result = Chunk.of({
+      const result = ContentChunk.of({
         ...VALID_CHUNK_PROPS,
         totalChunks: 0,
       });
@@ -69,7 +69,7 @@ describe('Chunk', () => {
     });
 
     it('with missing required fields returns ko', () => {
-      const result = Chunk.of({
+      const result = ContentChunk.of({
         id: '123e4567-e89b-12d3-a456-426614174000',
         text: 'Test',
         chunkIndex: 0,
@@ -81,7 +81,7 @@ describe('Chunk', () => {
     });
 
     it('with importance > 1 returns ko', () => {
-      const result = Chunk.of({
+      const result = ContentChunk.of({
         ...VALID_CHUNK_PROPS,
         importance: 1.5,
       } as never);
@@ -90,7 +90,7 @@ describe('Chunk', () => {
     });
 
     it('with importance < 0 returns ko', () => {
-      const result = Chunk.of({
+      const result = ContentChunk.of({
         ...VALID_CHUNK_PROPS,
         importance: -0.1,
       } as never);
@@ -99,7 +99,7 @@ describe('Chunk', () => {
     });
 
     it('with empty string tag returns ko', () => {
-      const result = Chunk.of({
+      const result = ContentChunk.of({
         ...VALID_CHUNK_PROPS,
         tags: ['valid-tag', ''],
       } as never);
@@ -108,7 +108,7 @@ describe('Chunk', () => {
     });
 
     it('with too many tags returns ko', () => {
-      const result = Chunk.of({
+      const result = ContentChunk.of({
         ...VALID_CHUNK_PROPS,
         tags: Array.from({ length: 21 }, (_, i) => `tag-${i}`),
       } as never);
@@ -117,7 +117,7 @@ describe('Chunk', () => {
     });
 
     it('with empty namespace returns ko', () => {
-      const result = Chunk.of({
+      const result = ContentChunk.of({
         ...VALID_CHUNK_PROPS,
         namespace: '',
       } as never);
@@ -128,7 +128,7 @@ describe('Chunk', () => {
 
   describe('Chunk.of — enhancement fields', () => {
     it('with valid importance returns ok', () => {
-      const result = Chunk.of({
+      const result = ContentChunk.of({
         ...VALID_CHUNK_PROPS,
         importance: 0.85,
       });
@@ -138,7 +138,7 @@ describe('Chunk', () => {
     });
 
     it('with valid tags returns ok', () => {
-      const result = Chunk.of({
+      const result = ContentChunk.of({
         ...VALID_CHUNK_PROPS,
         tags: ['typescript', 'config', 'important'],
       });
@@ -148,7 +148,7 @@ describe('Chunk', () => {
     });
 
     it('with valid namespace returns ok', () => {
-      const result = Chunk.of({
+      const result = ContentChunk.of({
         ...VALID_CHUNK_PROPS,
         namespace: 'vault-knowledge',
       });
@@ -158,7 +158,7 @@ describe('Chunk', () => {
     });
 
     it('defaults importance to 0.5 when omitted', () => {
-      const result = Chunk.of({
+      const result = ContentChunk.of({
         ...VALID_CHUNK_PROPS,
       });
 
@@ -167,7 +167,7 @@ describe('Chunk', () => {
     });
 
     it('defaults tags to empty array when omitted', () => {
-      const result = Chunk.of({
+      const result = ContentChunk.of({
         ...VALID_CHUNK_PROPS,
       });
 
@@ -176,7 +176,7 @@ describe('Chunk', () => {
     });
 
     it('defaults namespace to "default" when omitted', () => {
-      const result = Chunk.of({
+      const result = ContentChunk.of({
         ...VALID_CHUNK_PROPS,
       });
 
@@ -187,7 +187,7 @@ describe('Chunk', () => {
 
   describe('Chunk.create', () => {
     it('returns ok with valid args', () => {
-      const result = Chunk.create(
+      const result = ContentChunk.create(
         'Test content',
         0,
         3,
@@ -205,28 +205,28 @@ describe('Chunk', () => {
     });
 
     it('generates UUID for id', () => {
-      const result = Chunk.create('Content', 0, 1, 'Header', 'breadcrumb');
+      const result = ContentChunk.create('Content', 0, 1, 'Header', 'breadcrumb');
 
       const chunk = result.getValue();
       expect(chunk.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
     });
 
     it('defaults fileRole to DOCS', () => {
-      const result = Chunk.create('Content', 0, 1, 'Header', 'breadcrumb');
+      const result = ContentChunk.create('Content', 0, 1, 'Header', 'breadcrumb');
 
       const chunk = result.getValue();
       expect(chunk.fileRole).toBe(FILE_ROLES.DOCS);
     });
 
     it('defaults oversized to false', () => {
-      const result = Chunk.create('Content', 0, 1, 'Header', 'breadcrumb');
+      const result = ContentChunk.create('Content', 0, 1, 'Header', 'breadcrumb');
 
       const chunk = result.getValue();
       expect(chunk.oversized).toBe(false);
     });
 
     it('accepts importance parameter', () => {
-      const result = Chunk.create(
+      const result = ContentChunk.create(
         'Content',
         0,
         1,
@@ -246,7 +246,7 @@ describe('Chunk', () => {
     });
 
     it('accepts tags parameter', () => {
-      const result = Chunk.create(
+      const result = ContentChunk.create(
         'Content',
         0,
         1,
@@ -267,7 +267,7 @@ describe('Chunk', () => {
     });
 
     it('accepts namespace parameter', () => {
-      const result = Chunk.create(
+      const result = ContentChunk.create(
         'Content',
         0,
         1,
@@ -290,10 +290,10 @@ describe('Chunk', () => {
   });
 
   describe('getters', () => {
-    let chunk: Chunk;
+    let chunk: ContentChunk;
 
     beforeEach(() => {
-      const result = Chunk.of({
+      const result = ContentChunk.of({
         id: '123e4567-e89b-12d3-a456-426614174000',
         text: 'Test content here',
         chunkIndex: 2,

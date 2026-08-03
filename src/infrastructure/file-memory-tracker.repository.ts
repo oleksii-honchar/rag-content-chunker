@@ -106,7 +106,7 @@ export class FileMemoryTrackerRepository {
    * Upsert a single memory link for a tracker.
    * Infrastructure term — just persists the link, no domain logic.
    */
-  async upsertMemory(fileTrackerId: string, memoryId: string): Promise<void> {
+  async upsertMemory(fileTrackerId: bigint, memoryId: string): Promise<void> {
     const id = generateId();
     await this.prisma.fileMemoryTracker.upsert({
       where: {
@@ -127,7 +127,7 @@ export class FileMemoryTrackerRepository {
   /**
    * Delete a single memory link by fileTrackerId and memoryId.
    */
-  async deleteMemory(fileTrackerId: string, memoryId: string): Promise<void> {
+  async deleteMemory(fileTrackerId: bigint, memoryId: string): Promise<void> {
     await this.prisma.fileMemoryTracker.deleteMany({
       where: {
         fileTrackerId,

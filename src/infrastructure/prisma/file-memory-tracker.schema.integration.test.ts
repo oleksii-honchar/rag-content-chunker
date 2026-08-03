@@ -20,7 +20,7 @@ describe('FileTracker and FileMemoryTracker Schema Integration', () => {
     // Create FileTracker table
     await prisma.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "FileTracker" (
-        "id" TEXT NOT NULL,
+        "id" INTEGER NOT NULL,
         "filePath" TEXT NOT NULL,
         "sourceId" TEXT NOT NULL,
         "namespace" TEXT NOT NULL,
@@ -34,9 +34,9 @@ describe('FileTracker and FileMemoryTracker Schema Integration', () => {
     // Create FileMemoryTracker table
     await prisma.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "FileMemoryTracker" (
-        "id" TEXT NOT NULL,
+        "id" INTEGER NOT NULL,
         "memoryId" TEXT NOT NULL,
-        "fileTrackerId" TEXT NOT NULL,
+        "fileTrackerId" INTEGER NOT NULL,
         "createdAt" DATETIME NOT NULL DEFAULT (datetime('now')),
         PRIMARY KEY ("id"),
         UNIQUE ("fileTrackerId", "memoryId"),
@@ -77,7 +77,7 @@ describe('FileTracker and FileMemoryTracker Schema Integration', () => {
   it('should create a FileTracker record with all fields', async () => {
     const record = await prisma.fileTracker.create({
       data: {
-        id: 'test-tracker-001',
+        id: 1001n,
         filePath: '/test/path/to/file.md',
         sourceId: 'source-1',
         namespace: 'test-namespace',
@@ -85,6 +85,8 @@ describe('FileTracker and FileMemoryTracker Schema Integration', () => {
     });
 
     expect(record.id).toBeDefined();
+    expect(record.id).toBe(1001n);
+    expect(typeof record.id).toBe('bigint');
     expect(record.filePath).toBe('/test/path/to/file.md');
     expect(record.sourceId).toBe('source-1');
     expect(record.namespace).toBe('test-namespace');
@@ -95,7 +97,7 @@ describe('FileTracker and FileMemoryTracker Schema Integration', () => {
   it('should enforce unique constraint on filePath', async () => {
     await prisma.fileTracker.create({
       data: {
-        id: 'test-tracker-002',
+        id: 1002n,
         filePath: '/unique/test/file.txt',
         sourceId: 'source-1',
         namespace: 'test',
@@ -105,7 +107,7 @@ describe('FileTracker and FileMemoryTracker Schema Integration', () => {
     await expect(
       prisma.fileTracker.create({
         data: {
-          id: 'test-tracker-003',
+          id: 1003n,
           filePath: '/unique/test/file.txt',
           sourceId: 'source-2',
           namespace: 'test',
@@ -120,6 +122,7 @@ describe('FileTracker and FileMemoryTracker Schema Integration', () => {
     });
 
     expect(found).not.toBeNull();
+    expect(found!.id).toBe(1001n);
     expect(found!.sourceId).toBe('source-1');
   });
 
@@ -151,7 +154,7 @@ describe('FileTracker and FileMemoryTracker Schema Integration', () => {
   it('should delete a FileTracker record and cascade delete memories', async () => {
     const tracker = await prisma.fileTracker.create({
       data: {
-        id: 'test-tracker-004',
+        id: 1004n,
         filePath: '/cascade/test/file.md',
         sourceId: 'source-1',
         namespace: 'test',
@@ -160,7 +163,7 @@ describe('FileTracker and FileMemoryTracker Schema Integration', () => {
 
     await prisma.fileMemoryTracker.create({
       data: {
-        id: 'test-fm-001',
+        id: 2001n,
         fileTrackerId: tracker.id,
         memoryId: 'mem-cascade-1',
       },
@@ -184,7 +187,7 @@ describe('FileTracker and FileMemoryTracker Schema Integration', () => {
   it('should create FileMemoryTracker linked to FileTracker', async () => {
     const tracker = await prisma.fileTracker.create({
       data: {
-        id: 'test-tracker-005',
+        id: 1005n,
         filePath: '/memory/test/file.md',
         sourceId: 'source-1',
         namespace: 'test',
@@ -193,13 +196,14 @@ describe('FileTracker and FileMemoryTracker Schema Integration', () => {
 
     const memory = await prisma.fileMemoryTracker.create({
       data: {
-        id: 'test-fm-002',
+        id: 2002n,
         fileTrackerId: tracker.id,
         memoryId: 'mem-test-1',
       },
     });
 
     expect(memory.id).toBeDefined();
+    expect(memory.id).toBe(2002n);
     expect(memory.memoryId).toBe('mem-test-1');
     expect(memory.fileTrackerId).toBe(tracker.id);
   });
@@ -207,7 +211,7 @@ describe('FileTracker and FileMemoryTracker Schema Integration', () => {
   it('should enforce unique constraint on fileTrackerId+memoryId', async () => {
     const tracker = await prisma.fileTracker.create({
       data: {
-        id: 'test-tracker-006',
+        id: 1006n,
         filePath: '/unique-memory/test/file.md',
         sourceId: 'source-1',
         namespace: 'test',
@@ -216,7 +220,7 @@ describe('FileTracker and FileMemoryTracker Schema Integration', () => {
 
     await prisma.fileMemoryTracker.create({
       data: {
-        id: 'test-fm-003',
+        id: 2003n,
         fileTrackerId: tracker.id,
         memoryId: 'mem-unique-1',
       },
@@ -225,7 +229,7 @@ describe('FileTracker and FileMemoryTracker Schema Integration', () => {
     await expect(
       prisma.fileMemoryTracker.create({
         data: {
-          id: 'test-fm-004',
+          id: 2004n,
           fileTrackerId: tracker.id,
           memoryId: 'mem-unique-1',
         },
@@ -236,7 +240,7 @@ describe('FileTracker and FileMemoryTracker Schema Integration', () => {
   it('should upsert FileMemoryTracker without error on duplicate', async () => {
     const tracker = await prisma.fileTracker.create({
       data: {
-        id: 'test-tracker-007',
+        id: 1007n,
         filePath: '/upsert-memory/test/file.md',
         sourceId: 'source-1',
         namespace: 'test',
@@ -251,7 +255,7 @@ describe('FileTracker and FileMemoryTracker Schema Integration', () => {
         },
       },
       create: {
-        id: 'test-fm-005',
+        id: 2005n,
         fileTrackerId: tracker.id,
         memoryId: 'mem-upsert-1',
       },
@@ -267,7 +271,7 @@ describe('FileTracker and FileMemoryTracker Schema Integration', () => {
         },
       },
       create: {
-        id: 'test-fm-006',
+        id: 2006n,
         fileTrackerId: tracker.id,
         memoryId: 'mem-upsert-1',
       },
@@ -283,7 +287,7 @@ describe('FileTracker and FileMemoryTracker Schema Integration', () => {
   it('should include memories when querying FileTracker with include', async () => {
     const tracker = await prisma.fileTracker.create({
       data: {
-        id: 'test-tracker-008',
+        id: 1008n,
         filePath: '/include/test/file.md',
         sourceId: 'source-1',
         namespace: 'test',
@@ -291,10 +295,10 @@ describe('FileTracker and FileMemoryTracker Schema Integration', () => {
     });
 
     await prisma.fileMemoryTracker.create({
-      data: { id: 'test-fm-007', fileTrackerId: tracker.id, memoryId: 'mem-inc-1' },
+      data: { id: 2007n, fileTrackerId: tracker.id, memoryId: 'mem-inc-1' },
     });
     await prisma.fileMemoryTracker.create({
-      data: { id: 'test-fm-008', fileTrackerId: tracker.id, memoryId: 'mem-inc-2' },
+      data: { id: 2008n, fileTrackerId: tracker.id, memoryId: 'mem-inc-2' },
     });
 
     const found = await prisma.fileTracker.findUnique({
@@ -314,7 +318,7 @@ describe('FileTracker and FileMemoryTracker Schema Integration', () => {
     const created = await prisma.fileTracker.upsert({
       where: { filePath: '/upsert-tracker/file.md' },
       create: {
-        id: 'test-tracker-009',
+        id: 1009n,
         filePath: '/upsert-tracker/file.md',
         sourceId: 'source-create',
         namespace: 'test',
@@ -330,7 +334,7 @@ describe('FileTracker and FileMemoryTracker Schema Integration', () => {
     const updated = await prisma.fileTracker.upsert({
       where: { filePath: '/upsert-tracker/file.md' },
       create: {
-        id: 'test-tracker-010',
+        id: 1010n,
         filePath: '/upsert-tracker/file.md',
         sourceId: 'source-should-not-use',
         namespace: 'test',

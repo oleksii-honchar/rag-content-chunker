@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { z } from 'zod';
-import { Chunk } from '../domain/content-chunk.entity';
+import { ContentChunk } from '../domain/content-chunk.entity';
 import { FileMemoryTrackerService } from '../infrastructure/file-memory-tracker.service';
 import { BasePinoLogger } from '../infrastructure/logging/base-pino-logger';
 import { MnemosyneClient } from '../infrastructure/mnemosyne-client.service';
@@ -9,7 +9,7 @@ import { ErrorWithDetails } from '../utils/error-with-details';
 import { Result } from '../utils/result';
 
 const ingestChunkParamsSchema = z.object({
-  chunks: z.array(z.custom<Chunk>()),
+  chunks: z.array(z.custom<ContentChunk>()),
   sourceId: z.string().min(1),
   metadata: z.record(z.string(), z.string()).optional(),
 });

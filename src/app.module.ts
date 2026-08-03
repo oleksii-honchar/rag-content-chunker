@@ -9,7 +9,6 @@ import { EnhancementPipelineService } from './application/services/enhancement-p
 import { ImportanceScoringService } from './application/services/importance-scoring.service';
 import { TagExtractionService } from './application/services/tag-extraction.service';
 import { MastraChunkingService } from './application/strategies/mastra-chunking.service';
-import { DomainModule } from './domain/domain.module';
 import { AppEventEmitter } from './infrastructure/app-event-emitter';
 import { ConfigurationModule } from './infrastructure/config/configuration.module';
 import { FileMemoryTrackerRepository } from './infrastructure/file-memory-tracker.repository';
@@ -40,7 +39,6 @@ import { ProcessFileUseCase } from './use-cases/process-file.use-case';
     }),
     LoggerModule.forRootAsync(),
     ConfigurationModule,
-    DomainModule,
     PrismaModule,
   ],
   controllers: [],

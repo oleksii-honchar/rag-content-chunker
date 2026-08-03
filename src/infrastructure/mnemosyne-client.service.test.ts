@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import * as http from 'http';
 import * as https from 'https';
-import { Chunk } from '../domain/content-chunk.entity';
+import { ContentChunk } from '../domain/content-chunk.entity';
 import { ConfigurationService } from './config/configuration.service';
 import { aConfigService } from './config/configuration.test-utils';
 import { BasePinoLogger } from './logging/base-pino-logger';
@@ -54,8 +54,8 @@ function createMockResponse(
   return res;
 }
 
-function testChunk(text = 'Test chunk content'): Chunk {
-  return Chunk.of({
+function testChunk(text = 'Test chunk content'): ContentChunk {
+  return ContentChunk.of({
     id: '550e8400-e29b-41d4-a716-446655440000',
     text,
     chunkIndex: 0,
@@ -189,7 +189,7 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
       await client.initialize();
 
       // Trigger a remember call to verify session header is included
-      const chunkResult = Chunk.create('test', 0, 1, 'test', 'test');
+      const chunkResult = ContentChunk.create('test', 0, 1, 'test', 'test');
       if (chunkResult.isOk()) {
         await client.remember(chunkResult.getValue());
       }
@@ -260,7 +260,7 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
         return req;
       });
 
-      const chunk = Chunk.of({
+      const chunk = ContentChunk.of({
         id: '6ba7b810-9dad-11d1-80b4-00c04fd430c8',
         text: 'test content',
         chunkIndex: 0,
@@ -380,7 +380,7 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
         },
       );
 
-      const chunk = Chunk.of({
+      const chunk = ContentChunk.of({
         id: '550e8400-e29b-41d4-a716-446655440001',
         text: 'namespace test',
         chunkIndex: 0,
@@ -426,7 +426,7 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
         },
       );
 
-      const chunk = Chunk.of({
+      const chunk = ContentChunk.of({
         id: '550e8400-e29b-41d4-a716-446655440002',
         text: 'importance test',
         chunkIndex: 0,
@@ -472,7 +472,7 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
         },
       );
 
-      const chunk = Chunk.of({
+      const chunk = ContentChunk.of({
         id: '550e8400-e29b-41d4-a716-446655440003',
         text: 'tags test',
         chunkIndex: 0,
@@ -517,7 +517,7 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
         },
       );
 
-      const chunk = Chunk.of({
+      const chunk = ContentChunk.of({
         id: '550e8400-e29b-41d4-a716-446655440004',
         text: 'source test',
         chunkIndex: 0,
@@ -563,7 +563,7 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
         },
       );
 
-      const chunk = Chunk.create('default values test', 0, 1, 'Test', 'test').getValue();
+      const chunk = ContentChunk.create('default values test', 0, 1, 'Test', 'test').getValue();
 
       const result = await client.remember(chunk);
       expect(result.isOk()).toBe(true);

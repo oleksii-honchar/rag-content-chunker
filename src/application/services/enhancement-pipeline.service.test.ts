@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { Chunk, FILE_ROLES, FileRole } from '../../domain/content-chunk.entity';
+import { ContentChunk, FILE_ROLES, FileRole } from '../../domain/content-chunk.entity';
 import { EnhancementConfig } from '../../infrastructure/config/config-schemas';
 import { BasePinoLogger } from '../../infrastructure/logging/base-pino-logger';
 import { EnhancementPipelineService } from './enhancement-pipeline.service';
@@ -55,7 +55,7 @@ describe('EnhancementPipelineService', () => {
       namespace: 'default',
       ...overrides,
     };
-    return Chunk.of(props).getValue();
+    return ContentChunk.of(props).getValue();
   };
 
   const mockLogger: jest.Mocked<BasePinoLogger> = {

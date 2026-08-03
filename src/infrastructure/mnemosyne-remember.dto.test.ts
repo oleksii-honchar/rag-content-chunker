@@ -1,10 +1,10 @@
-import { Chunk } from '../domain/content-chunk.entity';
+import { ContentChunk } from '../domain/content-chunk.entity';
 import { MnemosyneRememberDto } from './mnemosyne-remember.dto';
 
 describe('MnemosyneRememberDto', () => {
   describe('fromChunk', () => {
     it('maps all required chunk properties to remember payload', () => {
-      const chunk = Chunk.of({
+      const chunk = ContentChunk.of({
         id: '550e8400-e29b-41d4-a716-446655440000',
         text: 'Test chunk content',
         chunkIndex: 2,
@@ -40,7 +40,7 @@ describe('MnemosyneRememberDto', () => {
     });
 
     it('includes language in metadata when present', () => {
-      const chunk = Chunk.of({
+      const chunk = ContentChunk.of({
         id: '550e8400-e29b-41d4-a716-446655440001',
         text: 'function hello() {}',
         chunkIndex: 0,
@@ -63,7 +63,7 @@ describe('MnemosyneRememberDto', () => {
     });
 
     it('omits language from metadata when not present', () => {
-      const chunk = Chunk.of({
+      const chunk = ContentChunk.of({
         id: '550e8400-e29b-41d4-a716-446655440002',
         text: 'Some docs',
         chunkIndex: 0,
@@ -83,7 +83,7 @@ describe('MnemosyneRememberDto', () => {
     });
 
     it('omits startLine and endLine from metadata when not present', () => {
-      const chunk = Chunk.of({
+      const chunk = ContentChunk.of({
         id: '550e8400-e29b-41d4-a716-446655440003',
         text: 'No line numbers',
         chunkIndex: 0,
@@ -104,7 +104,7 @@ describe('MnemosyneRememberDto', () => {
     });
 
     it('merges chunk metadata into result metadata', () => {
-      const chunk = Chunk.of({
+      const chunk = ContentChunk.of({
         id: '550e8400-e29b-41d4-a716-446655440004',
         text: 'Custom metadata test',
         chunkIndex: 0,
@@ -132,7 +132,7 @@ describe('MnemosyneRememberDto', () => {
     });
 
     it('uses default values for chunk with defaults', () => {
-      const chunk = Chunk.create('default test', 0, 1, 'Header', 'breadcrumb').getValue();
+      const chunk = ContentChunk.create('default test', 0, 1, 'Header', 'breadcrumb').getValue();
 
       const dto = MnemosyneRememberDto.fromChunk(chunk);
 
@@ -146,7 +146,7 @@ describe('MnemosyneRememberDto', () => {
     });
 
     it('sets source equal to namespace (not literal "chunk")', () => {
-      const chunk = Chunk.of({
+      const chunk = ContentChunk.of({
         id: '550e8400-e29b-41d4-a716-446655440005',
         text: 'Source test',
         chunkIndex: 0,

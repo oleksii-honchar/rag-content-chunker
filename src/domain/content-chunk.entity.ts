@@ -30,17 +30,17 @@ export const contentChunkSchema = z.object({
   namespace: z.string().min(1).default('default'),
 });
 
-export type ChunkProps = z.infer<typeof contentChunkSchema>;
+export type ContentChunkProps = z.infer<typeof contentChunkSchema>;
 
-export class Chunk {
-  private constructor(private readonly props: ChunkProps) {}
+export class ContentChunk {
+  private constructor(private readonly props: ContentChunkProps) {}
 
-  static of(props: ChunkProps): Result<Chunk> {
+  static of(props: ContentChunkProps): Result<ContentChunk> {
     const parsed = contentChunkSchema.safeParse(props);
     if (!parsed.success) {
       return Result.ko(new ErrorWithDetails('Invalid chunk data: ' + parsed.error.message, 'InvalidChunk'));
     }
-    return Result.ok(new Chunk(parsed.data));
+    return Result.ok(new ContentChunk(parsed.data));
   }
 
   static create(
@@ -58,8 +58,8 @@ export class Chunk {
     importance = 0.5,
     tags = [] as string[],
     namespace = 'default',
-  ): Result<Chunk> {
-    return Chunk.of({
+  ): Result<ContentChunk> {
+    return ContentChunk.of({
       id: crypto.randomUUID(),
       text,
       chunkIndex,

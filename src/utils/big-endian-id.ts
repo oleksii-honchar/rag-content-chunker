@@ -3,7 +3,8 @@
  * Adapted from voqaria's typescript-common/big-endian-id.
  *
  * Layout: 41 bits timestamp (ms since epoch) + 10 bits node + 12 bits sequence.
- * Result fits into a 64-bit unsigned integer (BigInt), returned as string.
+ * The result IS a 64-bit unsigned integer (BigInt), stored natively as a 64-bit
+ * integer in the database. No string conversion.
  */
 
 const EPOCH = 1577836800000n; // 2020-01-01
@@ -47,8 +48,8 @@ function generate(): bigint {
 }
 
 /**
- * Generates a new big-endian ID as a string.
+ * Generates a new big-endian ID as a 64-bit integer (BigInt).
  */
-export function generateId(): string {
-  return generate().toString();
+export function generateId(): bigint {
+  return generate();
 }

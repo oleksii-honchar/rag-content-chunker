@@ -1,7 +1,7 @@
-import { Chunk, ChunkProps, FILE_ROLES } from './content-chunk.entity';
+import { ContentChunk, ContentChunkProps, FILE_ROLES } from './content-chunk.entity';
 
-export function aChunk(overrides?: Partial<ChunkProps>): Chunk {
-  const props: ChunkProps = {
+export function aChunk(overrides?: Partial<ContentChunkProps>): ContentChunk {
+  const props: ContentChunkProps = {
     id: crypto.randomUUID(),
     text: 'Test chunk content',
     chunkIndex: 0,
@@ -19,5 +19,5 @@ export function aChunk(overrides?: Partial<ChunkProps>): Chunk {
     namespace: 'default',
     ...overrides,
   };
-  return Chunk.of(props).getValue();
+  return ContentChunk.of(props).getValue();
 }

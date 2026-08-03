@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Chunk } from '../../domain/content-chunk.entity';
+import { ContentChunk } from '../../domain/content-chunk.entity';
 import { EnhancementConfig } from '../../infrastructure/config/config-schemas';
 import { BasePinoLogger } from '../../infrastructure/logging/base-pino-logger';
 import { Result } from '../../utils/result';
@@ -35,16 +35,16 @@ export class EnhancementPipelineService {
    * @returns Result.ok(enhancedChunks) or Result.ko if all chunks fail validation
    */
   async enhance(
-    chunks: Chunk[],
+    chunks: ContentChunk[],
     sourceId: string,
     namespace: string,
     config: EnhancementConfig,
-  ): Promise<Result<Chunk[]>> {
+  ): Promise<Result<ContentChunk[]>> {
     if (chunks.length === 0) {
       return Result.ok([]);
     }
 
-    const enhancedChunks: Chunk[] = [];
+    const enhancedChunks: ContentChunk[] = [];
     let allFailed = true;
 
     for (const chunk of chunks) {
@@ -73,11 +73,11 @@ export class EnhancementPipelineService {
    * Each stage is wrapped in try/catch for resilience.
    */
   private async enhanceChunk(
-    chunk: Chunk,
+    chunk: ContentChunk,
     sourceId: string,
     namespace: string,
     config: EnhancementConfig,
-  ): Promise<Result<Chunk>> {
+  ): Promise<Result<ContentChunk>> {
     // Stage 1: Importance scoring
     let importance: number;
     try {
@@ -111,7 +111,7 @@ export class EnhancementPipelineService {
     }
 
     // Stage 3: Create enhanced chunk with namespace
-    const enhancedChunkResult = Chunk.of({
+    const enhancedChunkResult = ContentChunk.of({
       id: chunk.id,
       text: chunk.text,
       chunkIndex: chunk.chunkIndex,

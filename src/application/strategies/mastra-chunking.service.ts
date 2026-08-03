@@ -1,6 +1,6 @@
 import { MDocument } from '@mastra/rag';
 import { Injectable } from '@nestjs/common';
-import { Chunk, FILE_ROLES, FileRole } from '../../domain/content-chunk.entity';
+import { ContentChunk, FILE_ROLES, FileRole } from '../../domain/content-chunk.entity';
 import { ConfigurationService } from '../../infrastructure/config/configuration.service';
 import { BasePinoLogger } from '../../infrastructure/logging/base-pino-logger';
 import { ErrorWithDetails } from '../../utils/error-with-details';
@@ -38,7 +38,7 @@ export class MastraChunkingService {
   /**
    * Chunk a file using Mastra MDocument with type-aware processing.
    */
-  async chunkFile(content: string, filePath: string, sourceId: string): Promise<Result<Chunk[]>> {
+  async chunkFile(content: string, filePath: string, sourceId: string): Promise<Result<ContentChunk[]>> {
     try {
       if (!content.trim()) {
         return Result.ok([]);
@@ -252,9 +252,9 @@ export class MastraChunkingService {
     sourceId: string,
     fileRole: FileRole,
     enrichedDoc: MDocument,
-  ): Chunk[] {
+  ): ContentChunk[] {
     const totalChunks = mastraChunks.length;
-    const chunks: Chunk[] = [];
+    const chunks: ContentChunk[] = [];
 
     for (let i = 0; i < mastraChunks.length; i++) {
       const mastraChunk = mastraChunks[i];
@@ -292,7 +292,7 @@ export class MastraChunkingService {
         metadata.mastraDocKeywords = docKeywords;
       }
 
-      const chunkResult = Chunk.create(
+      const chunkResult = ContentChunk.create(
         mastraChunk.text,
         i + 1,
         totalChunks,

@@ -26,7 +26,7 @@ describe('FileMemoryTrackerService', () => {
   describe('trackMemory', () => {
     it('creates new tracker via findOrCreate then upserts memory link', async () => {
       const newTracker: FileMemoryTracker = {
-        id: 'tracker-new',
+        id: 8001n,
         filePath: '/new/file.md',
         memoryIds: [],
         sourceId: 'source-001',
@@ -41,13 +41,13 @@ describe('FileMemoryTrackerService', () => {
 
       expect(repository.findOrCreate).toHaveBeenCalledWith(expect.any(Object));
       expect(newTracker.remember).toHaveBeenCalledWith('mem-abc');
-      expect(repository.upsertMemory).toHaveBeenCalledWith('tracker-new', 'mem-abc');
+      expect(repository.upsertMemory).toHaveBeenCalledWith(8001n, 'mem-abc');
       expect(result).toEqual(expect.objectContaining({ filePath: '/new/file.md' }));
     });
 
     it('finds existing tracker via findOrCreate then upserts memory link', async () => {
       const existingTracker: FileMemoryTracker = {
-        id: 'tracker-existing',
+        id: 8002n,
         filePath: '/existing/file.md',
         memoryIds: ['mem-001'],
         sourceId: 'source-001',
@@ -67,13 +67,13 @@ describe('FileMemoryTrackerService', () => {
 
       expect(repository.findOrCreate).toHaveBeenCalledWith(expect.any(Object));
       expect(existingTracker.remember).toHaveBeenCalledWith('mem-002');
-      expect(repository.upsertMemory).toHaveBeenCalledWith('tracker-existing', 'mem-002');
+      expect(repository.upsertMemory).toHaveBeenCalledWith(8002n, 'mem-002');
       expect(result).toEqual(expect.objectContaining({ filePath: '/existing/file.md' }));
     });
 
     it('returns aggregate with updated memoryIds after remember', async () => {
       const updatedTracker: FileMemoryTracker = {
-        id: 'tracker-001',
+        id: 8003n,
         filePath: '/test/file.md',
         memoryIds: ['mem-001', 'mem-002'],
         sourceId: 'source-001',
@@ -86,7 +86,7 @@ describe('FileMemoryTrackerService', () => {
 
       const result = await service.trackMemory('/test/file.md', 'mem-002', 'source-001', 'vault-knowledge');
 
-      expect(result).toEqual(expect.objectContaining({ id: 'tracker-001' }));
+      expect(result).toEqual(expect.objectContaining({ id: 8003n }));
       expect(result.memoryIds).toContain('mem-002');
     });
   });
@@ -94,7 +94,7 @@ describe('FileMemoryTrackerService', () => {
   describe('forgetMemory', () => {
     it('uses aggregate forget logic then deletes memory link via repository', async () => {
       const tracker: FileMemoryTracker = {
-        id: 'tracker-001',
+        id: 8004n,
         filePath: '/test/file.txt',
         memoryIds: ['mem-001', 'mem-002'],
         sourceId: 'source-001',
@@ -109,7 +109,7 @@ describe('FileMemoryTrackerService', () => {
 
       expect(repository.findByFilePath).toHaveBeenCalledWith('/test/file.txt');
       expect(tracker.forget).toHaveBeenCalledWith('mem-001');
-      expect(repository.deleteMemory).toHaveBeenCalledWith('tracker-001', 'mem-001');
+      expect(repository.deleteMemory).toHaveBeenCalledWith(8004n, 'mem-001');
       expect(result).toEqual(expect.objectContaining({ filePath: '/test/file.txt' }));
     });
 
@@ -125,7 +125,7 @@ describe('FileMemoryTrackerService', () => {
 
     it('returns aggregate after forget', async () => {
       const updatedTracker: FileMemoryTracker = {
-        id: 'tracker-001',
+        id: 8005n,
         filePath: '/test/file.txt',
         memoryIds: ['mem-002'],
         sourceId: 'source-001',
@@ -138,7 +138,7 @@ describe('FileMemoryTrackerService', () => {
 
       const result = await service.forgetMemory('/test/file.txt', 'mem-001');
 
-      expect(result).toEqual(expect.objectContaining({ id: 'tracker-001' }));
+      expect(result).toEqual(expect.objectContaining({ id: 8005n }));
       expect(result!.memoryIds).not.toContain('mem-001');
     });
   });

@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { z } from 'zod';
 import { EnhancementPipelineService } from '../application/services/enhancement-pipeline.service';
 import { MastraChunkingService } from '../application/strategies/mastra-chunking.service';
-import { Chunk } from '../domain/content-chunk.entity';
+import { ContentChunk } from '../domain/content-chunk.entity';
 import { ConfigurationService } from '../infrastructure/config/configuration.service';
 import { BasePinoLogger } from '../infrastructure/logging/base-pino-logger';
 import { BaseUseCase } from '../utils/base-use-case';
@@ -21,7 +21,7 @@ const chunkContentParamsSchema = z.object({
 export type ChunkContentParams = z.infer<typeof chunkContentParamsSchema>;
 
 @Injectable()
-export class ChunkContentUseCase extends BaseUseCase<ChunkContentParams, Chunk[]> {
+export class ChunkContentUseCase extends BaseUseCase<ChunkContentParams, ContentChunk[]> {
   constructor(
     private readonly mastraChunkingService: MastraChunkingService,
     private readonly enhancementPipelineService: EnhancementPipelineService,
@@ -40,7 +40,7 @@ export class ChunkContentUseCase extends BaseUseCase<ChunkContentParams, Chunk[]
     return Result.ok(parsed.data);
   }
 
-  protected async executeInternal(params: ChunkContentParams): Promise<Result<Chunk[]>> {
+  protected async executeInternal(params: ChunkContentParams): Promise<Result<ContentChunk[]>> {
     this.logger.debug(
       `Chunking content; path="${params.filePath}", length=${params.content.length}, namespace="${params.namespace}"`,
     );

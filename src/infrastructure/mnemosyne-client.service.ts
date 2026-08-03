@@ -1,7 +1,7 @@
 import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
 import * as http from 'http';
 import * as https from 'https';
-import { Chunk } from '../domain/content-chunk.entity';
+import { ContentChunk } from '../domain/content-chunk.entity';
 import { ErrorWithDetails } from '../utils/error-with-details';
 import { Result } from '../utils/result';
 import { ConfigurationService } from './config/configuration.service';
@@ -208,7 +208,7 @@ export class MnemosyneClient implements OnApplicationBootstrap {
    * @param chunk - The Chunk domain entity to store
    * @returns Result.ok with {memory_id, status} on successful storage; Result.ko after all retries exhausted
    */
-  async remember(chunk: Chunk): Promise<Result<{ memory_id: string; status: string }>> {
+  async remember(chunk: ContentChunk): Promise<Result<{ memory_id: string; status: string }>> {
     const payload = MnemosyneRememberDto.fromChunk(chunk);
 
     const request: McpToolRequest = {

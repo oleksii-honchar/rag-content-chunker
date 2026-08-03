@@ -12,7 +12,7 @@ import { faker } from '../utils/test-faker';
  */
 export function aFileMemoryTracker(
   overrides?: Partial<{
-    id: string;
+    id: bigint;
     filePath: string;
     memoryIds: string[];
     sourceId: string;
@@ -20,7 +20,7 @@ export function aFileMemoryTracker(
   }>,
 ): FileMemoryTracker {
   const result = FileMemoryTracker.of({
-    id: faker.string.uuid(),
+    id: faker.number.bigInt({ min: 1n, max: 9223372036854775807n }),
     filePath: faker.system.filePath(),
     memoryIds: [],
     sourceId: faker.string.alphanumeric(12),
@@ -31,19 +31,19 @@ export function aFileMemoryTracker(
 }
 
 export interface PrismaFileMemoryTrackerRecord {
-  id: string;
+  id: bigint;
   filePath: string;
   sourceId: string;
   namespace: string;
   createdAt: Date;
   updatedAt: Date;
-  memories: { id: string; memoryId: string; fileTrackerId: string }[];
+  memories: { id: bigint; memoryId: string; fileTrackerId: bigint }[];
 }
 
 export interface PrismaFileMemoryTrackerMemoryRecord {
-  id: string;
+  id: bigint;
   memoryId: string;
-  fileTrackerId: string;
+  fileTrackerId: bigint;
   createdAt: Date;
 }
 
@@ -51,7 +51,7 @@ export function aPrismaFileMemoryTracker(
   overrides?: Partial<PrismaFileMemoryTrackerRecord>,
 ): PrismaFileMemoryTrackerRecord {
   return {
-    id: faker.string.uuid(),
+    id: faker.number.bigInt({ min: 1n, max: 9223372036854775807n }),
     filePath: faker.system.filePath(),
     sourceId: faker.string.alphanumeric(12),
     namespace: faker.word.adjective(),
@@ -66,9 +66,9 @@ export function aPrismaFileMemoryTrackerMemory(
   overrides?: Partial<PrismaFileMemoryTrackerMemoryRecord>,
 ): PrismaFileMemoryTrackerMemoryRecord {
   return {
-    id: faker.string.uuid(),
+    id: faker.number.bigInt({ min: 1n, max: 9223372036854775807n }),
     memoryId: faker.string.uuid(),
-    fileTrackerId: faker.string.uuid(),
+    fileTrackerId: faker.number.bigInt({ min: 1n, max: 9223372036854775807n }),
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
     ...overrides,
   };

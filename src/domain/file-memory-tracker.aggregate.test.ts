@@ -2,7 +2,7 @@ import { FileMemoryTracker } from './file-memory-tracker.aggregate';
 
 describe('FileMemoryTracker', () => {
   const validProps = {
-    id: 'tracker-001',
+    id: 1n,
     filePath: '/test/file.txt',
     memoryIds: ['mem-001'],
     sourceId: 'source-001',
@@ -16,10 +16,20 @@ describe('FileMemoryTracker', () => {
       expect(result.isOk()).toBe(true);
       const tracker = result.getValue();
       expect(tracker.id).toBe(validProps.id);
+      expect(typeof tracker.id).toBe('bigint');
       expect(tracker.filePath).toBe(validProps.filePath);
       expect(tracker.memoryIds).toEqual(validProps.memoryIds);
       expect(tracker.sourceId).toBe(validProps.sourceId);
       expect(tracker.namespace).toBe(validProps.namespace);
+    });
+
+    it('with string id returns ko (id must be a bigint)', () => {
+      const result = FileMemoryTracker.of({
+        ...validProps,
+        id: 'tracker-001' as unknown as bigint,
+      });
+
+      expect(result.isKo()).toBe(true);
     });
 
     it('with empty filePath returns ko', () => {
@@ -61,7 +71,7 @@ describe('FileMemoryTracker', () => {
 
     it('with missing required fields returns ko', () => {
       const result = FileMemoryTracker.of({
-        id: 'tracker-001',
+        id: 1n,
         filePath: '/test/file.txt',
         // missing memoryIds, sourceId, namespace
       } as never);
@@ -82,7 +92,7 @@ describe('FileMemoryTracker', () => {
   describe('of', () => {
     it('with valid props returns ok', () => {
       const result = FileMemoryTracker.of({
-        id: 'tracker-001',
+        id: 1n,
         filePath: '/test/file.txt',
         memoryIds: ['mem-001', 'mem-002'],
         sourceId: 'source-001',
@@ -91,7 +101,7 @@ describe('FileMemoryTracker', () => {
 
       expect(result.isOk()).toBe(true);
       const tracker = result.getValue();
-      expect(tracker.id).toBe('tracker-001');
+      expect(tracker.id).toBe(1n);
       expect(tracker.filePath).toBe('/test/file.txt');
       expect(tracker.memoryIds).toEqual(['mem-001', 'mem-002']);
       expect(tracker.sourceId).toBe('source-001');
@@ -100,7 +110,7 @@ describe('FileMemoryTracker', () => {
 
     it('with invalid filePath returns ko', () => {
       const result = FileMemoryTracker.of({
-        id: 'tracker-001',
+        id: 1n,
         filePath: '',
         memoryIds: ['mem-001'],
         sourceId: 'source-001',
@@ -112,7 +122,7 @@ describe('FileMemoryTracker', () => {
 
     it('with empty memoryIds returns ok (allowed for findOrCreate)', () => {
       const result = FileMemoryTracker.of({
-        id: 'tracker-001',
+        id: 1n,
         filePath: '/test/file.txt',
         memoryIds: [],
         sourceId: 'source-001',
@@ -125,7 +135,7 @@ describe('FileMemoryTracker', () => {
 
     it('with missing required fields returns ko', () => {
       const result = FileMemoryTracker.of({
-        id: 'tracker-001',
+        id: 1n,
         filePath: '/test/file.txt',
         // missing memoryIds, sourceId, namespace
       } as never);
@@ -175,7 +185,7 @@ describe('FileMemoryTracker', () => {
   describe('forget', () => {
     it('removes existing memoryId from list', () => {
       const tracker = FileMemoryTracker.of({
-        id: 'tracker-001',
+        id: 1n,
         filePath: '/test/file.txt',
         memoryIds: ['mem-001', 'mem-002', 'mem-003'],
         sourceId: 'source-001',
@@ -191,7 +201,7 @@ describe('FileMemoryTracker', () => {
 
     it('returns new instance without mutating original', () => {
       const tracker = FileMemoryTracker.of({
-        id: 'tracker-001',
+        id: 1n,
         filePath: '/test/file.txt',
         memoryIds: ['mem-001', 'mem-002'],
         sourceId: 'source-001',
@@ -205,7 +215,7 @@ describe('FileMemoryTracker', () => {
 
     it('returns original unchanged when memoryId not found', () => {
       const tracker = FileMemoryTracker.of({
-        id: 'tracker-001',
+        id: 1n,
         filePath: '/test/file.txt',
         memoryIds: ['mem-001'],
         sourceId: 'source-001',
@@ -225,7 +235,7 @@ describe('FileMemoryTracker', () => {
 
     beforeEach(() => {
       const result = FileMemoryTracker.of({
-        id: 'tracker-001',
+        id: 1n,
         filePath: '/test/file.txt',
         memoryIds: ['mem-001', 'mem-002'],
         sourceId: 'source-001',
@@ -235,7 +245,7 @@ describe('FileMemoryTracker', () => {
     });
 
     it('all getters return correct values', () => {
-      expect(tracker.id).toBe('tracker-001');
+      expect(tracker.id).toBe(1n);
       expect(tracker.filePath).toBe('/test/file.txt');
       expect(tracker.memoryIds).toEqual(['mem-001', 'mem-002']);
       expect(tracker.sourceId).toBe('source-001');
@@ -246,7 +256,7 @@ describe('FileMemoryTracker', () => {
   describe('toJson', () => {
     it('returns plain object with Prisma record shape', () => {
       const tracker = FileMemoryTracker.of({
-        id: 'tracker-001',
+        id: 1n,
         filePath: '/test/file.txt',
         memoryIds: ['mem-001', 'mem-002'],
         sourceId: 'source-001',
@@ -256,7 +266,7 @@ describe('FileMemoryTracker', () => {
       const json = tracker.toJson();
 
       expect(json).toEqual({
-        id: 'tracker-001',
+        id: 1n,
         filePath: '/test/file.txt',
         memoryIds: ['mem-001', 'mem-002'],
         sourceId: 'source-001',

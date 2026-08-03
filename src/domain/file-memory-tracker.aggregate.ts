@@ -3,7 +3,7 @@ import { ErrorWithDetails } from '../utils/error-with-details';
 import { Result } from '../utils/result';
 
 const fileMemoryTrackerSchema = z.object({
-  id: z.string().min(1),
+  id: z.bigint(),
   filePath: z.string().min(1),
   memoryIds: z.array(z.string().min(1)),
   sourceId: z.string().min(1),
@@ -52,7 +52,7 @@ export class FileMemoryTracker {
     });
   }
 
-  get id(): string {
+  get id(): bigint {
     return this.props.id;
   }
 

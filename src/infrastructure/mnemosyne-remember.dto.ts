@@ -1,4 +1,4 @@
-import { Chunk } from '../domain/content-chunk.entity';
+import { ContentChunk } from '../domain/content-chunk.entity';
 
 /**
  * Payload shape for the mnemosyne_remember MCP tool call arguments.
@@ -31,7 +31,7 @@ export interface MnemosyneRememberPayload {
  * Encapsulates the mapping logic so MnemosyneClient stays focused on transport.
  */
 export class MnemosyneRememberDto {
-  static fromChunk(chunk: Chunk): MnemosyneRememberPayload {
+  static fromChunk(chunk: ContentChunk): MnemosyneRememberPayload {
     return {
       content: chunk.text,
       namespace: chunk.namespace,

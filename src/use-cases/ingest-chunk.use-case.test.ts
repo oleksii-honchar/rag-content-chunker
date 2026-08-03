@@ -1,4 +1,4 @@
-import { Chunk } from '../domain/content-chunk.entity';
+import { ContentChunk } from '../domain/content-chunk.entity';
 import { aChunk } from '../domain/content-chunk.entity.test-utils';
 import { aFileMemoryTrackerService } from '../infrastructure/file-memory-tracker.service.test-utils';
 import { aLogger } from '../infrastructure/logging/logger.test-utils';
@@ -37,7 +37,7 @@ describe('IngestChunkUseCase', () => {
 
   describe('execute', () => {
     it('should ingest all valid chunks via MnemosyneClient.remember()', async () => {
-      const chunks: Chunk[] = [aChunk({ chunkIndex: 0 }), aChunk({ chunkIndex: 1 })];
+      const chunks: ContentChunk[] = [aChunk({ chunkIndex: 0 }), aChunk({ chunkIndex: 1 })];
       mockMnemosyneClientService.remember.mockResolvedValue(
         Result.ok({ memory_id: 'mem-1', status: 'stored' }),
       );
@@ -77,7 +77,7 @@ describe('IngestChunkUseCase', () => {
     });
 
     it('should return error when all chunks fail', async () => {
-      const chunks: Chunk[] = [aChunk({ chunkIndex: 0 }), aChunk({ chunkIndex: 1 })];
+      const chunks: ContentChunk[] = [aChunk({ chunkIndex: 0 }), aChunk({ chunkIndex: 1 })];
       mockMnemosyneClientService.remember.mockResolvedValue(Result.ko(new Error('Connection refused')));
 
       const result = await useCase.execute({ chunks, sourceId: 'test-source' });
