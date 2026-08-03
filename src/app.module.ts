@@ -12,11 +12,14 @@ import { MastraChunkingService } from './application/strategies/mastra-chunking.
 import { DomainModule } from './domain/domain.module';
 import { AppEventEmitter } from './infrastructure/app-event-emitter';
 import { ConfigurationModule } from './infrastructure/config/configuration.module';
+import { FileMemoryTrackerRepository } from './infrastructure/file-memory-tracker.repository';
+import { FileMemoryTrackerService } from './infrastructure/file-memory-tracker.service';
 import { FileProcessingQueue } from './infrastructure/file-processing-queue.service';
 import { FileWatcherService } from './infrastructure/file-watcher.service';
 import { GracefulShutdownService } from './infrastructure/graceful-shutdown.service';
 import { LoggerModule } from './infrastructure/logging/logger.module';
 import { MnemosyneClient } from './infrastructure/mnemosyne-client.service';
+import { PrismaModule } from './infrastructure/prisma/prisma.module';
 import { ChunkContentUseCase } from './use-cases/chunk-content.use-case';
 import { IngestChunkUseCase } from './use-cases/ingest-chunk.use-case';
 import { ProcessFileUseCase } from './use-cases/process-file.use-case';
@@ -38,6 +41,7 @@ import { ProcessFileUseCase } from './use-cases/process-file.use-case';
     LoggerModule.forRootAsync(),
     ConfigurationModule,
     DomainModule,
+    PrismaModule,
   ],
   controllers: [],
   providers: [
@@ -60,6 +64,9 @@ import { ProcessFileUseCase } from './use-cases/process-file.use-case';
     // Infrastructure
     FileProcessingQueue,
     MnemosyneClient,
+    // File→Memory tracking
+    FileMemoryTrackerRepository,
+    FileMemoryTrackerService,
   ],
 })
 export class AppModule {}

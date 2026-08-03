@@ -5,8 +5,13 @@ const eslintPrettier = require('eslint-plugin-prettier');
 
 const eslintConfigBase = require('./eslint.config.base');
 
-module.exports = tseslint.config(...eslintConfigBase, {
-  files: ['src/**/*.ts'],
+module.exports = tseslint.config(
+  ...eslintConfigBase,
+  {
+    ignores: ['src/generated/**'],
+  },
+  {
+    files: ['src/**/*.ts'],
   plugins: {
     'typescript-eslint': tseslint.plugin,
     prettier: eslintPrettier,

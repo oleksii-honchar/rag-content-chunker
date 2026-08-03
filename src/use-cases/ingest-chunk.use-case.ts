@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { z } from 'zod';
 import { Chunk } from '../domain/chunk.entity';
+import { FileMemoryTrackerService } from '../infrastructure/file-memory-tracker.service';
 import { BasePinoLogger } from '../infrastructure/logging/base-pino-logger';
 import { MnemosyneClient } from '../infrastructure/mnemosyne-client.service';
 import { BaseUseCase } from '../utils/base-use-case';
@@ -19,6 +20,7 @@ export type IngestChunkParams = z.infer<typeof ingestChunkParamsSchema>;
 export class IngestChunkUseCase extends BaseUseCase<IngestChunkParams, void> {
   constructor(
     private readonly mnemosyneClient: MnemosyneClient,
+    private readonly tracker: FileMemoryTrackerService,
     logger: BasePinoLogger,
   ) {
     super(logger);
@@ -54,8 +56,23 @@ export class IngestChunkUseCase extends BaseUseCase<IngestChunkParams, void> {
       try {
         const result = await this.mnemosyneClient.remember(chunk);
         if (result.isOk()) {
+          const { memory_id, status } = result.getValue();
           successCount++;
-          this.logger.debug(`Chunk ingested; id="${chunk.id}", index=${chunk.chunkIndex}`);
+          this.logger.debug(
+            `Chunk ingested; id="${chunk.id}", index=${chunk.chunkIndex}, memoryId="${memory_id}", status="${status}"`,
+          );
+
+          // Track memory mapping (non-fatal)
+          const filePath = params.metadata?.filePath;
+          if (filePath) {
+            try {
+              await this.tracker.remember(filePath, memory_id, params.sourceId, chunk.namespace);
+            } catch (error) {
+              this.logger.warn(
+                `Failed to track memory; filePath="${filePath}", memoryId="${memory_id}", error="${error instanceof Error ? error.message : String(error)}"`,
+              );
+            }
+          }
         } else {
           failureCount++;
           errors.push({

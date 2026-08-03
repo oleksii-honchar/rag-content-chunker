@@ -2,7 +2,7 @@
 type: index
 title: "Domain Concepts"
 createdAt: "2026-07-31T07:30:00Z"
-updatedAt: "2026-07-31T07:30:00Z"
+updatedAt: "2026-08-01T21:35:00Z"
 tags: []
 ---
 
@@ -26,3 +26,5 @@ Core domain terminology and mental models for RAG Content Chunker.
 ### Mnemosyne Integration
 
 - [[0004-namespace-routing]] — Server-side namespace → database mapping for source segregation
+- [[0007-file-memory-tracking]] — File→Memory relationship tracking via Prisma SQLite
+- [[0008-namespace-management]] — Namespace lifecycle: registration, enforcement, discovery

@@ -22,76 +22,36 @@ jest.mock('@mastra/rag', () => ({
 }));
 
 import { Test, TestingModule } from '@nestjs/testing';
-import * as fs from 'fs';
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
-import { WatchSourceConfig } from '../infrastructure/config/config-schemas';
+import { aSource } from '../infrastructure/config/watch-source-config.test-utils';
 import { FileProcessingQueue } from '../infrastructure/file-processing-queue.service';
+import { aFileProcessingQueueService } from '../infrastructure/file-processing-queue.test-utils';
 import { BasePinoLogger } from '../infrastructure/logging/base-pino-logger';
+import { aLogger } from '../infrastructure/logging/logger.test-utils';
 import { ProcessFileUseCase } from '../use-cases/process-file.use-case';
+import { aProcessFileUseCase } from '../use-cases/process-file.use-case.test-utils';
 import { Result } from '../utils/result';
+import { mockDirent, mockDirStats, mockFileStats } from '../utils/test-utils';
 import { ForceReprocessService } from './force-reprocess.service';
 
 jest.mock('fs/promises');
 const fsMock = fsPromises as jest.Mocked<typeof fsPromises>;
 
-// Helper to create mock Dirent compatible with fs/promises readdir
-// @ts-ignore — Dirent mock type incompatibility between fs/promises Dirent<NonSharedBuffer> and runtime
-const mockDirent = (name: string, isDir: boolean): any => ({
-  name,
-  parentPath: null as unknown as Buffer,
-  isDirectory: () => isDir,
-  isFile: () => !isDir,
-  isBlockDevice: () => false,
-  isCharacterDevice: () => false,
-  isSymbolicLink: () => false,
-  isFIFO: () => false,
-  isSocket: () => false,
-});
-
-
-
-const mockStats = { isDirectory: () => true } as fs.Stats;
-
 describe('ForceReprocessService', () => {
   let service: ForceReprocessService;
-  let processFileUseCase: jest.Mocked<ProcessFileUseCase>;
-  let processingQueue: jest.Mocked<FileProcessingQueue>;
-  let logger: jest.Mocked<BasePinoLogger>;
-
-  const createSource = (overrides?: Partial<WatchSourceConfig>): WatchSourceConfig => ({
-    id: overrides?.id ?? 'test-source',
-    path: overrides?.path ?? '/tmp/test-source',
-    namespace: overrides?.namespace ?? overrides?.id ?? 'test-source',
-    exclude: overrides?.exclude ?? ['**/.git/**'],
-    debounceMs: overrides?.debounceMs ?? 3000,
-  });
+  let processFileUseCase: ReturnType<typeof aProcessFileUseCase>;
+  let processingQueue: ReturnType<typeof aFileProcessingQueueService>;
+  let logger: ReturnType<typeof aLogger>;
 
   beforeEach(async () => {
     jest.clearAllMocks();
     fsMock.stat.mockReset();
     fsMock.readdir.mockReset();
 
-    processFileUseCase = {
-      execute: jest.fn(),
-    } as unknown as jest.Mocked<ProcessFileUseCase>;
-
-    processingQueue = {
-      addToQueue: jest.fn(),
-    } as unknown as jest.Mocked<FileProcessingQueue>;
-
-    logger = {
-      info: jest.fn(),
-      error: jest.fn(),
-      warn: jest.fn(),
-      debug: jest.fn(),
-      log: jest.fn(),
-      setContext: jest.fn(),
-      child: jest.fn().mockReturnValue(logger),
-    } as unknown as jest.Mocked<BasePinoLogger>;
-
-    // Ensure child logger uses the same mock methods
-    jest.spyOn(logger, 'child').mockReturnValue(logger);
+    processFileUseCase = aProcessFileUseCase();
+    processingQueue = aFileProcessingQueueService();
+    logger = aLogger();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -107,9 +67,9 @@ describe('ForceReprocessService', () => {
 
   describe('forceReprocessAll', () => {
     it('should process files from all sources', async () => {
-      const sources = [createSource({ id: 'source-1' }), createSource({ id: 'source-2' })];
+      const sources = [aSource({ id: 'source-1' }), aSource({ id: 'source-2' })];
 
-      fsMock.stat.mockResolvedValue(mockStats);
+      fsMock.stat.mockResolvedValue(mockDirStats());
       fsMock.readdir.mockResolvedValue([mockDirent('file1.md', false)]);
 
       await service.forceReprocessAll(sources);
@@ -119,9 +79,9 @@ describe('ForceReprocessService', () => {
     });
 
     it('should queue files found in each source', async () => {
-      const sources = [createSource({ id: 'source-1', path: '/tmp/source-1' })];
+      const sources = [aSource({ id: 'source-1', path: '/tmp/source-1' })];
 
-      fsMock.stat.mockResolvedValue(mockStats);
+      fsMock.stat.mockResolvedValue(mockDirStats());
       fsMock.readdir.mockResolvedValue([mockDirent('file1.md', false), mockDirent('file2.md', false)]);
 
       await service.forceReprocessAll(sources);
@@ -133,11 +93,11 @@ describe('ForceReprocessService', () => {
   describe('forceReprocessSource', () => {
     it('should process files from specific source by id', async () => {
       const sources = [
-        createSource({ id: 'source-1', path: '/tmp/source-1' }),
-        createSource({ id: 'source-2', path: '/tmp/source-2' }),
+        aSource({ id: 'source-1', path: '/tmp/source-1' }),
+        aSource({ id: 'source-2', path: '/tmp/source-2' }),
       ];
 
-      fsMock.stat.mockResolvedValue(mockStats);
+      fsMock.stat.mockResolvedValue(mockDirStats());
       fsMock.readdir.mockResolvedValue([mockDirent('file1.md', false)]);
 
       await service.forceReprocessSource('source-1', sources);
@@ -146,7 +106,7 @@ describe('ForceReprocessService', () => {
     });
 
     it('should skip when source not found', async () => {
-      const sources = [createSource({ id: 'source-1' })];
+      const sources = [aSource({ id: 'source-1' })];
 
       await service.forceReprocessSource('non-existent', sources);
 
@@ -156,9 +116,9 @@ describe('ForceReprocessService', () => {
 
   describe('directory scanning', () => {
     it('should scan directory recursively', async () => {
-      const source = createSource({ id: 'test', path: '/tmp/test' });
+      const source = aSource({ id: 'test', path: '/tmp/test' });
 
-      fsMock.stat.mockResolvedValue(mockStats);
+      fsMock.stat.mockResolvedValue(mockDirStats());
       fsMock.readdir
         .mockResolvedValueOnce([mockDirent('file1.md', false), mockDirent('subdir', true)])
         .mockResolvedValueOnce([mockDirent('file2.md', false)]);
@@ -171,9 +131,9 @@ describe('ForceReprocessService', () => {
     });
 
     it('should not queue files when path is not a directory', async () => {
-      const source = createSource({ id: 'test', path: '/tmp/test' });
+      const source = aSource({ id: 'test', path: '/tmp/test' });
 
-      fsMock.stat.mockResolvedValue({ isDirectory: () => false } as fs.Stats);
+      fsMock.stat.mockResolvedValue(mockFileStats());
 
       await service.forceReprocessAll([source]);
 
@@ -181,7 +141,7 @@ describe('ForceReprocessService', () => {
     });
 
     it('should not queue files when stat fails', async () => {
-      const source = createSource({ id: 'test', path: '/tmp/test' });
+      const source = aSource({ id: 'test', path: '/tmp/test' });
 
       fsMock.stat.mockRejectedValue(new Error('ENOENT'));
 
@@ -193,9 +153,9 @@ describe('ForceReprocessService', () => {
 
   describe('queue population', () => {
     it('should add each file to processing queue', async () => {
-      const source = createSource({ id: 'test', path: '/tmp/test' });
+      const source = aSource({ id: 'test', path: '/tmp/test' });
 
-      fsMock.stat.mockResolvedValue(mockStats);
+      fsMock.stat.mockResolvedValue(mockDirStats());
       fsMock.readdir.mockResolvedValue([mockDirent('file1.md', false), mockDirent('file2.md', false)]);
 
       await service.forceReprocessAll([source]);
@@ -204,9 +164,9 @@ describe('ForceReprocessService', () => {
     });
 
     it('should call processFileUseCase for each queued file', async () => {
-      const source = createSource({ id: 'my-source', path: '/tmp/test' });
+      const source = aSource({ id: 'my-source', path: '/tmp/test' });
 
-      fsMock.stat.mockResolvedValue(mockStats);
+      fsMock.stat.mockResolvedValue(mockDirStats());
       fsMock.readdir.mockResolvedValue([mockDirent('file1.md', false)]);
 
       processFileUseCase.execute.mockResolvedValue(Result.ok(undefined as unknown as void));
@@ -226,9 +186,9 @@ describe('ForceReprocessService', () => {
     });
 
     it('should handle file reprocessing failure gracefully', async () => {
-      const source = createSource({ id: 'test', path: '/tmp/test' });
+      const source = aSource({ id: 'test', path: '/tmp/test' });
 
-      fsMock.stat.mockResolvedValue(mockStats);
+      fsMock.stat.mockResolvedValue(mockDirStats());
       fsMock.readdir.mockResolvedValue([mockDirent('file1.md', false)]);
 
       processFileUseCase.execute.mockResolvedValue(Result.ko(new Error('Processing failed')));
@@ -243,9 +203,9 @@ describe('ForceReprocessService', () => {
 
   describe('path resolution', () => {
     it('should resolve tilde paths to home directory', async () => {
-      const source = createSource({ id: 'test', path: '~/documents' });
+      const source = aSource({ id: 'test', path: '~/documents' });
 
-      fsMock.stat.mockResolvedValue({ isDirectory: () => false } as fs.Stats);
+      fsMock.stat.mockResolvedValue(mockFileStats());
 
       await service.forceReprocessAll([source]);
 
@@ -255,9 +215,9 @@ describe('ForceReprocessService', () => {
     });
 
     it('should resolve relative paths', async () => {
-      const source = createSource({ id: 'test', path: './relative' });
+      const source = aSource({ id: 'test', path: './relative' });
 
-      fsMock.stat.mockResolvedValue({ isDirectory: () => false } as fs.Stats);
+      fsMock.stat.mockResolvedValue(mockFileStats());
 
       await service.forceReprocessAll([source]);
 

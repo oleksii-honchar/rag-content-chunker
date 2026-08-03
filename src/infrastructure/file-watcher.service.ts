@@ -10,6 +10,7 @@ import { AppEventEmitter } from './app-event-emitter';
 import { WatchSourceConfig } from './config/config-schemas';
 import { ConfigurationService } from './config/configuration.service';
 import { BasePinoLogger } from './logging/base-pino-logger';
+import { MnemosyneClient } from './mnemosyne-client.service';
 
 @Injectable()
 export class FileWatcherService implements OnApplicationBootstrap, OnApplicationShutdown {
@@ -19,6 +20,7 @@ export class FileWatcherService implements OnApplicationBootstrap, OnApplication
   constructor(
     private readonly configService: ConfigurationService,
     private readonly eventEmitter: AppEventEmitter,
+    private readonly mnemosyneClient: MnemosyneClient,
     logger: BasePinoLogger,
   ) {
     this.logger = logger.child({ component: 'FileWatcherService' });
@@ -26,9 +28,38 @@ export class FileWatcherService implements OnApplicationBootstrap, OnApplication
 
   async onApplicationBootstrap(): Promise<void> {
     this.logger.info(`Starting file watcher service: sources=${this.configService.getWatchSources().length}`);
+
+    // Ensure MCP client is initialized before registering namespaces
+    const initResult = await this.mnemosyneClient.initialize();
+    if (!initResult.isOk()) {
+      this.logger.warn(`MCP init failed, namespace registration may fail: ${initResult.getError().message}`);
+    }
+
+    await this.registerNamespaces();
     const result = await this.start();
     if (result.isKo()) {
       this.logger.error(`Failed to start file watcher: ${result.getError().message}`);
+    }
+  }
+
+  private async registerNamespaces(): Promise<void> {
+    const sources = this.configService.getWatchSources();
+    const withDescription = sources.filter(s => s.description != null && s.description.length > 0);
+    this.logger.info(
+      `Registering namespaces: totalSources=${sources.length}, withDescription=${withDescription.length}`,
+    );
+
+    for (const source of withDescription) {
+      const result = await this.mnemosyneClient.registerNamespace(source.namespace, source.description!);
+      if (result.isOk()) {
+        this.logger.info(
+          `Namespace registered: id="${source.id}", namespace="${source.namespace}", description="${source.description}"`,
+        );
+      } else {
+        this.logger.warn(
+          `Failed to register namespace: id="${source.id}", namespace="${source.namespace}", error="${result.getError().message}"`,
+        );
+      }
     }
   }
 

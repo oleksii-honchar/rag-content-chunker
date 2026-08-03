@@ -158,8 +158,13 @@ describe('GracefulShutdownService', () => {
       processingQueue.setProcessing(false);
 
       const callOrder: string[] = [];
-      fileWatcherService.stop = async () => { callOrder.push('watchers'); return Result.ok(undefined as unknown as void); };
-      mnemosyneClient.close = async () => { callOrder.push('mcp'); };
+      fileWatcherService.stop = async () => {
+        callOrder.push('watchers');
+        return Result.ok(undefined as unknown as void);
+      };
+      mnemosyneClient.close = async () => {
+        callOrder.push('mcp');
+      };
 
       await service.onApplicationShutdown('SIGTERM');
 

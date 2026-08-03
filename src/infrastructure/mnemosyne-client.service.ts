@@ -205,9 +205,9 @@ export class MnemosyneClient implements OnApplicationBootstrap {
    * Retries up to maxRetries times on transient failures.
    *
    * @param chunk - The Chunk domain entity to store
-   * @returns Result.ok on successful storage; Result.ko after all retries exhausted
+   * @returns Result.ok with {memory_id, status} on successful storage; Result.ko after all retries exhausted
    */
-  async remember(chunk: Chunk): Promise<Result<void>> {
+  async remember(chunk: Chunk): Promise<Result<{ memory_id: string; status: string }>> {
     const request: McpToolRequest = {
       jsonrpc: '2.0',
       id: this.nextRequestId++,
@@ -257,10 +257,11 @@ export class MnemosyneClient implements OnApplicationBootstrap {
           // Parse MCP response — result.content[0].text contains JSON from Mnemosyne
           const parsed = this.parseMcpResponse(response);
           if (parsed.status === 'stored') {
+            const memoryId = String(parsed.memory_id ?? '');
             this.logger.debug(
-              `Chunk remembered; id="${chunk.id}", memoryId="${parsed.memory_id}", attempt=${attempt}`,
+              `Chunk remembered; id="${chunk.id}", memoryId="${memoryId}", attempt=${attempt}`,
             );
-            return Result.ok(undefined as unknown as void);
+            return Result.ok({ memory_id: memoryId, status: String(parsed.status) });
           } else {
             const errMsg =
               typeof parsed.error === 'string'
@@ -288,6 +289,111 @@ export class MnemosyneClient implements OnApplicationBootstrap {
     );
 
     return Result.ko(lastError || new ErrorWithDetails('Failed to remember chunk', 'RememberChunkFailed'));
+  }
+
+  /**
+   * Forget (delete) a memory via the mnemosyne_forget MCP tool.
+   *
+   * @param memoryId - Memory ID to delete
+   * @param namespace - Namespace where the memory resides
+   * @returns Result.ok on success (response.status === "deleted"); Result.ko on error
+   */
+  async forget(memoryId: string, namespace: string): Promise<Result<void>> {
+    this.ensureConfigLoaded();
+    this.logger.debug(`Forgetting memory: memoryId="${memoryId}", namespace="${namespace}"`);
+
+    const request: McpToolRequest = {
+      jsonrpc: '2.0',
+      id: this.nextRequestId++,
+      method: 'tools/call',
+      params: {
+        name: 'mnemosyne_forget',
+        arguments: { memory_id: memoryId, namespace },
+      },
+    };
+
+    try {
+      const response = await this.sendRequest(request);
+
+      if (response.error) {
+        return Result.ko(new ErrorWithDetails(`MCP error: ${response.error.message}`, 'McpToolError'));
+      }
+
+      // Parse MCP response — result.content[0].text contains JSON from Mnemosyne
+      const parsed = this.parseMcpResponse(response);
+      if (parsed.status === 'deleted') {
+        this.logger.info(`Memory forgotten: memoryId="${memoryId}"`);
+        return Result.ok(undefined as unknown as void);
+      }
+
+      const errMsg =
+        typeof parsed.error === 'string'
+          ? parsed.error
+          : JSON.stringify(parsed) || 'Unexpected forget response';
+      this.logger.warn(`Unexpected forget response: memoryId="${memoryId}", response="${errMsg}"`);
+      return Result.ko(new ErrorWithDetails(errMsg, 'UnexpectedMcpResponse'));
+    } catch (error) {
+      this.logger.error(
+        `Failed to forget memory: memoryId="${memoryId}", error="${error instanceof Error ? error.message : String(error)}"`,
+      );
+      return Result.ko(
+        new ErrorWithDetails(error instanceof Error ? error.message : String(error), 'ForgetMemoryError'),
+      );
+    }
+  }
+
+  /**
+   * Register a namespace with a description via the mnemosyne_register_namespace MCP tool.
+   *
+   * @param name - Namespace name
+   * @param description - Human-readable description of what this namespace contains
+   * @returns Result.ok on success (response.status === "registered"); Result.ko on error
+   */
+  async registerNamespace(name: string, description: string): Promise<Result<void>> {
+    this.ensureConfigLoaded();
+    this.logger.debug(`Registering namespace: name="${name}", description="${description}"`);
+
+    const request: McpToolRequest = {
+      jsonrpc: '2.0',
+      id: this.nextRequestId++,
+      method: 'tools/call',
+      params: {
+        name: 'mnemosyne_register_namespace',
+        arguments: { name, description },
+      },
+    };
+
+    try {
+      const response = await this.sendRequest(request);
+
+      if (response.error) {
+        return Result.ko(new ErrorWithDetails(`MCP error: ${response.error.message}`, 'McpToolError'));
+      }
+
+      // Parse MCP response — result.content[0].text contains JSON from Mnemosyne
+      const parsed = this.parseMcpResponse(response);
+      if (parsed.status === 'registered') {
+        this.logger.info(`Namespace registered: name="${name}"`);
+        return Result.ok(undefined as unknown as void);
+      }
+
+      const errMsg =
+        typeof parsed.error === 'string'
+          ? parsed.error
+          : JSON.stringify(parsed) || 'Unexpected register_namespace response';
+      this.logger.warn(`Unexpected register_namespace response: name="${name}", response="${errMsg}"`);
+      return Result.ko(new ErrorWithDetails(errMsg, 'UnexpectedMcpResponse'));
+    } catch (error) {
+      this.logger.error(
+        `Failed to register namespace: name="${name}", error="${error instanceof Error ? error.message : String(error)}"`,
+      );
+      return Result.ko(
+        new ErrorWithDetails(
+          error instanceof Error ? error.message : String(error),
+          'NamespaceRegistrationError',
+        ),
+      );
+    }
   }
 
   /**

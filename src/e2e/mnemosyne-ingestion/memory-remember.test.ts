@@ -9,6 +9,7 @@ import { createTestApplication } from '../main.test-application';
 describe('[E2E] Chunking and Mnemosyne Ingestion Flow', () => {
   let app: INestApplication;
   let processFileUseCase: ProcessFileUseCase;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   let mnemosyneClient: MnemosyneClient;
   let tempDir: string;
 
@@ -26,7 +27,9 @@ describe('[E2E] Chunking and Mnemosyne Ingestion Flow', () => {
   afterAll(async () => {
     await cleanupTempDir(tempDir);
     // Graceful close with 30s timeout; force exit if it hangs
-    const closePromise = app.close().catch(() => {});
+    const closePromise = app.close().catch(() => {
+      // ignore close errors during teardown
+    });
     const timeoutPromise = new Promise(resolve => setTimeout(resolve, 30000));
     await Promise.race([closePromise, timeoutPromise]);
   });

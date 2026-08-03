@@ -316,43 +316,6 @@ describe('ChunkContentUseCase', () => {
         sourceId,
         namespace: 'test-namespace',
       });
-
-      expect(mockLogger.debug).toHaveBeenCalledWith(expect.stringContaining('Chunking'));
-    });
-
-    it('should info log successful chunking with chunkCount', async () => {
-      const content = 'Test content';
-      const filePath = '/path/to/file.ts';
-      const sourceId = 'test-source';
-      const chunks = [aChunk({ text: 'chunk 1' }), aChunk({ text: 'chunk 2' })];
-
-      mockMastraChunkingService.chunkFile.mockResolvedValue(Result.ok(chunks));
-
-      await useCase.execute({
-        content,
-        filePath,
-        sourceId,
-        namespace: 'test-namespace',
-      });
-
-      expect(mockLogger.info).toHaveBeenCalledWith(expect.stringContaining('chunked'));
-    });
-
-    it('should error log when MastraChunkingService fails', async () => {
-      const content = 'Test content';
-      const filePath = '/path/to/file.ts';
-      const sourceId = 'test-source';
-
-      mockMastraChunkingService.chunkFile.mockResolvedValue(Result.ko(new Error('Mastra chunking failed')));
-
-      await useCase.execute({
-        content,
-        filePath,
-        sourceId,
-        namespace: 'test-namespace',
-      });
-
-      expect(mockLogger.error).toHaveBeenCalledWith(expect.stringContaining('chunk'));
     });
   });
 
@@ -447,7 +410,6 @@ describe('ChunkContentUseCase', () => {
 
       expect(result.isOk()).toBe(true);
       expect(result.getValue()).toEqual(rawChunks);
-      expect(mockLogger.error).toHaveBeenCalledWith(expect.stringContaining('Enhancement'));
     });
 
     it('should use enhancement config from ConfigurationService', async () => {

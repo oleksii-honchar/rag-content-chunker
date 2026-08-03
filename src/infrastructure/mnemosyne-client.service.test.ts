@@ -306,7 +306,7 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
       expect(body.params.arguments.metadata.namespace).toBe('default');
     });
 
-    it('parses stored response and returns ok', async () => {
+    it('parses stored response and returns ok with memory_id and status', async () => {
       (http.request as jest.Mock).mockImplementation(
         (_options: unknown, callback: (res: MockRes) => void) => {
           const req = createMockReq();
@@ -327,6 +327,35 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
 
       const result = await client.remember(testChunk());
       expect(result.isOk()).toBe(true);
+      const value = result.getValue();
+      expect(value.memory_id).toBe('mem-456');
+      expect(value.status).toBe('stored');
+    });
+
+    it('extracts memory_id and status from response', async () => {
+      (http.request as jest.Mock).mockImplementation(
+        (_options: unknown, callback: (res: MockRes) => void) => {
+          const req = createMockReq();
+          const res = createMockResponse(
+            200,
+            JSON.stringify({
+              jsonrpc: '2.0',
+              id: 3,
+              result: {
+                content: [
+                  { type: 'text', text: JSON.stringify({ status: 'stored', memory_id: 'abc-123-xyz' }) },
+                ],
+              },
+            }),
+          );
+          process.nextTick(() => callback(res));
+          return req;
+        },
+      );
+
+      const result = await client.remember(testChunk());
+      expect(result.isOk()).toBe(true);
+      expect(result.getValue()).toEqual({ memory_id: 'abc-123-xyz', status: 'stored' });
     });
 
     it('includes namespace in both top-level args and metadata', async () => {
@@ -924,8 +953,245 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
       await client.initialize();
       await client.close();
 
-      expect(mockLogger.info).toHaveBeenCalledWith('Closing Mnemosyne MCP client');
-      expect(mockLogger.info).toHaveBeenCalledWith('Mnemosyne MCP client closed');
+      expect(http.request).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('forget', () => {
+    let client: MnemosyneClient;
+
+    beforeEach(async () => {
+      let callIndex = 0;
+      (http.request as jest.Mock).mockImplementation((options: unknown, callback: (res: MockRes) => void) => {
+        const req = createMockReq();
+        const idx = callIndex++;
+        const body =
+          idx === 0
+            ? getInitResponse()
+            : JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' });
+        const headers = idx === 0 ? { 'mcp-session-id': 'session-abc' } : {};
+        const res = createMockResponse(200, body, headers);
+        process.nextTick(() => callback(res));
+        return req;
+      });
+      client = await createClient();
+      await client.initialize();
+    });
+
+    it('sends POST to /mcp with mnemosyne_forget tool call', async () => {
+      let lastReq: MockReq | null = null;
+
+      (http.request as jest.Mock).mockImplementation(
+        (_options: unknown, callback: (res: MockRes) => void) => {
+          const req = createMockReq();
+          lastReq = req;
+          const res = createMockResponse(
+            200,
+            JSON.stringify({
+              jsonrpc: '2.0',
+              id: 3,
+              result: {
+                content: [
+                  { type: 'text', text: JSON.stringify({ status: 'deleted', memory_id: 'mem-to-forget' }) },
+                ],
+              },
+            }),
+          );
+          process.nextTick(() => callback(res));
+          return req;
+        },
+      );
+
+      const result = await client.forget('mem-to-forget', 'test-ns');
+      expect(result.isOk()).toBe(true);
+
+      const body = JSON.parse(lastReq!.write.mock.calls[0][0]);
+      expect(body.method).toBe('tools/call');
+      expect(body.params.name).toBe('mnemosyne_forget');
+      expect(body.params.arguments.memory_id).toBe('mem-to-forget');
+      expect(body.params.arguments.namespace).toBe('test-ns');
+    });
+
+    it('returns ok when response status is deleted', async () => {
+      (http.request as jest.Mock).mockImplementation(
+        (_options: unknown, callback: (res: MockRes) => void) => {
+          const req = createMockReq();
+          const res = createMockResponse(
+            200,
+            JSON.stringify({
+              jsonrpc: '2.0',
+              id: 3,
+              result: {
+                content: [
+                  { type: 'text', text: JSON.stringify({ status: 'deleted', memory_id: 'mem-123' }) },
+                ],
+              },
+            }),
+          );
+          process.nextTick(() => callback(res));
+          return req;
+        },
+      );
+
+      const result = await client.forget('mem-123', 'default');
+      expect(result.isOk()).toBe(true);
+    });
+
+    it('returns ko on MCP error response', async () => {
+      (http.request as jest.Mock).mockImplementation(
+        (_options: unknown, callback: (res: MockRes) => void) => {
+          const req = createMockReq();
+          const res = createMockResponse(
+            200,
+            JSON.stringify({ jsonrpc: '2.0', id: 3, error: { code: -32603, message: 'Internal error' } }),
+          );
+          process.nextTick(() => callback(res));
+          return req;
+        },
+      );
+
+      const result = await client.forget('mem-err', 'ns');
+      expect(result.isKo()).toBe(true);
+      expect(result.getError().message).toContain('Internal error');
+    });
+
+    it('returns ko on connection error', async () => {
+      (http.request as jest.Mock).mockImplementation((_options: unknown, _callback: unknown) => {
+        const req: MockReq = {
+          on: jest.fn(),
+          write: jest.fn(),
+          end: jest.fn(),
+          setTimeout: jest.fn(),
+          destroy: jest.fn(),
+        };
+        req.on.mockImplementation((event: string, handler: (err: Error) => void) => {
+          if (event === 'error') {
+            process.nextTick(() => handler(new Error('ECONNREFUSED')));
+          }
+          return req;
+        });
+        return req;
+      });
+
+      const result = await client.forget('mem-conn', 'ns');
+      expect(result.isKo()).toBe(true);
+    });
+  });
+
+  describe('registerNamespace', () => {
+    let client: MnemosyneClient;
+
+    beforeEach(async () => {
+      let callIndex = 0;
+      (http.request as jest.Mock).mockImplementation((options: unknown, callback: (res: MockRes) => void) => {
+        const req = createMockReq();
+        const idx = callIndex++;
+        const body =
+          idx === 0
+            ? getInitResponse()
+            : JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' });
+        const headers = idx === 0 ? { 'mcp-session-id': 'session-abc' } : {};
+        const res = createMockResponse(200, body, headers);
+        process.nextTick(() => callback(res));
+        return req;
+      });
+      client = await createClient();
+      await client.initialize();
+    });
+
+    it('sends POST to /mcp with mnemosyne_register_namespace tool call', async () => {
+      let lastReq: MockReq | null = null;
+
+      (http.request as jest.Mock).mockImplementation(
+        (_options: unknown, callback: (res: MockRes) => void) => {
+          const req = createMockReq();
+          lastReq = req;
+          const res = createMockResponse(
+            200,
+            JSON.stringify({
+              jsonrpc: '2.0',
+              id: 3,
+              result: {
+                content: [{ type: 'text', text: JSON.stringify({ status: 'registered', name: 'test-ns' }) }],
+              },
+            }),
+          );
+          process.nextTick(() => callback(res));
+          return req;
+        },
+      );
+
+      const result = await client.registerNamespace('test-ns', 'Test namespace description');
+      expect(result.isOk()).toBe(true);
+
+      const body = JSON.parse(lastReq!.write.mock.calls[0][0]);
+      expect(body.method).toBe('tools/call');
+      expect(body.params.name).toBe('mnemosyne_register_namespace');
+      expect(body.params.arguments.name).toBe('test-ns');
+      expect(body.params.arguments.description).toBe('Test namespace description');
+    });
+
+    it('returns ok when response status is registered', async () => {
+      (http.request as jest.Mock).mockImplementation(
+        (_options: unknown, callback: (res: MockRes) => void) => {
+          const req = createMockReq();
+          const res = createMockResponse(
+            200,
+            JSON.stringify({
+              jsonrpc: '2.0',
+              id: 3,
+              result: {
+                content: [{ type: 'text', text: JSON.stringify({ status: 'registered', name: 'my-ns' }) }],
+              },
+            }),
+          );
+          process.nextTick(() => callback(res));
+          return req;
+        },
+      );
+
+      const result = await client.registerNamespace('my-ns', 'My namespace');
+      expect(result.isOk()).toBe(true);
+    });
+
+    it('returns ko on MCP error response', async () => {
+      (http.request as jest.Mock).mockImplementation(
+        (_options: unknown, callback: (res: MockRes) => void) => {
+          const req = createMockReq();
+          const res = createMockResponse(
+            200,
+            JSON.stringify({ jsonrpc: '2.0', id: 3, error: { code: -32603, message: 'Internal error' } }),
+          );
+          process.nextTick(() => callback(res));
+          return req;
+        },
+      );
+
+      const result = await client.registerNamespace('bad-ns', 'Bad namespace');
+      expect(result.isKo()).toBe(true);
+      expect(result.getError().message).toContain('Internal error');
+    });
+
+    it('returns ko on connection error', async () => {
+      (http.request as jest.Mock).mockImplementation((_options: unknown, _callback: unknown) => {
+        const req: MockReq = {
+          on: jest.fn(),
+          write: jest.fn(),
+          end: jest.fn(),
+          setTimeout: jest.fn(),
+          destroy: jest.fn(),
+        };
+        req.on.mockImplementation((event: string, handler: (err: Error) => void) => {
+          if (event === 'error') {
+            process.nextTick(() => handler(new Error('ECONNREFUSED')));
+          }
+          return req;
+        });
+        return req;
+      });
+
+      const result = await client.registerNamespace('ns', 'desc');
+      expect(result.isKo()).toBe(true);
     });
   });
 

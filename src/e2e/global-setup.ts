@@ -36,7 +36,8 @@ module.exports = async (): Promise<void> => {
         include: ['*.md', '*.ts', '*.json'],
         exclude: [],
         debounceMs: 500,
-        namespace: 'test',
+        namespace: 'e2e-test-ns',
+        description: 'E2E test namespace for namespace registration verification',
       },
     ],
     chunking: {

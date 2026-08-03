@@ -84,6 +84,28 @@ describe('config-schemas', () => {
         expect(result.data.namespace).toBe('my-source');
       }
     });
+
+    it('accepts description field and preserves it as-is', () => {
+      const input = {
+        id: 'test-source',
+        path: '/path',
+        description: 'My personal Obsidian vault with notes and research',
+      };
+      const result = watchSourceConfigSchema.safeParse(input);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.description).toBe('My personal Obsidian vault with notes and research');
+      }
+    });
+
+    it('allows config without description (description is optional)', () => {
+      const input = { id: 'test-source', path: '/path' };
+      const result = watchSourceConfigSchema.safeParse(input);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.description).toBeUndefined();
+      }
+    });
   });
 
   describe('enhancementConfigSchema', () => {

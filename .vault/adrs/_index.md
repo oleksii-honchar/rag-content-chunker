@@ -2,7 +2,7 @@
 type: index
 title: "Architecture Decision Records"
 createdAt: "2026-07-31T07:30:00Z"
-updatedAt: "2026-07-31T07:30:00Z"
+updatedAt: "2026-08-01T21:35:00Z"
 tags: []
 ---
 
@@ -26,3 +26,15 @@ Curated list of architectural decisions for RAG Content Chunker.
 - [[0007-configuration-management]] — Extended existing Zod config schema with enhancement settings
 - [[0008-remote-database-segregation]] — Server-side namespace routing to separate SQLite databases per source
 - [[0009-mastra-rag-integration]] — Use @mastra/rag library instead of custom chunkers
+
+### File→Memory Tracking
+
+- [[0010-file-memory-tracking-prisma-sqlite]] — Add Prisma SQLite for local file→memory relationship tracking
+- [[0014-array-based-memory-id-storage]] — Store memory IDs as JSON array in single field per file
+- [[0015-aggregate-repository-service-pattern]] — Use aggregate root pattern with repository and service for file→memory tracking
+
+### Namespace Management
+
+- [[0011-namespace-registration-on-startup]] — Register namespaces with descriptions on application bootstrap
+- [[0012-namespace-parameter-enforcement]] — Make namespace parameter required for all memory tools
+- [[0013-in-memory-namespace-registry]] — Use in-memory registry for namespace descriptions (no persistence)

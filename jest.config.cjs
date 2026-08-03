@@ -1,5 +1,9 @@
 module.exports = {
   preset: 'ts-jest',
+  moduleNameMapper: {
+    '^@/(.*)$': '<rootDir>/src/$1',
+    '^@prisma/client$': '<rootDir>/src/generated/prisma/client.js',
+  },
   moduleFileExtensions: ['js', 'json', 'ts'],
   rootDir: '.',
   testRegex: 'src/((?!e2e/)).*\\.test\\.ts$',

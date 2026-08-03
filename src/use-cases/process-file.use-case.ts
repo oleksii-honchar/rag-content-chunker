@@ -8,8 +8,10 @@ import {
   FileChangedEvent,
   FileDeletedEvent,
 } from '../domain/events/file-events';
+import { FileMemoryTrackerService } from '../infrastructure/file-memory-tracker.service';
 import { FileProcessingQueue } from '../infrastructure/file-processing-queue.service';
 import { BasePinoLogger } from '../infrastructure/logging/base-pino-logger';
+import { MnemosyneClient } from '../infrastructure/mnemosyne-client.service';
 import { BaseUseCase } from '../utils/base-use-case';
 import { ErrorWithDetails } from '../utils/error-with-details';
 import { Result } from '../utils/result';
@@ -31,6 +33,8 @@ export class ProcessFileUseCase extends BaseUseCase<ProcessFileParams, void> {
     private readonly chunkContentUseCase: ChunkContentUseCase,
     private readonly ingestChunkUseCase: IngestChunkUseCase,
     private readonly processingQueue: FileProcessingQueue,
+    private readonly fileMemoryTrackerService: FileMemoryTrackerService,
+    private readonly mnemosyneClient: MnemosyneClient,
     logger: BasePinoLogger,
   ) {
     super(logger);
@@ -148,7 +152,46 @@ export class ProcessFileUseCase extends BaseUseCase<ProcessFileParams, void> {
 
   private async handleDelete(params: ProcessFileParams): Promise<Result<void>> {
     this.logger.info(`File deleted; path="${params.filePath}", source="${params.sourceId}"`);
-    // MCP deletion handled separately
+
+    const memoryIds = await this.fileMemoryTrackerService.getMemoryIds(params.filePath);
+
+    if (memoryIds.length === 0) {
+      this.logger.debug(`No memory mappings found for deletion; path="${params.filePath}"`);
+      return Result.ok(undefined as unknown as void);
+    }
+
+    this.logger.debug(`Forgetting ${memoryIds.length} memories for deleted file; path="${params.filePath}"`);
+
+    let failedCount = 0;
+    for (const memoryId of memoryIds) {
+      try {
+        const result = await this.mnemosyneClient.forget(memoryId, params.namespace);
+        if (result.isKo()) {
+          failedCount++;
+          this.logger.warn(
+            `Failed to forget memory; memoryId="${memoryId}", namespace="${params.namespace}", error="${result.getError().message}"`,
+          );
+        }
+      } catch (error) {
+        failedCount++;
+        this.logger.warn(
+          `Error forgetting memory; memoryId="${memoryId}", namespace="${params.namespace}", error="${error instanceof Error ? error.message : String(error)}"`,
+        );
+      }
+    }
+
+    try {
+      await this.fileMemoryTrackerService.removeMappings(params.filePath);
+    } catch (error) {
+      this.logger.warn(
+        `Failed to removeMappings for deleted file; path="${params.filePath}", error="${error instanceof Error ? error.message : String(error)}"`,
+      );
+    }
+
+    this.logger.info(
+      `Delete completed; path="${params.filePath}", memoriesForgotten="${memoryIds.length - failedCount}", failures="${failedCount}"`,
+    );
+
     return Result.ok(undefined as unknown as void);
   }
 

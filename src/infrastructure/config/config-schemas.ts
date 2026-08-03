@@ -5,6 +5,7 @@ export const watchSourceConfigSchema = z
     id: z.string(),
     path: z.string(),
     namespace: z.string().optional(),
+    description: z.string().optional(),
     exclude: z.array(z.string()).default(['.git/**', '**/.git/**', 'node_modules/**', '**/node_modules/**']),
     debounceMs: z.number().positive().default(3000),
   })

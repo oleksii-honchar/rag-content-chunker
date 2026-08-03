@@ -26,9 +26,15 @@ import { AppBootstrapService } from './app-bootstrap.service';
 import { AppModule } from './app.module';
 import { Configuration } from './infrastructure/config/config-schemas';
 import { ConfigurationService } from './infrastructure/config/configuration.service';
+import { FileMemoryTrackerRepository } from './infrastructure/file-memory-tracker.repository';
+import { aFileMemoryTrackerRepositoryService } from './infrastructure/file-memory-tracker.repository.test-utils';
+import { FileMemoryTrackerService } from './infrastructure/file-memory-tracker.service';
+import { aFileMemoryTrackerService } from './infrastructure/file-memory-tracker.service.test-utils';
 import { FileProcessingQueue } from './infrastructure/file-processing-queue.service';
+import { aFileProcessingQueueService } from './infrastructure/file-processing-queue.test-utils';
 import { BasePinoLogger } from './infrastructure/logging/base-pino-logger';
 import { MnemosyneClient } from './infrastructure/mnemosyne-client.service';
+import { aMnemosyneClientService } from './infrastructure/mnemosyne-client.test-utils';
 
 const mockWatcher = {
   on: jest.fn(),
@@ -95,18 +101,13 @@ describe('AppModule Integration', () => {
       .overrideProvider(ConfigurationService)
       .useValue(createMockConfigService())
       .overrideProvider(MnemosyneClient)
-      .useValue({
-        initialize: jest.fn().mockResolvedValue({ isOk: () => true }),
-        remember: jest.fn().mockResolvedValue({ isOk: () => true }),
-        healthCheck: jest.fn().mockResolvedValue({ isOk: () => true, getValue: () => true }),
-      })
+      .useValue(aMnemosyneClientService())
       .overrideProvider(FileProcessingQueue)
-      .useValue({
-        addToQueue: jest.fn().mockResolvedValue(undefined),
-        length: 0,
-        isProcessing: jest.fn().mockReturnValue(false),
-        waitForEmpty: jest.fn().mockResolvedValue(undefined),
-      })
+      .useValue(aFileProcessingQueueService())
+      .overrideProvider(FileMemoryTrackerRepository)
+      .useValue(aFileMemoryTrackerRepositoryService())
+      .overrideProvider(FileMemoryTrackerService)
+      .useValue(aFileMemoryTrackerService())
       .compile();
 
     bootstrapService = module.get(AppBootstrapService);
