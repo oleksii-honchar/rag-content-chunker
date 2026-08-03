@@ -11,10 +11,10 @@ jest.mock('@mastra/rag', () => ({
     chunkJSON = jest.fn();
     chunkSentence = jest.fn();
     getDocs = jest.fn();
-    _chunks: any[] = [];
+    _chunks: { text: string; metadata?: Record<string, unknown> }[] = [];
     _metadata: Record<string, string> = {};
     _textContent = '';
-    constructor(content: string, metadata?: Record<string, any>) {
+    constructor(content: string, metadata?: Record<string, unknown>) {
       this._textContent = content;
       this._metadata = metadata ?? {};
     }

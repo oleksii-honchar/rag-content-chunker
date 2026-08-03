@@ -22,9 +22,14 @@ export class GracefulShutdownService implements OnApplicationShutdown {
    */
   private safeLog(level: 'info' | 'error' | 'warn', message: string, meta?: Record<string, unknown>): void {
     try {
-      const args = meta != null ? [message, meta] : [message];
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (this.logger as any)[level](...args);
+      const logger = this.logger as BasePinoLogger;
+      if (level === 'info') {
+        logger.info(message, meta);
+      } else if (level === 'error') {
+        logger.error(message, meta);
+      } else {
+        logger.warn(message, meta);
+      }
     } catch {
       // Logger already closed during shutdown — fall back to console
       console[level](`[GracefulShutdownService] ${message}`, meta ?? '');

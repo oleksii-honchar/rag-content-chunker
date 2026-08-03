@@ -20,7 +20,7 @@ export type IngestChunkParams = z.infer<typeof ingestChunkParamsSchema>;
 export class IngestChunkUseCase extends BaseUseCase<IngestChunkParams, void> {
   constructor(
     private readonly mnemosyneClient: MnemosyneClient,
-    private readonly tracker: FileMemoryTrackerService,
+    private readonly fileMemoryTrackerService: FileMemoryTrackerService,
     logger: BasePinoLogger,
   ) {
     super(logger);
@@ -66,7 +66,12 @@ export class IngestChunkUseCase extends BaseUseCase<IngestChunkParams, void> {
           const filePath = params.metadata?.filePath;
           if (filePath) {
             try {
-              await this.tracker.remember(filePath, memory_id, params.sourceId, chunk.namespace);
+              await this.fileMemoryTrackerService.trackMemory(
+                filePath,
+                memory_id,
+                params.sourceId,
+                chunk.namespace,
+              );
             } catch (error) {
               this.logger.warn(
                 `Failed to track memory; filePath="${filePath}", memoryId="${memory_id}", error="${error instanceof Error ? error.message : String(error)}"`,

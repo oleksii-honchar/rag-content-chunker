@@ -6,7 +6,7 @@ import * as path from 'path';
 import { Result } from '../utils/result';
 import { AppEventEmitter } from './app-event-emitter';
 import { ConfigurationService } from './config/configuration.service';
-import { aSource } from './config/watch-source-config.test-utils';
+import { aWatchSource } from './config/watch-source-config.test-utils';
 import { FileWatcherService } from './file-watcher.service';
 import { BasePinoLogger } from './logging/base-pino-logger';
 import { MnemosyneClient } from './mnemosyne-client.service';
@@ -87,8 +87,8 @@ describe('FileWatcherService', () => {
   describe('start()', () => {
     it('creates watchers for all configured sources', async () => {
       const sources = [
-        aSource({ id: 'vault', path: '~/vault' }),
-        aSource({ id: 'sessions', path: '~/.agent-sessions' }),
+        aWatchSource({ id: 'vault', path: '~/vault' }),
+        aWatchSource({ id: 'sessions', path: '~/.agent-sessions' }),
       ];
       configService.getWatchSources.mockReturnValue(sources);
 
@@ -115,8 +115,8 @@ describe('FileWatcherService', () => {
 
     it('logs errors when a source fails to start but continues with others', async () => {
       const sources = [
-        aSource({ id: 'source-1', path: '/valid' }),
-        aSource({ id: 'source-2', path: '/valid' }),
+        aWatchSource({ id: 'source-1', path: '/valid' }),
+        aWatchSource({ id: 'source-2', path: '/valid' }),
       ];
       configService.getWatchSources.mockReturnValue(sources);
 
@@ -134,7 +134,7 @@ describe('FileWatcherService', () => {
 
   describe('stop()', () => {
     it('closes all watchers', async () => {
-      configService.getWatchSources.mockReturnValue([aSource()]);
+      configService.getWatchSources.mockReturnValue([aWatchSource()]);
       await service.start();
 
       const result = await service.stop();
@@ -144,7 +144,7 @@ describe('FileWatcherService', () => {
     });
 
     it('handles errors when closing a watcher without failing', async () => {
-      configService.getWatchSources.mockReturnValue([aSource()]);
+      configService.getWatchSources.mockReturnValue([aWatchSource()]);
       await service.start();
 
       mockWatcher.close.mockRejectedValueOnce(new Error('watcher error'));
@@ -157,7 +157,7 @@ describe('FileWatcherService', () => {
 
   describe('file added event', () => {
     it('emits FileAddedEvent when file is added', async () => {
-      configService.getWatchSources.mockReturnValue([aSource()]);
+      configService.getWatchSources.mockReturnValue([aWatchSource()]);
       await service.start();
 
       const addHandler = mockWatcher.on.mock.calls.find(call => call[0] === 'add')?.[1] as
@@ -178,7 +178,7 @@ describe('FileWatcherService', () => {
 
   describe('file changed event', () => {
     it('emits FileChangedEvent when file is changed', async () => {
-      configService.getWatchSources.mockReturnValue([aSource()]);
+      configService.getWatchSources.mockReturnValue([aWatchSource()]);
       await service.start();
 
       const changeHandler = mockWatcher.on.mock.calls.find(call => call[0] === 'change')?.[1] as
@@ -199,7 +199,7 @@ describe('FileWatcherService', () => {
 
   describe('file deleted event', () => {
     it('emits FileDeletedEvent when file is deleted', async () => {
-      configService.getWatchSources.mockReturnValue([aSource()]);
+      configService.getWatchSources.mockReturnValue([aWatchSource()]);
       await service.start();
 
       const unlinkHandler = mockWatcher.on.mock.calls.find(call => call[0] === 'unlink')?.[1] as
@@ -220,7 +220,7 @@ describe('FileWatcherService', () => {
 
   describe('ignore patterns', () => {
     it('applies ignore patterns correctly including defaults', async () => {
-      const source = aSource({
+      const source = aWatchSource({
         exclude: ['**/node_modules/**', '**/temp/**'],
       });
       configService.getWatchSources.mockReturnValue([source]);
@@ -242,7 +242,7 @@ describe('FileWatcherService', () => {
 
   describe('debounce behavior', () => {
     it('uses awaitWriteFinish with source debounceMs', async () => {
-      const source = aSource({ debounceMs: 5000 });
+      const source = aWatchSource({ debounceMs: 5000 });
       configService.getWatchSources.mockReturnValue([source]);
 
       await service.start();
@@ -261,7 +261,7 @@ describe('FileWatcherService', () => {
 
   describe('onApplicationBootstrap', () => {
     it('calls start and logs error if a source fails to start', async () => {
-      configService.getWatchSources.mockReturnValue([aSource()]);
+      configService.getWatchSources.mockReturnValue([aWatchSource()]);
       mockWatchFn.mockImplementation(() => {
         throw new Error('start failed');
       });
@@ -272,7 +272,7 @@ describe('FileWatcherService', () => {
 
   describe('onApplicationShutdown', () => {
     it('calls stop', async () => {
-      configService.getWatchSources.mockReturnValue([aSource()]);
+      configService.getWatchSources.mockReturnValue([aWatchSource()]);
       await service.start();
 
       await service.onApplicationShutdown();
@@ -284,8 +284,8 @@ describe('FileWatcherService', () => {
   describe('namespace registration', () => {
     it('calls registerNamespace for sources with description', async () => {
       const sources = [
-        aSource({ id: 'vault', namespace: 'vault', description: 'Personal vault notes' }),
-        aSource({ id: 'sessions', namespace: 'sessions', description: 'Agent sessions' }),
+        aWatchSource({ id: 'vault', namespace: 'vault', description: 'Personal vault notes' }),
+        aWatchSource({ id: 'sessions', namespace: 'sessions', description: 'Agent sessions' }),
       ];
       configService.getWatchSources.mockReturnValue(sources);
       mockMnemosyneClient.registerNamespace.mockResolvedValue(Result.ok(undefined as unknown as void));
@@ -299,8 +299,8 @@ describe('FileWatcherService', () => {
 
     it('skips sources without description', async () => {
       const sources = [
-        aSource({ id: 'vault', namespace: 'vault', description: 'Personal vault notes' }),
-        aSource({ id: 'no-desc', namespace: 'no-desc' }),
+        aWatchSource({ id: 'vault', namespace: 'vault', description: 'Personal vault notes' }),
+        aWatchSource({ id: 'no-desc', namespace: 'no-desc' }),
       ];
       configService.getWatchSources.mockReturnValue(sources);
       mockMnemosyneClient.registerNamespace.mockResolvedValue(Result.ok(undefined as unknown as void));
@@ -313,8 +313,8 @@ describe('FileWatcherService', () => {
 
     it('logs warning on registration failure and continues with other namespaces', async () => {
       const sources = [
-        aSource({ id: 'vault', namespace: 'vault', description: 'Vault' }),
-        aSource({ id: 'sessions', namespace: 'sessions', description: 'Sessions' }),
+        aWatchSource({ id: 'vault', namespace: 'vault', description: 'Vault' }),
+        aWatchSource({ id: 'sessions', namespace: 'sessions', description: 'Sessions' }),
       ];
       configService.getWatchSources.mockReturnValue(sources);
 
@@ -341,7 +341,7 @@ describe('FileWatcherService', () => {
         return Result.ok(undefined as unknown as void);
       });
 
-      const sources = [aSource({ id: 'vault', namespace: 'vault', description: 'Vault' })];
+      const sources = [aWatchSource({ id: 'vault', namespace: 'vault', description: 'Vault' })];
       configService.getWatchSources.mockReturnValue(sources);
 
       await service.onApplicationBootstrap();
@@ -355,7 +355,7 @@ describe('FileWatcherService', () => {
     });
 
     it('does not block startup when all registrations fail', async () => {
-      const sources = [aSource({ id: 'vault', namespace: 'vault', description: 'Vault' })];
+      const sources = [aWatchSource({ id: 'vault', namespace: 'vault', description: 'Vault' })];
       configService.getWatchSources.mockReturnValue(sources);
       mockMnemosyneClient.registerNamespace.mockResolvedValue(Result.ko(new Error('MCP error')));
 
@@ -366,7 +366,7 @@ describe('FileWatcherService', () => {
     });
 
     it('does not register when no sources have descriptions', async () => {
-      const sources = [aSource({ id: 'no-desc', namespace: 'no-desc' })];
+      const sources = [aWatchSource({ id: 'no-desc', namespace: 'no-desc' })];
       configService.getWatchSources.mockReturnValue(sources);
 
       await service.onApplicationBootstrap();

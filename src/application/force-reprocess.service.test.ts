@@ -11,10 +11,10 @@ jest.mock('@mastra/rag', () => ({
     chunkJSON = jest.fn();
     chunkSentence = jest.fn();
     getDocs = jest.fn();
-    _chunks: any[] = [];
+    _chunks: { text: string; metadata?: Record<string, unknown> }[] = [];
     _metadata: Record<string, string> = {};
     _textContent = '';
-    constructor(content: string, metadata?: Record<string, any>) {
+    constructor(content: string, metadata?: Record<string, unknown>) {
       this._textContent = content;
       this._metadata = metadata ?? {};
     }
@@ -24,7 +24,7 @@ jest.mock('@mastra/rag', () => ({
 import { Test, TestingModule } from '@nestjs/testing';
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
-import { aSource } from '../infrastructure/config/watch-source-config.test-utils';
+import { aWatchSource } from '../infrastructure/config/watch-source-config.test-utils';
 import { FileProcessingQueue } from '../infrastructure/file-processing-queue.service';
 import { aFileProcessingQueueService } from '../infrastructure/file-processing-queue.test-utils';
 import { BasePinoLogger } from '../infrastructure/logging/base-pino-logger';
@@ -67,7 +67,7 @@ describe('ForceReprocessService', () => {
 
   describe('forceReprocessAll', () => {
     it('should process files from all sources', async () => {
-      const sources = [aSource({ id: 'source-1' }), aSource({ id: 'source-2' })];
+      const sources = [aWatchSource({ id: 'source-1' }), aWatchSource({ id: 'source-2' })];
 
       fsMock.stat.mockResolvedValue(mockDirStats());
       fsMock.readdir.mockResolvedValue([mockDirent('file1.md', false)]);
@@ -79,7 +79,7 @@ describe('ForceReprocessService', () => {
     });
 
     it('should queue files found in each source', async () => {
-      const sources = [aSource({ id: 'source-1', path: '/tmp/source-1' })];
+      const sources = [aWatchSource({ id: 'source-1', path: '/tmp/source-1' })];
 
       fsMock.stat.mockResolvedValue(mockDirStats());
       fsMock.readdir.mockResolvedValue([mockDirent('file1.md', false), mockDirent('file2.md', false)]);
@@ -93,8 +93,8 @@ describe('ForceReprocessService', () => {
   describe('forceReprocessSource', () => {
     it('should process files from specific source by id', async () => {
       const sources = [
-        aSource({ id: 'source-1', path: '/tmp/source-1' }),
-        aSource({ id: 'source-2', path: '/tmp/source-2' }),
+        aWatchSource({ id: 'source-1', path: '/tmp/source-1' }),
+        aWatchSource({ id: 'source-2', path: '/tmp/source-2' }),
       ];
 
       fsMock.stat.mockResolvedValue(mockDirStats());
@@ -106,7 +106,7 @@ describe('ForceReprocessService', () => {
     });
 
     it('should skip when source not found', async () => {
-      const sources = [aSource({ id: 'source-1' })];
+      const sources = [aWatchSource({ id: 'source-1' })];
 
       await service.forceReprocessSource('non-existent', sources);
 
@@ -116,7 +116,7 @@ describe('ForceReprocessService', () => {
 
   describe('directory scanning', () => {
     it('should scan directory recursively', async () => {
-      const source = aSource({ id: 'test', path: '/tmp/test' });
+      const source = aWatchSource({ id: 'test', path: '/tmp/test' });
 
       fsMock.stat.mockResolvedValue(mockDirStats());
       fsMock.readdir
@@ -131,7 +131,7 @@ describe('ForceReprocessService', () => {
     });
 
     it('should not queue files when path is not a directory', async () => {
-      const source = aSource({ id: 'test', path: '/tmp/test' });
+      const source = aWatchSource({ id: 'test', path: '/tmp/test' });
 
       fsMock.stat.mockResolvedValue(mockFileStats());
 
@@ -141,7 +141,7 @@ describe('ForceReprocessService', () => {
     });
 
     it('should not queue files when stat fails', async () => {
-      const source = aSource({ id: 'test', path: '/tmp/test' });
+      const source = aWatchSource({ id: 'test', path: '/tmp/test' });
 
       fsMock.stat.mockRejectedValue(new Error('ENOENT'));
 
@@ -153,7 +153,7 @@ describe('ForceReprocessService', () => {
 
   describe('queue population', () => {
     it('should add each file to processing queue', async () => {
-      const source = aSource({ id: 'test', path: '/tmp/test' });
+      const source = aWatchSource({ id: 'test', path: '/tmp/test' });
 
       fsMock.stat.mockResolvedValue(mockDirStats());
       fsMock.readdir.mockResolvedValue([mockDirent('file1.md', false), mockDirent('file2.md', false)]);
@@ -164,7 +164,7 @@ describe('ForceReprocessService', () => {
     });
 
     it('should call processFileUseCase for each queued file', async () => {
-      const source = aSource({ id: 'my-source', path: '/tmp/test' });
+      const source = aWatchSource({ id: 'my-source', path: '/tmp/test' });
 
       fsMock.stat.mockResolvedValue(mockDirStats());
       fsMock.readdir.mockResolvedValue([mockDirent('file1.md', false)]);
@@ -186,7 +186,7 @@ describe('ForceReprocessService', () => {
     });
 
     it('should handle file reprocessing failure gracefully', async () => {
-      const source = aSource({ id: 'test', path: '/tmp/test' });
+      const source = aWatchSource({ id: 'test', path: '/tmp/test' });
 
       fsMock.stat.mockResolvedValue(mockDirStats());
       fsMock.readdir.mockResolvedValue([mockDirent('file1.md', false)]);
@@ -203,7 +203,7 @@ describe('ForceReprocessService', () => {
 
   describe('path resolution', () => {
     it('should resolve tilde paths to home directory', async () => {
-      const source = aSource({ id: 'test', path: '~/documents' });
+      const source = aWatchSource({ id: 'test', path: '~/documents' });
 
       fsMock.stat.mockResolvedValue(mockFileStats());
 
@@ -215,7 +215,7 @@ describe('ForceReprocessService', () => {
     });
 
     it('should resolve relative paths', async () => {
-      const source = aSource({ id: 'test', path: './relative' });
+      const source = aWatchSource({ id: 'test', path: './relative' });
 
       fsMock.stat.mockResolvedValue(mockFileStats());
 

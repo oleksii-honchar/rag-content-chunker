@@ -96,7 +96,7 @@ export const chunkingConfigSchema = z
         agentSessions: z.number().optional(),
         obsidianNotes: z.number().optional(),
         codeFiles: z.number().optional(),
-        configuration: z.any().optional(),
+        configuration: z.union([z.number(), z.string()]).optional(),
         plainText: z.number().optional(),
       })
       .optional(),

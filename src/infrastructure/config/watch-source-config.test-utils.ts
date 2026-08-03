@@ -8,7 +8,7 @@
 import { WatchSourceConfig } from './config-schemas';
 
 /**
- * Type alias for a WatchSourceConfig created via the aSource factory.
+ * Type alias for a WatchSourceConfig created via the aWatchSource factory.
  * Useful when you want to document that a value is a test fixture.
  */
 export type AWatchSourceConfig = WatchSourceConfig;
@@ -27,10 +27,10 @@ export type AWatchSourceConfig = WatchSourceConfig;
  * @returns AWatchSourceConfig instance
  *
  * @example
- * const source = aSource();
- * const custom = aSource({ id: 'vault', path: '~/vault' });
+ * const source = aWatchSource();
+ * const custom = aWatchSource({ id: 'vault', path: '~/vault' });
  */
-export const aSource = (overrides?: Partial<WatchSourceConfig>): AWatchSourceConfig => ({
+export const aWatchSource = (overrides?: Partial<WatchSourceConfig>): AWatchSourceConfig => ({
   id: overrides?.id ?? 'test-source',
   path: overrides?.path ?? '/tmp/test-source',
   namespace: overrides?.namespace ?? overrides?.id ?? 'test-source',

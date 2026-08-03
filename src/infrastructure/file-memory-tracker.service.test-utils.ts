@@ -8,9 +8,9 @@
  */
 export function aFileMemoryTrackerService() {
   return {
-    remember: jest.fn().mockResolvedValue(undefined),
-    forget: jest.fn().mockResolvedValue(undefined),
+    trackMemory: jest.fn().mockResolvedValue(undefined),
+    forgetMemory: jest.fn().mockResolvedValue(null),
     getMemoryIds: jest.fn().mockResolvedValue([]),
-    removeMappings: jest.fn().mockResolvedValue(undefined),
+    deleteByFilePath: jest.fn().mockResolvedValue(undefined),
   };
 }

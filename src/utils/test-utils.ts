@@ -16,10 +16,9 @@ import * as fs from 'fs';
  * @param isDir - Whether this entry is a directory
  * @returns Mock Dirent object
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const mockDirent = (name: string, isDir: boolean): any => ({
+export const mockDirent = (name: string, isDir: boolean): fs.Dirent => ({
   name,
-  parentPath: null as unknown as Buffer,
+  parentPath: null as unknown as string,
   isDirectory: () => isDir,
   isFile: () => !isDir,
   isBlockDevice: () => false,

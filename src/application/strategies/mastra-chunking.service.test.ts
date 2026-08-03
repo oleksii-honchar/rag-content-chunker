@@ -15,10 +15,10 @@ jest.mock('@mastra/rag', () => ({
     chunkJSON = jest.fn();
     chunkSentence = jest.fn();
     getDocs = jest.fn();
-    _chunks: any[] = [];
+    _chunks: { text: string; metadata?: Record<string, unknown> }[] = [];
     _metadata: Record<string, string> = {};
     _textContent = '';
-    constructor(content: string, metadata?: Record<string, any>) {
+    constructor(content: string, metadata?: Record<string, unknown>) {
       this._textContent = content;
       this._metadata = metadata ?? {};
     }
@@ -233,8 +233,6 @@ describe('MastraChunkingService', () => {
   });
 
   describe('maxCharacters config wiring', () => {
-    const { MDocument } = require('@mastra/rag');
-
     it('should read maxCharacters from ConfigurationService', () => {
       expect(configService.getEnhancementConfig).not.toHaveBeenCalled();
       // Just verify config service is injected and accessible
@@ -268,7 +266,7 @@ describe('MastraChunkingService', () => {
         }),
         chunkMarkdown: jest.fn(),
       };
-      MDocument.fromMarkdown.mockReturnValue(mockDoc);
+      mockedMDocument.fromMarkdown.mockReturnValue(mockDoc as never);
 
       await service.chunkFile('# Title', 'README.md', 'test-source');
 
@@ -282,7 +280,7 @@ describe('MastraChunkingService', () => {
         }),
         chunkRecursive: jest.fn(),
       };
-      MDocument.fromText.mockReturnValue(mockDoc);
+      mockedMDocument.fromText.mockReturnValue(mockDoc as never);
 
       await service.chunkFile('function test() {}', 'app.ts', 'test-source');
 
@@ -296,7 +294,7 @@ describe('MastraChunkingService', () => {
         }),
         chunkJSON: jest.fn(),
       };
-      MDocument.fromJSON.mockReturnValue(mockDoc);
+      mockedMDocument.fromJSON.mockReturnValue(mockDoc as never);
 
       await service.chunkFile('{"key": "value"}', 'config.json', 'test-source');
 
@@ -315,7 +313,7 @@ describe('MastraChunkingService', () => {
         }),
         chunkSentence: jest.fn(),
       };
-      MDocument.fromText.mockReturnValue(mockDoc);
+      mockedMDocument.fromText.mockReturnValue(mockDoc as never);
 
       await service.chunkFile('First sentence. Second sentence.', 'notes.txt', 'test-source');
 
@@ -335,7 +333,7 @@ describe('MastraChunkingService', () => {
         }),
         chunkRecursive: jest.fn(),
       };
-      MDocument.fromText.mockReturnValue(mockDoc);
+      mockedMDocument.fromText.mockReturnValue(mockDoc as never);
 
       await service.chunkFile('const x = 1;', 'script.js', 'test-source');
 
@@ -349,7 +347,7 @@ describe('MastraChunkingService', () => {
         }),
         chunkMarkdown: jest.fn(),
       };
-      MDocument.fromMarkdown.mockReturnValue(mockDoc);
+      mockedMDocument.fromMarkdown.mockReturnValue(mockDoc as never);
 
       await service.chunkFile('# Session', '.agent-sessions/test/session.md', 'test-source');
 
@@ -366,7 +364,7 @@ describe('MastraChunkingService', () => {
         }),
         chunkMarkdown: jest.fn(),
       };
-      MDocument.fromMarkdown.mockReturnValue(mockDoc);
+      mockedMDocument.fromMarkdown.mockReturnValue(mockDoc as never);
 
       await service.chunkFile('# Title', 'README.md', 'test-source');
 
@@ -381,7 +379,7 @@ describe('MastraChunkingService', () => {
         }),
         chunkMarkdown: jest.fn(),
       };
-      MDocument.fromMarkdown.mockReturnValue(mockDoc);
+      mockedMDocument.fromMarkdown.mockReturnValue(mockDoc as never);
 
       const result = await service.chunkFile('# Title\n' + longText, 'README.md', 'test-source');
 
@@ -393,8 +391,6 @@ describe('MastraChunkingService', () => {
   });
 
   describe('chunkFile', () => {
-    const { MDocument } = require('@mastra/rag');
-
     it('should return Result.ok with chunks for valid markdown content', async () => {
       const mockDoc = {
         extractMetadata: jest.fn().mockResolvedValue({
@@ -406,7 +402,7 @@ describe('MastraChunkingService', () => {
         }),
         chunkMarkdown: jest.fn(),
       };
-      MDocument.fromMarkdown.mockReturnValue(mockDoc);
+      mockedMDocument.fromMarkdown.mockReturnValue(mockDoc as never);
 
       const result = await service.chunkFile('# Test\n\nContent here.', 'README.md', 'test-source');
 
@@ -423,7 +419,7 @@ describe('MastraChunkingService', () => {
           getDocs: jest.fn().mockReturnValue([{ text: 'content', metadata: {} }]),
         }),
       };
-      MDocument.fromMarkdown.mockReturnValue(mockDoc);
+      mockedMDocument.fromMarkdown.mockReturnValue(mockDoc as never);
 
       await service.chunkFile('# Title', 'README.md', 'test-source');
 
@@ -439,7 +435,7 @@ describe('MastraChunkingService', () => {
           getDocs: jest.fn().mockReturnValue([{ text: 'content', metadata: {} }]),
         }),
       };
-      MDocument.fromJSON.mockReturnValue(mockDoc);
+      mockedMDocument.fromJSON.mockReturnValue(mockDoc as never);
 
       await service.chunkFile('{"key": "value"}', 'config.json', 'test-source');
 
@@ -452,7 +448,7 @@ describe('MastraChunkingService', () => {
           getDocs: jest.fn().mockReturnValue([{ text: 'content', metadata: {} }]),
         }),
       };
-      MDocument.fromHTML.mockReturnValue(mockDoc);
+      mockedMDocument.fromHTML.mockReturnValue(mockDoc as never);
 
       await service.chunkFile('<html><body>Test</body></html>', 'page.html', 'test-source');
 
@@ -465,7 +461,7 @@ describe('MastraChunkingService', () => {
           getDocs: jest.fn().mockReturnValue([{ text: 'content', metadata: {} }]),
         }),
       };
-      MDocument.fromText.mockReturnValue(mockDoc);
+      mockedMDocument.fromText.mockReturnValue(mockDoc as never);
 
       await service.chunkFile('plain text content', 'notes.txt', 'test-source');
 
@@ -479,7 +475,7 @@ describe('MastraChunkingService', () => {
         }),
         chunkMarkdown: jest.fn(),
       };
-      MDocument.fromMarkdown.mockReturnValue(mockDoc);
+      mockedMDocument.fromMarkdown.mockReturnValue(mockDoc as never);
 
       await service.chunkFile('# Title\nContent', 'README.md', 'test-source');
 
@@ -493,7 +489,7 @@ describe('MastraChunkingService', () => {
         }),
         chunkRecursive: jest.fn(),
       };
-      MDocument.fromText.mockReturnValue(mockDoc);
+      mockedMDocument.fromText.mockReturnValue(mockDoc as never);
 
       await service.chunkFile('function test() {}', 'app.ts', 'test-source');
 
@@ -507,7 +503,7 @@ describe('MastraChunkingService', () => {
         }),
         chunkJSON: jest.fn(),
       };
-      MDocument.fromJSON.mockReturnValue(mockDoc);
+      mockedMDocument.fromJSON.mockReturnValue(mockDoc as never);
 
       await service.chunkFile('{"key": "value"}', 'config.json', 'test-source');
 
@@ -521,7 +517,7 @@ describe('MastraChunkingService', () => {
         }),
         chunkSentence: jest.fn(),
       };
-      MDocument.fromText.mockReturnValue(mockDoc);
+      mockedMDocument.fromText.mockReturnValue(mockDoc as never);
 
       await service.chunkFile('First sentence. Second sentence.', 'notes.txt', 'test-source');
 
@@ -535,7 +531,7 @@ describe('MastraChunkingService', () => {
         }),
         chunkMarkdown: jest.fn(),
       };
-      MDocument.fromMarkdown.mockReturnValue(mockDoc);
+      mockedMDocument.fromMarkdown.mockReturnValue(mockDoc as never);
 
       await service.chunkFile('# Title', 'README.md', 'test-source');
 
@@ -555,7 +551,7 @@ describe('MastraChunkingService', () => {
         }),
         chunkMarkdown: jest.fn(),
       };
-      MDocument.fromMarkdown.mockReturnValue(mockDoc);
+      mockedMDocument.fromMarkdown.mockReturnValue(mockDoc as never);
 
       const result = await service.chunkFile(
         '# My Title\n\nFirst paragraph.\n\nSecond paragraph.',
@@ -591,7 +587,7 @@ describe('MastraChunkingService', () => {
         }),
         chunkMarkdown: jest.fn(),
       };
-      MDocument.fromMarkdown.mockReturnValue(mockDoc);
+      mockedMDocument.fromMarkdown.mockReturnValue(mockDoc as never);
 
       const result = await service.chunkFile('# Title', 'README.md', 'test-source');
 
@@ -608,7 +604,7 @@ describe('MastraChunkingService', () => {
         }),
         chunkRecursive: jest.fn(),
       };
-      MDocument.fromText.mockReturnValue(mockDoc);
+      mockedMDocument.fromText.mockReturnValue(mockDoc as never);
 
       const result = await service.chunkFile('function test() {}', 'app.ts', 'test-source');
 
@@ -623,7 +619,7 @@ describe('MastraChunkingService', () => {
         }),
         chunkJSON: jest.fn(),
       };
-      MDocument.fromJSON.mockReturnValue(mockDoc);
+      mockedMDocument.fromJSON.mockReturnValue(mockDoc as never);
 
       const result = await service.chunkFile('{"key": "value"}', 'config.json', 'test-source');
 
@@ -638,7 +634,7 @@ describe('MastraChunkingService', () => {
         }),
         chunkMarkdown: jest.fn(),
       };
-      MDocument.fromMarkdown.mockReturnValue(mockDoc);
+      mockedMDocument.fromMarkdown.mockReturnValue(mockDoc as never);
 
       const result = await service.chunkFile('', 'README.md', 'test-source');
 
@@ -647,7 +643,7 @@ describe('MastraChunkingService', () => {
     });
 
     it('should return Result.ko when MDocument creation throws', async () => {
-      MDocument.fromMarkdown.mockImplementation(() => {
+      mockedMDocument.fromMarkdown.mockImplementation(() => {
         throw new Error('Invalid markdown');
       });
 
@@ -666,7 +662,7 @@ describe('MastraChunkingService', () => {
           throw new Error('Chunking failed');
         }),
       };
-      MDocument.fromMarkdown.mockReturnValue(mockDoc);
+      mockedMDocument.fromMarkdown.mockReturnValue(mockDoc as never);
 
       const result = await service.chunkFile('# Title', 'README.md', 'test-source');
 
@@ -682,7 +678,7 @@ describe('MastraChunkingService', () => {
         chunkMarkdown: jest.fn(),
         getDocs: jest.fn().mockReturnValue([{ text: 'content', metadata: {} }]),
       };
-      MDocument.fromMarkdown.mockReturnValue(mockDoc);
+      mockedMDocument.fromMarkdown.mockReturnValue(mockDoc as never);
 
       const result = await service.chunkFile('# Title', 'README.md', 'test-source');
 
@@ -700,7 +696,7 @@ describe('MastraChunkingService', () => {
         }),
         chunkMarkdown: jest.fn(),
       };
-      MDocument.fromMarkdown.mockReturnValue(mockDoc);
+      mockedMDocument.fromMarkdown.mockReturnValue(mockDoc as never);
 
       const result = await service.chunkFile('# Title', 'README.md', 'test-source');
 
@@ -721,7 +717,7 @@ describe('MastraChunkingService', () => {
         }),
         chunkMarkdown: jest.fn(),
       };
-      MDocument.fromMarkdown.mockReturnValue(mockDoc);
+      mockedMDocument.fromMarkdown.mockReturnValue(mockDoc as never);
 
       const result = await service.chunkFile('# Title', 'docs/guide.md', 'test-source');
 
@@ -775,7 +771,6 @@ describe('MastraChunkingService', () => {
         enrichmentApiKey: 'test-key',
       });
       service = new MastraChunkingService(configService, mockLogger);
-      const { MDocument } = require('@mastra/rag');
 
       const mockDoc = {
         extractMetadata: jest.fn().mockResolvedValue({
@@ -783,7 +778,7 @@ describe('MastraChunkingService', () => {
         }),
         chunkMarkdown: jest.fn(),
       };
-      MDocument.fromMarkdown.mockReturnValue(mockDoc);
+      mockedMDocument.fromMarkdown.mockReturnValue(mockDoc as never);
 
       await service.chunkFile('# Title', 'README.md', 'test-source');
 
@@ -796,7 +791,6 @@ describe('MastraChunkingService', () => {
         enrichmentLlmUrl: 'https://example.com/v1',
       });
       service = new MastraChunkingService(configService, mockLogger);
-      const { MDocument } = require('@mastra/rag');
 
       const mockDoc = {
         extractMetadata: jest.fn().mockResolvedValue({
@@ -804,7 +798,7 @@ describe('MastraChunkingService', () => {
         }),
         chunkMarkdown: jest.fn(),
       };
-      MDocument.fromMarkdown.mockReturnValue(mockDoc);
+      mockedMDocument.fromMarkdown.mockReturnValue(mockDoc as never);
 
       await service.chunkFile('# Title', 'README.md', 'test-source');
 
@@ -814,14 +808,13 @@ describe('MastraChunkingService', () => {
     it('should continue without enrichment if extractMetadata throws', async () => {
       configService = createMockConfigService({ enrichmentEnabled: true, enrichmentApiKey: 'key' });
       service = new MastraChunkingService(configService, mockLogger);
-      const { MDocument } = require('@mastra/rag');
 
       const mockDoc = {
         extractMetadata: jest.fn().mockRejectedValue(new Error('LLM unavailable')),
         chunkMarkdown: jest.fn(),
         getDocs: jest.fn().mockReturnValue([{ text: 'content', metadata: {} }]),
       };
-      MDocument.fromMarkdown.mockReturnValue(mockDoc);
+      mockedMDocument.fromMarkdown.mockReturnValue(mockDoc as never);
 
       const result = await service.chunkFile('# Title', 'README.md', 'test-source');
 

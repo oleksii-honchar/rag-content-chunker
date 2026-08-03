@@ -26,107 +26,50 @@ jest.mock('@mastra/rag', () => ({
 import { aChunk } from '../domain/chunk.entity.test-utils';
 import { FileAddedEvent, FileChangedEvent, FileDeletedEvent } from '../domain/events/file-events';
 import { FileMemoryTrackerService } from '../infrastructure/file-memory-tracker.service';
+import { aFileMemoryTrackerService } from '../infrastructure/file-memory-tracker.service.test-utils';
 import { FileProcessingQueue } from '../infrastructure/file-processing-queue.service';
-import { BasePinoLogger } from '../infrastructure/logging/base-pino-logger';
+import { aFileProcessingQueueService } from '../infrastructure/file-processing-queue.test-utils';
+import { aLogger } from '../infrastructure/logging/logger.test-utils';
 import { MnemosyneClient } from '../infrastructure/mnemosyne-client.service';
+import { aMnemosyneClientService } from '../infrastructure/mnemosyne-client.test-utils';
 import { Result } from '../utils/result';
 import { ChunkContentUseCase } from './chunk-content.use-case';
+import { aChunkContentUseCase } from './chunk-content.use-case.test-utils';
 import { IngestChunkUseCase } from './ingest-chunk.use-case';
+import { aIngestChunkUseCase } from './ingest-chunk.use-case.test-utils';
 import { ProcessFileUseCase } from './process-file.use-case';
 
 jest.mock('fs/promises');
 
-type MockFn = jest.Mock;
-
-interface MockChunkContentUseCase {
-  execute: MockFn;
-}
-
-interface MockIngestChunkUseCase {
-  execute: MockFn;
-}
-
-interface MockProcessingQueue {
-  addToQueue: MockFn;
-}
-
-interface MockFileMemoryTrackerService {
-  getMemoryIds: MockFn;
-  removeMappings: MockFn;
-}
-
-interface MockMnemosyneClient {
-  forget: MockFn;
-}
-
-interface MockLogger {
-  info: MockFn;
-  error: MockFn;
-  debug: MockFn;
-  warn: MockFn;
-  child: MockFn;
-  setContext: MockFn;
-  log: MockFn;
-}
-
 describe('ProcessFileUseCase', () => {
   let useCase: ProcessFileUseCase;
-  let mockChunkContentUseCase: MockChunkContentUseCase;
-  let mockIngestChunkUseCase: MockIngestChunkUseCase;
-  let mockProcessingQueue: MockProcessingQueue;
-  let mockFileMemoryTrackerService: MockFileMemoryTrackerService;
-  let mockMnemosyneClient: MockMnemosyneClient;
-  let mockLogger: MockLogger;
+  let mockChunkContentUseCase: ReturnType<typeof aChunkContentUseCase>;
+  let mockIngestChunkUseCase: ReturnType<typeof aIngestChunkUseCase>;
+  let mockProcessingQueue: ReturnType<typeof aFileProcessingQueueService>;
+  let mockFileMemoryTrackerService: ReturnType<typeof aFileMemoryTrackerService>;
+  let mockMnemosyneClient: ReturnType<typeof aMnemosyneClientService>;
 
   beforeEach(() => {
     jest.clearAllMocks();
 
-    mockChunkContentUseCase = {
-      execute: jest.fn(),
-    };
+    mockChunkContentUseCase = aChunkContentUseCase();
+    mockIngestChunkUseCase = aIngestChunkUseCase();
+    mockProcessingQueue = aFileProcessingQueueService();
+    mockFileMemoryTrackerService = aFileMemoryTrackerService();
+    mockMnemosyneClient = aMnemosyneClientService();
+    const mockLogger = aLogger();
 
-    mockIngestChunkUseCase = {
-      execute: jest.fn(),
-    };
-
-    mockProcessingQueue = {
-      addToQueue: jest.fn(),
-    };
-
-    mockFileMemoryTrackerService = {
-      getMemoryIds: jest.fn(),
-      removeMappings: jest.fn(),
-    };
-
-    mockMnemosyneClient = {
-      forget: jest.fn(),
-    };
-
-    mockLogger = {
-      info: jest.fn(),
-      error: jest.fn(),
-      debug: jest.fn(),
-      warn: jest.fn(),
-      child: jest.fn(),
-      setContext: jest.fn(),
-      log: jest.fn(),
-    };
-
-    mockLogger.child.mockReturnValue(mockLogger);
+    useCase = new ProcessFileUseCase(
+      mockChunkContentUseCase as unknown as ChunkContentUseCase,
+      mockIngestChunkUseCase as unknown as IngestChunkUseCase,
+      mockProcessingQueue as unknown as FileProcessingQueue,
+      mockFileMemoryTrackerService as unknown as FileMemoryTrackerService,
+      mockMnemosyneClient as unknown as MnemosyneClient,
+      mockLogger as unknown as never,
+    );
   });
 
   describe('execute with ADD event', () => {
-    beforeEach(() => {
-      useCase = new ProcessFileUseCase(
-        mockChunkContentUseCase as unknown as ChunkContentUseCase,
-        mockIngestChunkUseCase as unknown as IngestChunkUseCase,
-        mockProcessingQueue as unknown as FileProcessingQueue,
-        mockFileMemoryTrackerService as unknown as FileMemoryTrackerService,
-        mockMnemosyneClient as unknown as MnemosyneClient,
-        mockLogger as unknown as BasePinoLogger,
-      );
-    });
-
     it('should queue processing and chunk + ingest on success', async () => {
       const filePath = '/path/to/file.md';
       const sourceId = 'test-source';
@@ -134,7 +77,7 @@ describe('ProcessFileUseCase', () => {
       const fileContent = 'Test file content';
       const chunks = [aChunk({ text: 'chunk 1' }), aChunk({ text: 'chunk 2' })];
 
-      (fs.readFile as MockFn).mockResolvedValue(fileContent);
+      (fs.readFile as jest.Mock).mockResolvedValue(fileContent);
 
       mockChunkContentUseCase.execute.mockResolvedValue(Result.ok(chunks));
       mockIngestChunkUseCase.execute.mockResolvedValue(Result.ok(undefined as unknown as void));
@@ -173,7 +116,7 @@ describe('ProcessFileUseCase', () => {
       const fileContent = 'Test';
       const chunks = [aChunk({ namespace })];
 
-      (fs.readFile as MockFn).mockResolvedValue(fileContent);
+      (fs.readFile as jest.Mock).mockResolvedValue(fileContent);
       mockChunkContentUseCase.execute.mockResolvedValue(Result.ok(chunks));
       mockIngestChunkUseCase.execute.mockResolvedValue(Result.ok(undefined as unknown as void));
       mockProcessingQueue.addToQueue.mockImplementation(task => task());
@@ -192,7 +135,7 @@ describe('ProcessFileUseCase', () => {
       const filePath = '/path/to/missing.md';
       const sourceId = 'test-source';
 
-      (fs.readFile as MockFn).mockRejectedValue(new Error('ENOENT'));
+      (fs.readFile as jest.Mock).mockRejectedValue(new Error('ENOENT'));
 
       mockProcessingQueue.addToQueue.mockImplementation(async task => {
         await task();
@@ -213,7 +156,7 @@ describe('ProcessFileUseCase', () => {
       const sourceId = 'test-source';
       const fileContent = 'Test content';
 
-      (fs.readFile as MockFn).mockResolvedValue(fileContent);
+      (fs.readFile as jest.Mock).mockResolvedValue(fileContent);
       mockChunkContentUseCase.execute.mockResolvedValue(Result.ko(new Error('Chunking failed')));
 
       mockProcessingQueue.addToQueue.mockImplementation(async task => {
@@ -236,7 +179,7 @@ describe('ProcessFileUseCase', () => {
       const fileContent = 'Test content';
       const chunks = [aChunk()];
 
-      (fs.readFile as MockFn).mockResolvedValue(fileContent);
+      (fs.readFile as jest.Mock).mockResolvedValue(fileContent);
       mockChunkContentUseCase.execute.mockResolvedValue(Result.ok(chunks));
       mockIngestChunkUseCase.execute.mockResolvedValue(Result.ko(new Error('Ingestion failed')));
 
@@ -259,7 +202,7 @@ describe('ProcessFileUseCase', () => {
       const sourceId = 'test-source';
       const fileContent = '';
 
-      (fs.readFile as MockFn).mockResolvedValue(fileContent);
+      (fs.readFile as jest.Mock).mockResolvedValue(fileContent);
       mockChunkContentUseCase.execute.mockResolvedValue(Result.ok([]));
 
       mockProcessingQueue.addToQueue.mockImplementation(async task => {
@@ -278,17 +221,6 @@ describe('ProcessFileUseCase', () => {
   });
 
   describe('execute with CHANGE event', () => {
-    beforeEach(() => {
-      useCase = new ProcessFileUseCase(
-        mockChunkContentUseCase as unknown as ChunkContentUseCase,
-        mockIngestChunkUseCase as unknown as IngestChunkUseCase,
-        mockProcessingQueue as unknown as FileProcessingQueue,
-        mockFileMemoryTrackerService as unknown as FileMemoryTrackerService,
-        mockMnemosyneClient as unknown as MnemosyneClient,
-        mockLogger as unknown as BasePinoLogger,
-      );
-    });
-
     it('should re-chunk and re-ingest on change', async () => {
       const filePath = '/path/to/file.md';
       const sourceId = 'test-source';
@@ -296,7 +228,7 @@ describe('ProcessFileUseCase', () => {
       const fileContent = 'Updated content';
       const chunks = [aChunk({ text: 'updated chunk' })];
 
-      (fs.readFile as MockFn).mockResolvedValue(fileContent);
+      (fs.readFile as jest.Mock).mockResolvedValue(fileContent);
       mockChunkContentUseCase.execute.mockResolvedValue(Result.ok(chunks));
       mockIngestChunkUseCase.execute.mockResolvedValue(Result.ok(undefined as unknown as void));
 
@@ -327,18 +259,7 @@ describe('ProcessFileUseCase', () => {
   });
 
   describe('execute with DELETE event', () => {
-    beforeEach(() => {
-      useCase = new ProcessFileUseCase(
-        mockChunkContentUseCase as unknown as ChunkContentUseCase,
-        mockIngestChunkUseCase as unknown as IngestChunkUseCase,
-        mockProcessingQueue as unknown as FileProcessingQueue,
-        mockFileMemoryTrackerService as unknown as FileMemoryTrackerService,
-        mockMnemosyneClient as unknown as MnemosyneClient,
-        mockLogger as unknown as BasePinoLogger,
-      );
-    });
-
-    it('should get memoryIds, forget each, then removeMappings on delete', async () => {
+    it('should get memoryIds, forget each, then deleteByFilePath on delete', async () => {
       const filePath = '/path/to/file.md';
       const sourceId = 'test-source';
       const namespace = 'test-namespace';
@@ -346,7 +267,7 @@ describe('ProcessFileUseCase', () => {
 
       mockFileMemoryTrackerService.getMemoryIds.mockResolvedValue(memoryIds);
       mockMnemosyneClient.forget.mockResolvedValue(Result.ok(undefined as unknown as void));
-      mockFileMemoryTrackerService.removeMappings.mockResolvedValue(undefined);
+      mockFileMemoryTrackerService.deleteByFilePath.mockResolvedValue(undefined);
       mockProcessingQueue.addToQueue.mockImplementation(task => task());
 
       const result = await useCase.execute({
@@ -362,7 +283,7 @@ describe('ProcessFileUseCase', () => {
       expect(mockMnemosyneClient.forget).toHaveBeenCalledWith('mem-1', namespace);
       expect(mockMnemosyneClient.forget).toHaveBeenCalledWith('mem-2', namespace);
       expect(mockMnemosyneClient.forget).toHaveBeenCalledWith('mem-3', namespace);
-      expect(mockFileMemoryTrackerService.removeMappings).toHaveBeenCalledWith(filePath);
+      expect(mockFileMemoryTrackerService.deleteByFilePath).toHaveBeenCalledWith(filePath);
       expect(mockChunkContentUseCase.execute).not.toHaveBeenCalled();
       expect(mockIngestChunkUseCase.execute).not.toHaveBeenCalled();
     });
@@ -385,7 +306,7 @@ describe('ProcessFileUseCase', () => {
       expect(result.isOk()).toBe(true);
       expect(mockFileMemoryTrackerService.getMemoryIds).toHaveBeenCalledWith(filePath);
       expect(mockMnemosyneClient.forget).not.toHaveBeenCalled();
-      expect(mockFileMemoryTrackerService.removeMappings).not.toHaveBeenCalled();
+      expect(mockFileMemoryTrackerService.deleteByFilePath).not.toHaveBeenCalled();
     });
 
     it('should continue with remaining memories when forget fails for one', async () => {
@@ -399,7 +320,7 @@ describe('ProcessFileUseCase', () => {
         .mockResolvedValueOnce(Result.ok(undefined as unknown as void))
         .mockResolvedValueOnce(Result.ko(new Error('MCP error')))
         .mockResolvedValueOnce(Result.ok(undefined as unknown as void));
-      mockFileMemoryTrackerService.removeMappings.mockResolvedValue(undefined);
+      mockFileMemoryTrackerService.deleteByFilePath.mockResolvedValue(undefined);
       mockProcessingQueue.addToQueue.mockImplementation(task => task());
 
       const result = await useCase.execute({
@@ -411,7 +332,7 @@ describe('ProcessFileUseCase', () => {
 
       expect(result.isOk()).toBe(true);
       expect(mockMnemosyneClient.forget).toHaveBeenCalledTimes(3);
-      expect(mockFileMemoryTrackerService.removeMappings).toHaveBeenCalledWith(filePath);
+      expect(mockFileMemoryTrackerService.deleteByFilePath).toHaveBeenCalledWith(filePath);
     });
 
     it('should continue with remaining memories when forget throws', async () => {
@@ -424,7 +345,7 @@ describe('ProcessFileUseCase', () => {
       mockMnemosyneClient.forget
         .mockResolvedValueOnce(Result.ok(undefined as unknown as void))
         .mockRejectedValueOnce(new Error('Connection error'));
-      mockFileMemoryTrackerService.removeMappings.mockResolvedValue(undefined);
+      mockFileMemoryTrackerService.deleteByFilePath.mockResolvedValue(undefined);
       mockProcessingQueue.addToQueue.mockImplementation(task => task());
 
       const result = await useCase.execute({
@@ -436,10 +357,10 @@ describe('ProcessFileUseCase', () => {
 
       expect(result.isOk()).toBe(true);
       expect(mockMnemosyneClient.forget).toHaveBeenCalledTimes(2);
-      expect(mockFileMemoryTrackerService.removeMappings).toHaveBeenCalledWith(filePath);
+      expect(mockFileMemoryTrackerService.deleteByFilePath).toHaveBeenCalledWith(filePath);
     });
 
-    it('should return ok even when removeMappings fails', async () => {
+    it('should return ok even when deleteByFilePath fails', async () => {
       const filePath = '/path/to/file.md';
       const sourceId = 'test-source';
       const namespace = 'test-namespace';
@@ -447,7 +368,7 @@ describe('ProcessFileUseCase', () => {
 
       mockFileMemoryTrackerService.getMemoryIds.mockResolvedValue(memoryIds);
       mockMnemosyneClient.forget.mockResolvedValue(Result.ok(undefined as unknown as void));
-      mockFileMemoryTrackerService.removeMappings.mockRejectedValue(new Error('DB error'));
+      mockFileMemoryTrackerService.deleteByFilePath.mockRejectedValue(new Error('DB error'));
       mockProcessingQueue.addToQueue.mockImplementation(task => task());
 
       const result = await useCase.execute({
@@ -459,7 +380,7 @@ describe('ProcessFileUseCase', () => {
 
       expect(result.isOk()).toBe(true);
       expect(mockMnemosyneClient.forget).toHaveBeenCalledTimes(1);
-      expect(mockFileMemoryTrackerService.removeMappings).toHaveBeenCalledWith(filePath);
+      expect(mockFileMemoryTrackerService.deleteByFilePath).toHaveBeenCalledWith(filePath);
     });
 
     it('should complete delete flow for all memory IDs', async () => {
@@ -470,7 +391,7 @@ describe('ProcessFileUseCase', () => {
 
       mockFileMemoryTrackerService.getMemoryIds.mockResolvedValue(memoryIds);
       mockMnemosyneClient.forget.mockResolvedValue(Result.ok(undefined as unknown as void));
-      mockFileMemoryTrackerService.removeMappings.mockResolvedValue(undefined);
+      mockFileMemoryTrackerService.deleteByFilePath.mockResolvedValue(undefined);
       mockProcessingQueue.addToQueue.mockImplementation(task => task());
 
       const result = await useCase.execute({
@@ -482,22 +403,11 @@ describe('ProcessFileUseCase', () => {
 
       expect(result.isOk()).toBe(true);
       expect(mockMnemosyneClient.forget).toHaveBeenCalledTimes(2);
-      expect(mockFileMemoryTrackerService.removeMappings).toHaveBeenCalledWith(filePath);
+      expect(mockFileMemoryTrackerService.deleteByFilePath).toHaveBeenCalledWith(filePath);
     });
   });
 
   describe('queue processing', () => {
-    beforeEach(() => {
-      useCase = new ProcessFileUseCase(
-        mockChunkContentUseCase as unknown as ChunkContentUseCase,
-        mockIngestChunkUseCase as unknown as IngestChunkUseCase,
-        mockProcessingQueue as unknown as FileProcessingQueue,
-        mockFileMemoryTrackerService as unknown as FileMemoryTrackerService,
-        mockMnemosyneClient as unknown as MnemosyneClient,
-        mockLogger as unknown as BasePinoLogger,
-      );
-    });
-
     it('should queue processing via FileProcessingQueue', async () => {
       const filePath = '/path/to/file.md';
       const sourceId = 'test-source';
@@ -517,17 +427,6 @@ describe('ProcessFileUseCase', () => {
   });
 
   describe('validation', () => {
-    beforeEach(() => {
-      useCase = new ProcessFileUseCase(
-        mockChunkContentUseCase as unknown as ChunkContentUseCase,
-        mockIngestChunkUseCase as unknown as IngestChunkUseCase,
-        mockProcessingQueue as unknown as FileProcessingQueue,
-        mockFileMemoryTrackerService as unknown as FileMemoryTrackerService,
-        mockMnemosyneClient as unknown as MnemosyneClient,
-        mockLogger as unknown as BasePinoLogger,
-      );
-    });
-
     it('should return error when filePath is missing', async () => {
       const result = await useCase.execute({
         filePath: '',
@@ -584,17 +483,6 @@ describe('ProcessFileUseCase', () => {
   });
 
   describe('OnEvent handlers', () => {
-    beforeEach(() => {
-      useCase = new ProcessFileUseCase(
-        mockChunkContentUseCase as unknown as ChunkContentUseCase,
-        mockIngestChunkUseCase as unknown as IngestChunkUseCase,
-        mockProcessingQueue as unknown as FileProcessingQueue,
-        mockFileMemoryTrackerService as unknown as FileMemoryTrackerService,
-        mockMnemosyneClient as unknown as MnemosyneClient,
-        mockLogger as unknown as BasePinoLogger,
-      );
-    });
-
     it('handleFileAdded should trigger execute with add event type', async () => {
       const filePath = '/path/to/file.md';
       const event = FileAddedEvent.of(filePath).getValue();

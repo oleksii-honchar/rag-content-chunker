@@ -181,10 +181,10 @@ export class ProcessFileUseCase extends BaseUseCase<ProcessFileParams, void> {
     }
 
     try {
-      await this.fileMemoryTrackerService.removeMappings(params.filePath);
+      await this.fileMemoryTrackerService.deleteByFilePath(params.filePath);
     } catch (error) {
       this.logger.warn(
-        `Failed to removeMappings for deleted file; path="${params.filePath}", error="${error instanceof Error ? error.message : String(error)}"`,
+        `Failed to deleteByFilePath for deleted file; path="${params.filePath}", error="${error instanceof Error ? error.message : String(error)}"`,
       );
     }
 

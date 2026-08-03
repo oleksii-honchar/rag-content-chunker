@@ -71,4 +71,14 @@ export class FileMemoryTracker {
   get namespace(): string {
     return this.props.namespace;
   }
+
+  toJson(): FileMemoryTrackerProps {
+    return {
+      id: this.props.id,
+      filePath: this.props.filePath,
+      memoryIds: [...this.props.memoryIds],
+      sourceId: this.props.sourceId,
+      namespace: this.props.namespace,
+    };
+  }
 }

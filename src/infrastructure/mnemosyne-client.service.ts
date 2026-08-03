@@ -6,6 +6,7 @@ import { ErrorWithDetails } from '../utils/error-with-details';
 import { Result } from '../utils/result';
 import { ConfigurationService } from './config/configuration.service';
 import { BasePinoLogger } from './logging/base-pino-logger';
+import { MnemosyneRememberDto } from './mnemosyne-remember.dto';
 
 /**
  * JSON-RPC 2.0 request sent to the MCP server.
@@ -208,33 +209,15 @@ export class MnemosyneClient implements OnApplicationBootstrap {
    * @returns Result.ok with {memory_id, status} on successful storage; Result.ko after all retries exhausted
    */
   async remember(chunk: Chunk): Promise<Result<{ memory_id: string; status: string }>> {
+    const payload = MnemosyneRememberDto.fromChunk(chunk);
+
     const request: McpToolRequest = {
       jsonrpc: '2.0',
       id: this.nextRequestId++,
       method: 'tools/call',
       params: {
         name: 'mnemosyne_remember',
-        arguments: {
-          content: chunk.text,
-          namespace: chunk.namespace,
-          importance: chunk.importance,
-          source: chunk.namespace,
-          metadata: {
-            id: chunk.id,
-            chunkIndex: chunk.chunkIndex,
-            totalChunks: chunk.totalChunks,
-            sectionHeader: chunk.sectionHeader,
-            breadcrumb: chunk.breadcrumb,
-            fileRole: chunk.fileRole,
-            language: chunk.language,
-            startLine: chunk.startLine,
-            endLine: chunk.endLine,
-            importance: chunk.importance,
-            tags: chunk.tags,
-            namespace: chunk.namespace,
-            ...(chunk.metadata || {}),
-          },
-        },
+        arguments: payload,
       },
     };
 

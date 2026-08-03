@@ -247,11 +247,11 @@ export class MastraChunkingService {
    * Map Mastra chunks to domain Chunk entities.
    */
   private mapToDomainChunks(
-    mastraChunks: any[],
+    mastraChunks: { text: string; metadata?: Record<string, unknown> }[],
     filePath: string,
     sourceId: string,
     fileRole: FileRole,
-    enrichedDoc: any,
+    enrichedDoc: MDocument,
   ): Chunk[] {
     const totalChunks = mastraChunks.length;
     const chunks: Chunk[] = [];
@@ -267,24 +267,36 @@ export class MastraChunkingService {
       };
 
       // Include Mastra-extracted metadata if available
-      if (chunkMetadata.title) {
-        metadata.mastraTitle = chunkMetadata.title;
+      const chunkTitle = typeof chunkMetadata.title === 'string' ? chunkMetadata.title : undefined;
+      const chunkKeywords = typeof chunkMetadata.keywords === 'string' ? chunkMetadata.keywords : undefined;
+      const enrichedDocInternal = enrichedDoc as unknown as { _metadata?: Record<string, unknown> };
+      const docTitle =
+        typeof enrichedDocInternal._metadata?.title === 'string'
+          ? enrichedDocInternal._metadata.title
+          : undefined;
+      const docKeywords =
+        typeof enrichedDocInternal._metadata?.keywords === 'string'
+          ? enrichedDocInternal._metadata.keywords
+          : undefined;
+
+      if (chunkTitle) {
+        metadata.mastraTitle = chunkTitle;
       }
-      if (chunkMetadata.keywords) {
-        metadata.mastraKeywords = chunkMetadata.keywords;
+      if (chunkKeywords) {
+        metadata.mastraKeywords = chunkKeywords;
       }
-      if (enrichedDoc._metadata?.title) {
-        metadata.mastraDocTitle = enrichedDoc._metadata.title;
+      if (docTitle) {
+        metadata.mastraDocTitle = docTitle;
       }
-      if (enrichedDoc._metadata?.keywords) {
-        metadata.mastraDocKeywords = enrichedDoc._metadata.keywords;
+      if (docKeywords) {
+        metadata.mastraDocKeywords = docKeywords;
       }
 
       const chunkResult = Chunk.create(
         mastraChunk.text,
         i + 1,
         totalChunks,
-        chunkMetadata.title || filePath,
+        chunkTitle || filePath,
         filePath,
         undefined,
         fileRole,

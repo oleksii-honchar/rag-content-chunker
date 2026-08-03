@@ -18,7 +18,7 @@ module.exports = {
     }],
   },
   transformIgnorePatterns: [
-    'node_modules/(?!(chokidar|anymatch|readdirp|glob-parent|is-binary-path|fsevents|nestjs-pino|pino-http|pino|pino-pretty|@mastra|@sindresorhus|escape-string-regexp|tokenx|tiktoken)/)',
+    'node_modules/(?!(chokidar|anymatch|readdirp|glob-parent|is-binary-path|fsevents|nestjs-pino|pino-http|pino|pino-pretty|@mastra|@sindresorhus|escape-string-regexp|tokenx|tiktoken|@faker-js)/)',
   ],
   coverageThreshold: {
     global: {

@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { Prisma } from '@prisma/client';
-import { FileMemoryTracker } from '../domain/file-memory-tracker.aggregate';
 import { FileMemoryTrackerRepository } from './file-memory-tracker.repository';
 import {
+  aFileMemoryTracker,
   aPrismaFileMemoryTracker,
   aPrismaFileMemoryTrackerMemory,
   PrismaFileMemoryTrackerRecord,
@@ -21,19 +21,8 @@ describe('FileMemoryTrackerRepository', () => {
     deleteMany: jest.Mock;
   };
 
-  const createTestTracker = (): FileMemoryTracker => {
-    const result = FileMemoryTracker.of({
-      id: 'tracker-test-001',
-      filePath: '/test/file.txt',
-      memoryIds: ['mem-001'],
-      sourceId: 'source-001',
-      namespace: 'vault-knowledge',
-    });
-    return result.getValue();
-  };
-
   const createPrismaTrackerRecord = (
-    tracker: FileMemoryTracker,
+    tracker: { id: string; filePath: string; sourceId: string; namespace: string },
     memories: PrismaFileMemoryTrackerRecord['memories'] = [],
   ): PrismaFileMemoryTrackerRecord =>
     aPrismaFileMemoryTracker({
@@ -74,8 +63,12 @@ describe('FileMemoryTrackerRepository', () => {
 
   describe('findByFilePath', () => {
     it('returns tracker when record exists with memories', async () => {
-      const tracker = createTestTracker();
-      const prismaRecord = createPrismaTrackerRecord(tracker, [
+      const tracker = aFileMemoryTracker({
+        filePath: '/test/file.txt',
+        memoryIds: ['mem-001'],
+      });
+      const trackerJson = tracker.toJson();
+      const prismaRecord = createPrismaTrackerRecord(trackerJson, [
         aPrismaFileMemoryTrackerMemory({ id: 'fm-1', memoryId: 'mem-001', fileTrackerId: tracker.id }),
         aPrismaFileMemoryTrackerMemory({ id: 'fm-2', memoryId: 'mem-002', fileTrackerId: tracker.id }),
       ]);
@@ -88,13 +81,13 @@ describe('FileMemoryTrackerRepository', () => {
       expect(result!.id).toBe(tracker.id);
       expect(result!.filePath).toBe('/test/file.txt');
       expect(result!.memoryIds).toEqual(['mem-001', 'mem-002']);
-      expect(result!.sourceId).toBe('source-001');
-      expect(result!.namespace).toBe('vault-knowledge');
+      expect(result!.sourceId).toBe(trackerJson.sourceId);
+      expect(result!.namespace).toBe(trackerJson.namespace);
     });
 
     it('calls prisma with correct where clause and include memories', async () => {
-      const tracker = createTestTracker();
-      prismaFileTracker.findUnique.mockResolvedValue(createPrismaTrackerRecord(tracker));
+      const tracker = aFileMemoryTracker({ filePath: '/test/file.txt' });
+      prismaFileTracker.findUnique.mockResolvedValue(createPrismaTrackerRecord(tracker.toJson()));
 
       await repository.findByFilePath('/test/file.txt');
 
@@ -113,17 +106,8 @@ describe('FileMemoryTrackerRepository', () => {
     });
 
     it('returns empty memoryIds when tracker has no memories', async () => {
-      const tracker = createTestTracker();
-      const prismaRecord = createPrismaTrackerRecord(
-        FileMemoryTracker.of({
-          id: tracker.id,
-          filePath: tracker.filePath,
-          memoryIds: [],
-          sourceId: tracker.sourceId,
-          namespace: tracker.namespace,
-        }).getValue(),
-        [],
-      );
+      const tracker = aFileMemoryTracker({ filePath: '/test/file.txt', memoryIds: [] });
+      const prismaRecord = createPrismaTrackerRecord(tracker.toJson(), []);
 
       prismaFileTracker.findUnique.mockResolvedValue(prismaRecord);
 
@@ -134,24 +118,32 @@ describe('FileMemoryTrackerRepository', () => {
   });
 
   describe('findOrCreate', () => {
-    it('creates new FileTracker when not exists', async () => {
-      const newTracker = aPrismaFileMemoryTracker({
-        id: 'tracker-new',
+    it('creates new FileTracker when not exists, using aggregate with pre-generated ID', async () => {
+      const aggregate = aFileMemoryTracker({
         filePath: '/new/file.md',
         sourceId: 'source-001',
         namespace: 'vault-knowledge',
+      });
+      const aggregateJson = aggregate.toJson();
+
+      const savedTracker = aPrismaFileMemoryTracker({
+        id: aggregateJson.id,
+        filePath: aggregateJson.filePath,
+        sourceId: aggregateJson.sourceId,
+        namespace: aggregateJson.namespace,
         createdAt: new Date(),
         updatedAt: new Date(),
       });
 
-      prismaFileTracker.upsert.mockResolvedValue(newTracker);
+      prismaFileTracker.findUnique.mockResolvedValue(null);
+      prismaFileTracker.upsert.mockResolvedValue(savedTracker);
 
-      const result = await repository.findOrCreate('/new/file.md', 'source-001', 'vault-knowledge');
+      const result = await repository.findOrCreate(aggregate);
 
       expect(prismaFileTracker.upsert).toHaveBeenCalledWith({
         where: { filePath: '/new/file.md' },
         create: {
-          id: expect.any(String),
+          id: aggregateJson.id,
           filePath: '/new/file.md',
           sourceId: 'source-001',
           namespace: 'vault-knowledge',
@@ -165,9 +157,10 @@ describe('FileMemoryTrackerRepository', () => {
       expect(result.filePath).toBe('/new/file.md');
       expect(result.sourceId).toBe('source-001');
       expect(result.namespace).toBe('vault-knowledge');
+      expect(result.id).toBe(aggregateJson.id);
     });
 
-    it('returns existing FileTracker with memories when already exists', async () => {
+    it('returns existing FileTracker when already exists (ignores provided aggregate)', async () => {
       const existingTracker = aPrismaFileMemoryTracker({
         id: 'tracker-existing',
         filePath: '/existing/file.md',
@@ -184,16 +177,61 @@ describe('FileMemoryTrackerRepository', () => {
         ],
       });
 
-      prismaFileTracker.upsert.mockResolvedValue(existingTracker);
+      prismaFileTracker.findUnique.mockResolvedValue(existingTracker);
 
-      const result = await repository.findOrCreate('/existing/file.md', 'source-001', 'vault-knowledge');
+      const newAggregate = aFileMemoryTracker({
+        filePath: '/existing/file.md',
+        sourceId: 'source-001',
+        namespace: 'vault-knowledge',
+      });
+      const result = await repository.findOrCreate(newAggregate);
 
       expect(result.id).toBe('tracker-existing');
       expect(result.memoryIds).toEqual(['mem-001']);
     });
   });
 
-  describe('remember', () => {
+  describe('save', () => {
+    it('upserts FileTracker and returns AggregateResult.ok with persisted aggregate', async () => {
+      const aggregate = aFileMemoryTracker({
+        filePath: '/save/test.md',
+        sourceId: 'source-001',
+        namespace: 'vault-knowledge',
+      });
+      const aggregateJson = aggregate.toJson();
+
+      const savedTracker = aPrismaFileMemoryTracker({
+        id: aggregateJson.id,
+        filePath: aggregateJson.filePath,
+        sourceId: aggregateJson.sourceId,
+        namespace: aggregateJson.namespace,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      prismaFileTracker.upsert.mockResolvedValue(savedTracker);
+
+      const result = await repository.save(aggregate);
+
+      expect(result.isOk()).toBe(true);
+      const persisted = result.getValue();
+      expect(persisted.id).toBe(aggregateJson.id);
+      expect(persisted.filePath).toBe('/save/test.md');
+    });
+
+    it('returns AggregateResult.ko when prisma throws', async () => {
+      const aggregate = aFileMemoryTracker({ filePath: '/fail/test.md' });
+      prismaFileTracker.upsert.mockRejectedValue(new Error('DB error'));
+
+      const result = await repository.save(aggregate);
+
+      expect(result.isOk()).toBe(false);
+      expect(result.getErrors()).toHaveLength(1);
+      expect(result.getErrors()[0].code).toBe('SaveFileMemoryTrackerError');
+    });
+  });
+
+  describe('upsertMemory', () => {
     it('calls fileMemoryTracker upsert with correct unique constraint', async () => {
       prismaFileMemoryTracker.upsert.mockResolvedValue(
         aPrismaFileMemoryTrackerMemory({
@@ -204,7 +242,7 @@ describe('FileMemoryTrackerRepository', () => {
         }),
       );
 
-      await repository.remember('tracker-001', 'mem-001');
+      await repository.upsertMemory('tracker-001', 'mem-001');
 
       expect(prismaFileMemoryTracker.upsert).toHaveBeenCalledWith({
         where: {
@@ -232,46 +270,35 @@ describe('FileMemoryTrackerRepository', () => {
         }),
       );
 
-      await repository.remember('tracker-001', 'mem-001');
-      await repository.remember('tracker-001', 'mem-001');
+      await repository.upsertMemory('tracker-001', 'mem-001');
+      await repository.upsertMemory('tracker-001', 'mem-001');
 
       expect(prismaFileMemoryTracker.upsert).toHaveBeenCalledTimes(2);
     });
   });
 
-  describe('forget', () => {
-    it('deletes the memory mapping when tracker exists', async () => {
-      const tracker = createTestTracker();
-      const prismaRecord = createPrismaTrackerRecord(tracker, [
-        aPrismaFileMemoryTrackerMemory({ id: 'fm-1', memoryId: 'mem-001', fileTrackerId: tracker.id }),
-      ]);
-
-      prismaFileTracker.findUnique.mockResolvedValue(prismaRecord);
+  describe('deleteMemory', () => {
+    it('deletes the memory mapping by fileTrackerId and memoryId', async () => {
       prismaFileMemoryTracker.deleteMany.mockResolvedValue({ count: 1 });
 
-      await repository.forget('/test/file.txt', 'mem-001');
+      await repository.deleteMemory('tracker-001', 'mem-001');
 
       expect(prismaFileMemoryTracker.deleteMany).toHaveBeenCalledWith({
         where: {
-          fileTrackerId: tracker.id,
+          fileTrackerId: 'tracker-001',
           memoryId: 'mem-001',
         },
       });
-    });
-
-    it('does nothing when tracker does not exist', async () => {
-      prismaFileTracker.findUnique.mockResolvedValue(null);
-
-      await repository.forget('/nonexistent/file.txt', 'mem-001');
-
-      expect(prismaFileMemoryTracker.deleteMany).not.toHaveBeenCalled();
     });
   });
 
   describe('getMemoryIds', () => {
     it('returns array of memory IDs when tracker exists', async () => {
-      const tracker = createTestTracker();
-      const prismaRecord = createPrismaTrackerRecord(tracker, [
+      const tracker = aFileMemoryTracker({
+        filePath: '/test/file.txt',
+        memoryIds: ['mem-001'],
+      });
+      const prismaRecord = createPrismaTrackerRecord(tracker.toJson(), [
         aPrismaFileMemoryTrackerMemory({ id: 'fm-1', memoryId: 'mem-001', fileTrackerId: tracker.id }),
         aPrismaFileMemoryTrackerMemory({ id: 'fm-2', memoryId: 'mem-002', fileTrackerId: tracker.id }),
       ]);
@@ -292,17 +319,8 @@ describe('FileMemoryTrackerRepository', () => {
     });
 
     it('returns empty array when tracker has no memories', async () => {
-      const tracker = createTestTracker();
-      const prismaRecord = createPrismaTrackerRecord(
-        FileMemoryTracker.of({
-          id: tracker.id,
-          filePath: tracker.filePath,
-          memoryIds: [],
-          sourceId: tracker.sourceId,
-          namespace: tracker.namespace,
-        }).getValue(),
-        [],
-      );
+      const tracker = aFileMemoryTracker({ filePath: '/test/file.txt', memoryIds: [] });
+      const prismaRecord = createPrismaTrackerRecord(tracker.toJson(), []);
 
       prismaFileTracker.findUnique.mockResolvedValue(prismaRecord);
 
@@ -312,7 +330,7 @@ describe('FileMemoryTrackerRepository', () => {
     });
   });
 
-  describe('removeMappings', () => {
+  describe('deleteByFilePath', () => {
     it('deletes FileTracker record (cascade deletes memories)', async () => {
       prismaFileTracker.delete.mockResolvedValue(
         aPrismaFileMemoryTracker({
@@ -325,7 +343,7 @@ describe('FileMemoryTrackerRepository', () => {
         }),
       );
 
-      await repository.removeMappings('/test/file.txt');
+      await repository.deleteByFilePath('/test/file.txt');
 
       expect(prismaFileTracker.delete).toHaveBeenCalledWith({
         where: { filePath: '/test/file.txt' },
@@ -338,7 +356,7 @@ describe('FileMemoryTrackerRepository', () => {
 
       prismaFileTracker.delete.mockRejectedValue(error);
 
-      await expect(repository.removeMappings('/nonexistent/file.txt')).resolves.not.toThrow();
+      await expect(repository.deleteByFilePath('/nonexistent/file.txt')).resolves.not.toThrow();
       expect(prismaFileTracker.delete).toHaveBeenCalledWith({
         where: { filePath: '/nonexistent/file.txt' },
       });

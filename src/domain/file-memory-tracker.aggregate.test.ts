@@ -242,4 +242,36 @@ describe('FileMemoryTracker', () => {
       expect(tracker.namespace).toBe('vault-knowledge');
     });
   });
+
+  describe('toJson', () => {
+    it('returns plain object with Prisma record shape', () => {
+      const tracker = FileMemoryTracker.of({
+        id: 'tracker-001',
+        filePath: '/test/file.txt',
+        memoryIds: ['mem-001', 'mem-002'],
+        sourceId: 'source-001',
+        namespace: 'vault-knowledge',
+      }).getValue();
+
+      const json = tracker.toJson();
+
+      expect(json).toEqual({
+        id: 'tracker-001',
+        filePath: '/test/file.txt',
+        memoryIds: ['mem-001', 'mem-002'],
+        sourceId: 'source-001',
+        namespace: 'vault-knowledge',
+      });
+    });
+
+    it('returns new object each call (not cached reference)', () => {
+      const tracker = FileMemoryTracker.of(validProps).getValue();
+
+      const json1 = tracker.toJson();
+      const json2 = tracker.toJson();
+
+      expect(json1).toEqual(json2);
+      expect(json1).not.toBe(json2);
+    });
+  });
 });

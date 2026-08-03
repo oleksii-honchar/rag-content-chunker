@@ -4,6 +4,31 @@
  */
 
 import { FileMemoryTracker } from '../domain/file-memory-tracker.aggregate';
+import { faker } from '../utils/test-faker';
+
+/**
+ * Aggregate-level test builder for FileMemoryTracker domain entity.
+ * Uses faker for randomized but deterministic values (seed 42).
+ */
+export function aFileMemoryTracker(
+  overrides?: Partial<{
+    id: string;
+    filePath: string;
+    memoryIds: string[];
+    sourceId: string;
+    namespace: string;
+  }>,
+): FileMemoryTracker {
+  const result = FileMemoryTracker.of({
+    id: faker.string.uuid(),
+    filePath: faker.system.filePath(),
+    memoryIds: [],
+    sourceId: faker.string.alphanumeric(12),
+    namespace: faker.word.adjective(),
+    ...overrides,
+  });
+  return result.getValue();
+}
 
 export interface PrismaFileMemoryTrackerRecord {
   id: string;
@@ -26,10 +51,10 @@ export function aPrismaFileMemoryTracker(
   overrides?: Partial<PrismaFileMemoryTrackerRecord>,
 ): PrismaFileMemoryTrackerRecord {
   return {
-    id: 'tracker-001',
-    filePath: '/test/file.txt',
-    sourceId: 'source-001',
-    namespace: 'vault-knowledge',
+    id: faker.string.uuid(),
+    filePath: faker.system.filePath(),
+    sourceId: faker.string.alphanumeric(12),
+    namespace: faker.word.adjective(),
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
     updatedAt: new Date('2026-01-01T00:00:00.000Z'),
     memories: [],
@@ -41,9 +66,9 @@ export function aPrismaFileMemoryTrackerMemory(
   overrides?: Partial<PrismaFileMemoryTrackerMemoryRecord>,
 ): PrismaFileMemoryTrackerMemoryRecord {
   return {
-    id: 'fm-001',
-    memoryId: 'mem-001',
-    fileTrackerId: 'tracker-001',
+    id: faker.string.uuid(),
+    memoryId: faker.string.uuid(),
+    fileTrackerId: faker.string.uuid(),
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
     ...overrides,
   };
@@ -55,10 +80,15 @@ export function aPrismaFileMemoryTrackerMemory(
 export function aFileMemoryTrackerRepositoryService() {
   return {
     findByFilePath: jest.fn().mockResolvedValue(null),
-    findOrCreate: jest.fn().mockResolvedValue({} as FileMemoryTracker),
-    remember: jest.fn().mockResolvedValue(undefined),
-    forget: jest.fn().mockResolvedValue(undefined),
+    findOrCreate: jest.fn().mockImplementation((tracker: FileMemoryTracker) => Promise.resolve(tracker)),
+    save: jest
+      .fn()
+      .mockImplementation((tracker: FileMemoryTracker) =>
+        Promise.resolve({ isOk: () => true, getValue: () => tracker }),
+      ),
+    upsertMemory: jest.fn().mockResolvedValue(undefined),
+    deleteMemory: jest.fn().mockResolvedValue(undefined),
     getMemoryIds: jest.fn().mockResolvedValue([]),
-    removeMappings: jest.fn().mockResolvedValue(undefined),
+    deleteByFilePath: jest.fn().mockResolvedValue(undefined),
   };
 }
