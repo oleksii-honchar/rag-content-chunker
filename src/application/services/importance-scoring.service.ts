@@ -53,14 +53,13 @@ export class ImportanceScoringService {
   }
 
   /**
-   * File role weight: docs > code > config > agent-output
+   * File role weight: docs > code > config
    */
   private fileRoleFactor(fileRole: FileRole): number {
     const weights: Record<FileRole, number> = {
       [FILE_ROLES.DOCS]: 0.8,
       [FILE_ROLES.CODE]: 0.7,
       [FILE_ROLES.CONFIG]: 0.6,
-      [FILE_ROLES.AGENT_OUTPUT]: 0.5,
     };
     return weights[fileRole] ?? 0.5;
   }

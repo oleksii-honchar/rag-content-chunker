@@ -269,7 +269,6 @@ describe('Chunk', () => {
       expect(FILE_ROLES.CONFIG).toBe('config');
       expect(FILE_ROLES.CODE).toBe('code');
       expect(FILE_ROLES.DOCS).toBe('docs');
-      expect(FILE_ROLES.AGENT_OUTPUT).toBe('agent-output');
     });
   });
 });

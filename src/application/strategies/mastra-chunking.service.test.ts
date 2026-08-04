@@ -223,10 +223,6 @@ describe('MastraChunkingService', () => {
       expect(service['determineFileRole']('README.md')).toBe(FILE_ROLES.DOCS);
     });
 
-    it('should return AGENT_OUTPUT for agent-session files', () => {
-      expect(service['determineFileRole']('/.agent-sessions/test/session.md')).toBe(FILE_ROLES.AGENT_OUTPUT);
-    });
-
     it('should return DOCS as default', () => {
       expect(service['determineFileRole']('unknown.xyz')).toBe(FILE_ROLES.DOCS);
     });
@@ -251,11 +247,6 @@ describe('MastraChunkingService', () => {
 
     it('should map FILE_ROLES.CONFIG → configuration maxCharacters (300)', () => {
       const maxChars = service['getMaxCharacters'](FILE_ROLES.CONFIG);
-      expect(maxChars).toBe(300);
-    });
-
-    it('should map FILE_ROLES.AGENT_OUTPUT → documentation maxCharacters (300)', () => {
-      const maxChars = service['getMaxCharacters'](FILE_ROLES.AGENT_OUTPUT);
       expect(maxChars).toBe(300);
     });
 
@@ -338,20 +329,6 @@ describe('MastraChunkingService', () => {
       await service.chunkFile('const x = 1;', 'script.js', 'test-source');
 
       expect(mockDoc.chunkRecursive).toHaveBeenCalledWith(expect.objectContaining({ maxSize: 400 }));
-    });
-
-    it('should use documentation maxCharacters (300) for agent-output files', async () => {
-      const mockDoc = {
-        extractMetadata: jest.fn().mockResolvedValue({
-          getDocs: jest.fn().mockReturnValue([{ text: 'content', metadata: {} }]),
-        }),
-        chunkMarkdown: jest.fn(),
-      };
-      mockedMDocument.fromMarkdown.mockReturnValue(mockDoc as never);
-
-      await service.chunkFile('# Session', '.agent-sessions/test/session.md', 'test-source');
-
-      expect(mockDoc.chunkMarkdown).toHaveBeenCalledWith(expect.objectContaining({ maxSize: 300 }));
     });
 
     it('should use custom maxCharacters when config is overridden', async () => {

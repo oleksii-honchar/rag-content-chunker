@@ -97,23 +97,6 @@ describe('ImportanceScoringService', () => {
         expect(score).toBeCloseTo(0.74);
       });
 
-      it('should produce lowest score for AGENT_OUTPUT fileRole', () => {
-        const agentChunk = aContentChunk({ fileRole: FILE_ROLES.AGENT_OUTPUT, text: 'x', sectionHeader: '' });
-        const config: EnhancementConfig = {
-          ...defaultConfig,
-          importance: {
-            enabled: true,
-            defaultScore: 0.5,
-            factors: [{ name: 'fileRole', weight: 0.4 }],
-          },
-        };
-
-        const score = service.score(agentChunk, config);
-
-        // Base 0.5 + (0.5 * 0.4) = 0.7
-        expect(score).toBeCloseTo(0.7);
-      });
-
       it('should apply fileRole weight multiplier', () => {
         const chunk = aContentChunk({ fileRole: FILE_ROLES.DOCS, text: 'x', sectionHeader: '' });
         const config: EnhancementConfig = {
@@ -492,23 +475,6 @@ describe('ImportanceScoringService', () => {
         expect(score).toBeLessThanOrEqual(1.0);
       });
 
-      it('should produce higher score for important docs than agent output', () => {
-        const docsChunk = aContentChunk({
-          fileRole: FILE_ROLES.DOCS,
-          text: 'a'.repeat(400) + ' IMPORTANT',
-          sectionHeader: '## Key Section',
-        });
-        const agentChunk = aContentChunk({
-          fileRole: FILE_ROLES.AGENT_OUTPUT,
-          text: 'short',
-          sectionHeader: '',
-        });
-
-        const docsScore = service.score(docsChunk, defaultConfig);
-        const agentScore = service.score(agentChunk, defaultConfig);
-
-        expect(docsScore).toBeGreaterThan(agentScore);
-      });
     });
 
     describe('score clamping', () => {
@@ -539,7 +505,7 @@ describe('ImportanceScoringService', () => {
 
       it('should clamp score to minimum of 0.0', () => {
         const chunk = aContentChunk({
-          fileRole: FILE_ROLES.AGENT_OUTPUT,
+          fileRole: FILE_ROLES.CONFIG,
           text: '',
           sectionHeader: '',
         });

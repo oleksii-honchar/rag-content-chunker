@@ -29,8 +29,6 @@ export class MastraChunkingService {
         return maxChars.code;
       case FILE_ROLES.CONFIG:
         return maxChars.configuration;
-      case FILE_ROLES.AGENT_OUTPUT:
-        return maxChars.documentation;
       default:
         return maxChars.prose;
     }
@@ -157,12 +155,6 @@ export class MastraChunkingService {
    */
   private determineFileRole(filePath: string): FileRole {
     const ext = this.getExtension(filePath).toLowerCase();
-    const lowerPath = filePath.toLowerCase();
-
-    // Agent output
-    if (lowerPath.includes('.agent-sessions') || lowerPath.includes('agent-meta-tool')) {
-      return FILE_ROLES.AGENT_OUTPUT;
-    }
 
     // Config files
     if (this.isConfigExtension(ext)) {
