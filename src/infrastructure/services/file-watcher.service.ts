@@ -3,7 +3,7 @@ import * as chokidar from 'chokidar';
 import { EventEmitter } from 'node:events';
 import * as os from 'os';
 import * as path from 'path';
-import { FileChange } from '../../domain/file-change.aggregate';
+import { FileTracker } from '../../domain/file-tracker.aggregate';
 import { Result } from '../../utils/result';
 import { AppEventEmitter } from '../app-event-emitter';
 import { WatchSourceConfig } from '../config/config-schemas';
@@ -131,7 +131,7 @@ export class FileWatcherService implements OnApplicationBootstrap, OnApplication
 
   private handleFileAdded(filePath: string, sourceId: string): void {
     this.logger.debug(`File added; path="${filePath}", source="${sourceId}"`);
-    const result = FileChange.add(filePath);
+    const result = FileTracker.add(filePath);
     if (result.isOk()) {
       this.eventEmitter.publishMany(result.getEvents());
     }
@@ -139,10 +139,10 @@ export class FileWatcherService implements OnApplicationBootstrap, OnApplication
 
   private handleFileChanged(filePath: string, sourceId: string): void {
     this.logger.debug(`File changed; path="${filePath}", source="${sourceId}"`);
-    const addedResult = FileChange.add(filePath);
+    const addedResult = FileTracker.add(filePath);
     if (addedResult.isOk()) {
-      const fileChange = addedResult.getValue();
-      const changeResult = fileChange.change();
+      const fileTracker = addedResult.getValue();
+      const changeResult = fileTracker.change();
       if (changeResult.isOk()) {
         this.eventEmitter.publishMany(changeResult.getEvents());
       }
@@ -151,10 +151,10 @@ export class FileWatcherService implements OnApplicationBootstrap, OnApplication
 
   private handleFileDeleted(filePath: string, sourceId: string): void {
     this.logger.debug(`File deleted; path="${filePath}", source="${sourceId}"`);
-    const addedResult = FileChange.add(filePath);
+    const addedResult = FileTracker.add(filePath);
     if (addedResult.isOk()) {
-      const fileChange = addedResult.getValue();
-      const deleteResult = fileChange.delete();
+      const fileTracker = addedResult.getValue();
+      const deleteResult = fileTracker.delete();
       if (deleteResult.isOk()) {
         this.eventEmitter.publishMany(deleteResult.getEvents());
       }

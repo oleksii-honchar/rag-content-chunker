@@ -5,36 +5,36 @@ import { Result } from '../utils/result';
 import { FileAddedEvent, FileChangedEvent, FileDeletedEvent } from './events/file-events';
 
 /**
- * File change status — tracks the current state of a file.
+ * File tracker status — tracks the current state of a tracked file.
  */
-export const FILE_CHANGE_STATUS = {
+export const FILE_TRACKER_STATUS = {
   ADDED: 'added' as const,
   CHANGED: 'changed' as const,
   DELETED: 'deleted' as const,
 } as const;
 
-export type FileChangeStatus = ValuesType<typeof FILE_CHANGE_STATUS>;
+export type FileTrackerStatus = ValuesType<typeof FILE_TRACKER_STATUS>;
 
-const fileChangeSchema = z.object({
+const fileTrackerSchema = z.object({
   filePath: z.string().min(1),
-  status: z.enum(Object.values(FILE_CHANGE_STATUS)),
+  status: z.enum(Object.values(FILE_TRACKER_STATUS)),
 });
 
-export type FileChangeProps = z.infer<typeof fileChangeSchema>;
+export type FileTrackerProps = z.infer<typeof fileTrackerSchema>;
 
-export class FileChange {
-  private constructor(private readonly props: FileChangeProps) {}
+export class FileTracker {
+  private constructor(private readonly props: FileTrackerProps) {}
 
   /**
-   * Create a new file change with ADDED status and emit FileAddedEvent.
+   * Create a new file tracker with ADDED status and emit FileAddedEvent.
    */
-  static add(filePath: string): Result<FileChange> {
+  static add(filePath: string): Result<FileTracker> {
     const eventResult = FileAddedEvent.of(filePath);
     if (eventResult.isKo()) {
       return Result.ko(eventResult.getErrors());
     }
     const event = eventResult.getValue();
-    const aggregateResult = FileChange.of({ filePath, status: FILE_CHANGE_STATUS.ADDED });
+    const aggregateResult = FileTracker.of({ filePath, status: FILE_TRACKER_STATUS.ADDED });
     if (aggregateResult.isKo()) {
       return aggregateResult;
     }
@@ -44,15 +44,15 @@ export class FileChange {
   /**
    * Transition to CHANGED status and emit FileChangedEvent.
    */
-  change(): Result<FileChange> {
+  change(): Result<FileTracker> {
     const eventResult = FileChangedEvent.of(this.props.filePath);
     if (eventResult.isKo()) {
       return Result.ko(eventResult.getErrors());
     }
     const event = eventResult.getValue();
-    const aggregateResult = FileChange.of({
+    const aggregateResult = FileTracker.of({
       ...this.props,
-      status: FILE_CHANGE_STATUS.CHANGED,
+      status: FILE_TRACKER_STATUS.CHANGED,
     });
     if (aggregateResult.isKo()) {
       return aggregateResult;
@@ -63,15 +63,15 @@ export class FileChange {
   /**
    * Transition to DELETED status and emit FileDeletedEvent.
    */
-  delete(): Result<FileChange> {
+  delete(): Result<FileTracker> {
     const eventResult = FileDeletedEvent.of(this.props.filePath);
     if (eventResult.isKo()) {
       return Result.ko(eventResult.getErrors());
     }
     const event = eventResult.getValue();
-    const aggregateResult = FileChange.of({
+    const aggregateResult = FileTracker.of({
       ...this.props,
-      status: FILE_CHANGE_STATUS.DELETED,
+      status: FILE_TRACKER_STATUS.DELETED,
     });
     if (aggregateResult.isKo()) {
       return aggregateResult;
@@ -79,25 +79,25 @@ export class FileChange {
     return Result.ok(aggregateResult.getValue(), [event]);
   }
 
-  static of(props: FileChangeProps): Result<FileChange> {
-    const parsed = fileChangeSchema.safeParse(props);
+  static of(props: FileTrackerProps): Result<FileTracker> {
+    const parsed = fileTrackerSchema.safeParse(props);
     if (!parsed.success) {
       return Result.ko([
-        new ErrorWithDetails('Invalid file change data: ' + parsed.error.message, 'InvalidFileChange'),
+        new ErrorWithDetails('Invalid file tracker data: ' + parsed.error.message, 'InvalidFileTracker'),
       ]);
     }
-    return Result.ok(new FileChange(parsed.data));
+    return Result.ok(new FileTracker(parsed.data));
   }
 
   get filePath(): string {
     return this.props.filePath;
   }
 
-  get status(): FileChangeStatus {
+  get status(): FileTrackerStatus {
     return this.props.status;
   }
 
-  toJson(): FileChangeProps {
+  toJson(): FileTrackerProps {
     return {
       filePath: this.props.filePath,
       status: this.props.status,
