@@ -3,6 +3,9 @@ import { faker } from '../utils/test-faker';
 import { ContentChunk, ContentChunkProps, FILE_ROLES } from './content-chunk.entity';
 
 export function aContentChunk(overrides?: Partial<ContentChunkProps>): ContentChunk {
+  const startLine = faker.number.int({ min: 1, max: 99 });
+  const endLine = faker.number.int({ min: startLine });
+  const importance = Number(faker.number.float({ min: 0, max: 1, fractionDigits: 2 }).toFixed(2));
   const props: ContentChunkProps = {
     id: generateId(),
     text: faker.lorem.paragraph(),
@@ -11,12 +14,12 @@ export function aContentChunk(overrides?: Partial<ContentChunkProps>): ContentCh
     sectionHeader: faker.lorem.sentence(),
     breadcrumb: faker.lorem.words(3).split(' ').join(' > '),
     language: undefined,
-    fileRole: FILE_ROLES.DOCS,
+    fileRole: faker.helpers.arrayElement(Object.values(FILE_ROLES)),
     oversized: false,
-    startLine: 1,
-    endLine: 10,
+    startLine,
+    endLine,
     metadata: {},
-    importance: 0.5,
+    importance,
     tags: faker.lorem.words(2).split(' ') as string[],
     memoryBank: faker.lorem.word(),
     ...overrides,

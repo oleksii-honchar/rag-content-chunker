@@ -1,11 +1,23 @@
+import { ValuesType } from '@/utils/values-type';
 import { z } from 'zod';
-import { DomainEvent } from '../utils/domain-event';
 import { ErrorWithDetails } from '../utils/error-with-details';
 import { Result } from '../utils/result';
 import { FileAddedEvent, FileChangedEvent, FileDeletedEvent } from './events/file-events';
 
+/**
+ * File change status — tracks the current state of a file.
+ */
+export const FILE_CHANGE_STATUS = {
+  ADDED: 'added' as const,
+  CHANGED: 'changed' as const,
+  DELETED: 'deleted' as const,
+} as const;
+
+export type FileChangeStatus = ValuesType<typeof FILE_CHANGE_STATUS>;
+
 const fileChangeSchema = z.object({
-  events: z.array(z.custom<DomainEvent>()),
+  filePath: z.string().min(1),
+  status: z.enum(Object.values(FILE_CHANGE_STATUS)),
 });
 
 export type FileChangeProps = z.infer<typeof fileChangeSchema>;
@@ -13,8 +25,46 @@ export type FileChangeProps = z.infer<typeof fileChangeSchema>;
 export class FileChange {
   private constructor(private readonly props: FileChangeProps) {}
 
-  static empty(): FileChange {
-    return new FileChange({ events: [] });
+  /**
+   * Create a new file change with ADDED status and emit FileAddedEvent.
+   */
+  static add(filePath: string): Result<FileChange> {
+    const eventResult = FileAddedEvent.of(filePath);
+    if (eventResult.isKo()) {
+      return Result.ko(eventResult.getError());
+    }
+    const aggregate = new FileChange({ filePath, status: FILE_CHANGE_STATUS.ADDED });
+    return Result.ok(aggregate, [eventResult.getValue()]);
+  }
+
+  /**
+   * Transition to CHANGED status and emit FileChangedEvent.
+   */
+  change(): Result<FileChange> {
+    const eventResult = FileChangedEvent.of(this.props.filePath);
+    if (eventResult.isKo()) {
+      return Result.ko(eventResult.getError());
+    }
+    const newAggregate = new FileChange({
+      ...this.props,
+      status: FILE_CHANGE_STATUS.CHANGED,
+    });
+    return Result.ok(newAggregate, [eventResult.getValue()]);
+  }
+
+  /**
+   * Transition to DELETED status and emit FileDeletedEvent.
+   */
+  delete(): Result<FileChange> {
+    const eventResult = FileDeletedEvent.of(this.props.filePath);
+    if (eventResult.isKo()) {
+      return Result.ko(eventResult.getError());
+    }
+    const newAggregate = new FileChange({
+      ...this.props,
+      status: FILE_CHANGE_STATUS.DELETED,
+    });
+    return Result.ok(newAggregate, [eventResult.getValue()]);
   }
 
   static of(props: FileChangeProps): Result<FileChange> {
@@ -27,37 +77,18 @@ export class FileChange {
     return Result.ok(new FileChange(parsed.data));
   }
 
-  add(filePath: string): Result<FileChange> {
-    const eventResult = FileAddedEvent.of(filePath);
-    if (eventResult.isKo()) {
-      return eventResult as unknown as Result<FileChange>;
-    }
-    const fileChange = FileChange.empty();
-    fileChange.props.events.push(eventResult.getValue());
-    return Result.ok(fileChange);
+  get filePath(): string {
+    return this.props.filePath;
   }
 
-  change(filePath: string): Result<FileChange> {
-    const eventResult = FileChangedEvent.of(filePath);
-    if (eventResult.isKo()) {
-      return eventResult as unknown as Result<FileChange>;
-    }
-    const fileChange = FileChange.empty();
-    fileChange.props.events.push(eventResult.getValue());
-    return Result.ok(fileChange);
+  get status(): FileChangeStatus {
+    return this.props.status;
   }
 
-  delete(filePath: string): Result<FileChange> {
-    const eventResult = FileDeletedEvent.of(filePath);
-    if (eventResult.isKo()) {
-      return eventResult as unknown as Result<FileChange>;
-    }
-    const fileChange = FileChange.empty();
-    fileChange.props.events.push(eventResult.getValue());
-    return Result.ok(fileChange);
-  }
-
-  get events(): DomainEvent[] {
-    return this.props.events;
+  toJson(): FileChangeProps {
+    return {
+      filePath: this.props.filePath,
+      status: this.props.status,
+    };
   }
 }

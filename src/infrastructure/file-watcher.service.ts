@@ -138,28 +138,33 @@ export class FileWatcherService implements OnApplicationBootstrap, OnApplication
 
   private handleFileAdded(filePath: string, sourceId: string): void {
     this.logger.debug(`File added; path="${filePath}", source="${sourceId}"`);
-    const fileChange = FileChange.empty();
-    const result = fileChange.add(filePath);
+    const result = FileChange.add(filePath);
     if (result.isOk()) {
-      this.eventEmitter.publishMany(result.getValue().events);
+      this.eventEmitter.publishMany(result.getEvents());
     }
   }
 
   private handleFileChanged(filePath: string, sourceId: string): void {
     this.logger.debug(`File changed; path="${filePath}", source="${sourceId}"`);
-    const fileChange = FileChange.empty();
-    const result = fileChange.change(filePath);
-    if (result.isOk()) {
-      this.eventEmitter.publishMany(result.getValue().events);
+    const addedResult = FileChange.add(filePath);
+    if (addedResult.isOk()) {
+      const fileChange = addedResult.getValue();
+      const changeResult = fileChange.change();
+      if (changeResult.isOk()) {
+        this.eventEmitter.publishMany(changeResult.getEvents());
+      }
     }
   }
 
   private handleFileDeleted(filePath: string, sourceId: string): void {
     this.logger.debug(`File deleted; path="${filePath}", source="${sourceId}"`);
-    const fileChange = FileChange.empty();
-    const result = fileChange.delete(filePath);
-    if (result.isOk()) {
-      this.eventEmitter.publishMany(result.getValue().events);
+    const addedResult = FileChange.add(filePath);
+    if (addedResult.isOk()) {
+      const fileChange = addedResult.getValue();
+      const deleteResult = fileChange.delete();
+      if (deleteResult.isOk()) {
+        this.eventEmitter.publishMany(deleteResult.getEvents());
+      }
     }
   }
 

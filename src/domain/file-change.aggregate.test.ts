@@ -1,104 +1,151 @@
 import { FILE_EVENTS, FileAddedEvent, FileChangedEvent, FileDeletedEvent } from './events/file-events';
-import { FileChange } from './file-change.aggregate';
+import { FILE_CHANGE_STATUS, FileChange } from './file-change.aggregate';
 
 describe('FileChange', () => {
-  describe('of', () => {
+  describe('static add', () => {
+    it('creates FileChange with ADDED status and FileAddedEvent in Result events', () => {
+      const result = FileChange.add('/test/file.txt');
+
+      expect(result.isOk()).toBe(true);
+      const fileChange = result.getValue();
+      expect(fileChange.filePath).toBe('/test/file.txt');
+      expect(fileChange.status).toBe(FILE_CHANGE_STATUS.ADDED);
+      const events = result.getEvents();
+      expect(events).toHaveLength(1);
+      expect(events[0]).toBeInstanceOf(FileAddedEvent);
+      expect((events[0] as FileAddedEvent).type).toBe(FILE_EVENTS.ADDED);
+      expect((events[0] as FileAddedEvent).path).toBe('/test/file.txt');
+    });
+
+    it('returns ko for empty path', () => {
+      const result = FileChange.add('');
+
+      expect(result.isKo()).toBe(true);
+    });
+  });
+
+  describe('instance change', () => {
+    it('transitions to CHANGED status and emits FileChangedEvent in Result events', () => {
+      const addResult = FileChange.add('/test/file.txt');
+      expect(addResult.isOk()).toBe(true);
+
+      const fileChange = addResult.getValue();
+      const changeResult = fileChange.change();
+
+      expect(changeResult.isOk()).toBe(true);
+      const changed = changeResult.getValue();
+      expect(changed.filePath).toBe('/test/file.txt');
+      expect(changed.status).toBe(FILE_CHANGE_STATUS.CHANGED);
+      const events = changeResult.getEvents();
+      expect(events).toHaveLength(1);
+      expect(events[0]).toBeInstanceOf(FileChangedEvent);
+      expect((events[0] as FileChangedEvent).type).toBe(FILE_EVENTS.CHANGED);
+    });
+
+    it('original aggregate remains unchanged after change', () => {
+      const addResult = FileChange.add('/test/file.txt');
+      expect(addResult.isOk()).toBe(true);
+
+      const fileChange = addResult.getValue();
+      expect(fileChange.status).toBe(FILE_CHANGE_STATUS.ADDED);
+
+      const changeResult = fileChange.change();
+      expect(changeResult.isOk()).toBe(true);
+      // Original aggregate is immutable
+      expect(fileChange.status).toBe(FILE_CHANGE_STATUS.ADDED);
+    });
+  });
+
+  describe('instance delete', () => {
+    it('transitions to DELETED status and emits FileDeletedEvent in Result events', () => {
+      const addResult = FileChange.add('/test/file.txt');
+      expect(addResult.isOk()).toBe(true);
+
+      const fileChange = addResult.getValue();
+      const deleteResult = fileChange.delete();
+
+      expect(deleteResult.isOk()).toBe(true);
+      const deleted = deleteResult.getValue();
+      expect(deleted.filePath).toBe('/test/file.txt');
+      expect(deleted.status).toBe(FILE_CHANGE_STATUS.DELETED);
+      const events = deleteResult.getEvents();
+      expect(events).toHaveLength(1);
+      expect(events[0]).toBeInstanceOf(FileDeletedEvent);
+      expect((events[0] as FileDeletedEvent).type).toBe(FILE_EVENTS.DELETED);
+    });
+
+    it('original aggregate remains unchanged after delete', () => {
+      const addResult = FileChange.add('/test/file.txt');
+      expect(addResult.isOk()).toBe(true);
+
+      const fileChange = addResult.getValue();
+      expect(fileChange.status).toBe(FILE_CHANGE_STATUS.ADDED);
+
+      const deleteResult = fileChange.delete();
+      expect(deleteResult.isOk()).toBe(true);
+      // Original aggregate is immutable
+      expect(fileChange.status).toBe(FILE_CHANGE_STATUS.ADDED);
+    });
+  });
+
+  describe('static of', () => {
     it('creates FileChange with valid props', () => {
-      const result = FileChange.of({ events: [] });
+      const result = FileChange.of({
+        filePath: '/test/file.txt',
+        status: FILE_CHANGE_STATUS.ADDED,
+      });
 
       expect(result.isOk()).toBe(true);
       const fileChange = result.getValue();
-      expect(fileChange.events).toEqual([]);
+      expect(fileChange.filePath).toBe('/test/file.txt');
+      expect(fileChange.status).toBe(FILE_CHANGE_STATUS.ADDED);
     });
 
-    it('creates FileChange with events in props', () => {
-      const event = FileAddedEvent.of('/test/file.txt').getValue();
-      const result = FileChange.of({ events: [event] });
-
-      expect(result.isOk()).toBe(true);
-      const fileChange = result.getValue();
-      expect(fileChange.events).toHaveLength(1);
-      expect(fileChange.events[0]).toBe(event);
-    });
-
-    it('returns ko when events is missing', () => {
+    it('returns ko when filePath is missing', () => {
       const result = FileChange.of({} as never);
 
       expect(result.isKo()).toBe(true);
     });
 
-    it('returns ko when events is not an array', () => {
-      const result = FileChange.of({ events: 'not-an-array' } as never);
+    it('returns ko when filePath is empty', () => {
+      const result = FileChange.of({
+        filePath: '',
+        status: FILE_CHANGE_STATUS.ADDED,
+      });
+
+      expect(result.isKo()).toBe(true);
+    });
+
+    it('returns ko when status is invalid', () => {
+      const result = FileChange.of({
+        filePath: '/test/file.txt',
+        status: 'invalid' as never,
+      });
 
       expect(result.isKo()).toBe(true);
     });
   });
 
-  describe('empty', () => {
-    it('creates empty aggregate', () => {
-      const fileChange = FileChange.empty();
-
-      expect(fileChange.events).toEqual([]);
-    });
-  });
-
-  describe('add', () => {
-    it('creates FileChange with FileAddedEvent for valid path', () => {
-      const fileChange = FileChange.empty();
-      const result = fileChange.add('/test/file.txt');
-
+  describe('toJson', () => {
+    it('serializes filePath and status without events', () => {
+      const result = FileChange.add('/test/file.txt');
       expect(result.isOk()).toBe(true);
-      const changed = result.getValue();
-      expect(changed.events).toHaveLength(1);
-      expect(changed.events[0]).toBeInstanceOf(FileAddedEvent);
-      expect((changed.events[0] as FileAddedEvent).type).toBe(FILE_EVENTS.ADDED);
-    });
 
-    it('returns ko for empty path', () => {
-      const fileChange = FileChange.empty();
-      const result = fileChange.add('');
+      const fileChange = result.getValue();
+      const json = fileChange.toJson();
 
-      expect(result.isKo()).toBe(true);
+      expect(json).toEqual({
+        filePath: '/test/file.txt',
+        status: FILE_CHANGE_STATUS.ADDED,
+      });
     });
   });
 
-  describe('change', () => {
-    it('creates FileChange with FileChangedEvent for valid path', () => {
-      const fileChange = FileChange.empty();
-      const result = fileChange.change('/test/file.txt');
-
-      expect(result.isOk()).toBe(true);
-      const changed = result.getValue();
-      expect(changed.events).toHaveLength(1);
-      expect(changed.events[0]).toBeInstanceOf(FileChangedEvent);
-      expect((changed.events[0] as FileChangedEvent).type).toBe(FILE_EVENTS.CHANGED);
-    });
-
-    it('returns ko for empty path', () => {
-      const fileChange = FileChange.empty();
-      const result = fileChange.change('');
-
-      expect(result.isKo()).toBe(true);
-    });
-  });
-
-  describe('delete', () => {
-    it('creates FileChange with FileDeletedEvent for valid path', () => {
-      const fileChange = FileChange.empty();
-      const result = fileChange.delete('/test/file.txt');
-
-      expect(result.isOk()).toBe(true);
-      const changed = result.getValue();
-      expect(changed.events).toHaveLength(1);
-      expect(changed.events[0]).toBeInstanceOf(FileDeletedEvent);
-      expect((changed.events[0] as FileDeletedEvent).type).toBe(FILE_EVENTS.DELETED);
-    });
-
-    it('returns ko for empty path', () => {
-      const fileChange = FileChange.empty();
-      const result = fileChange.delete('');
-
-      expect(result.isKo()).toBe(true);
+  describe('status enum', () => {
+    it('has ADDED, CHANGED, and DELETED values', () => {
+      expect(FILE_CHANGE_STATUS.ADDED).toBe('added');
+      expect(FILE_CHANGE_STATUS.CHANGED).toBe('changed');
+      expect(FILE_CHANGE_STATUS.DELETED).toBe('deleted');
     });
   });
 });
