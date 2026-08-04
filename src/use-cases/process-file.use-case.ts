@@ -44,12 +44,12 @@ export class ProcessFileUseCase extends BaseUseCase<ProcessFileParams, void> {
   protected validateParams(params: ProcessFileParams): Result<ProcessFileParams> {
     const parsed = processFileParamsSchema.safeParse(params);
     if (!parsed.success) {
-      return Result.ko(
+      return Result.ko([
         new ErrorWithDetails(
           'Invalid process file params: ' + parsed.error.message,
           'InvalidProcessFileParams',
         ),
-      );
+      ]);
     }
     return Result.ok(parsed.data);
   }

@@ -4,7 +4,6 @@ import { EventEmitter } from 'node:events';
 import * as os from 'os';
 import * as path from 'path';
 import { FileChange } from '../../domain/file-change.aggregate';
-import { ErrorWithDetails } from '../../utils/error-with-details';
 import { Result } from '../../utils/result';
 import { AppEventEmitter } from '../app-event-emitter';
 import { WatchSourceConfig } from '../config/config-schemas';
@@ -33,14 +32,14 @@ export class FileWatcherService implements OnApplicationBootstrap, OnApplication
     const initResult = await this.mnemosyneClient.initialize();
     if (!initResult.isOk()) {
       this.logger.warn(
-        `MCP init failed, memory bank registration may fail: ${initResult.getError().message}`,
+        `MCP init failed, memory bank registration may fail: ${initResult.getFormattedErrors()}`,
       );
     }
 
     await this.registerBanks();
     const result = await this.start();
     if (result.isKo()) {
-      this.logger.error(`Failed to start file watcher: ${result.getError().message}`);
+      this.logger.error(`Failed to start file watcher: ${result.getFormattedErrors()}`);
     }
   }
 
@@ -103,37 +102,31 @@ export class FileWatcherService implements OnApplicationBootstrap, OnApplication
   }
 
   private async startWatchingSource(source: WatchSourceConfig): Promise<Result<void>> {
-    try {
-      const resolvedPath = this.resolvePath(source.path);
-      this.logger.info(`Watching source; id="${source.id}", path="${resolvedPath}"`);
+    const resolvedPath = this.resolvePath(source.path);
+    this.logger.info(`Watching source; id="${source.id}", path="${resolvedPath}"`);
 
-      const watcher = chokidar.watch(resolvedPath, {
-        ignored: this.buildIgnorePatterns(source),
-        persistent: true,
-        ignoreInitial: true,
-        awaitWriteFinish: {
-          stabilityThreshold: source.debounceMs,
-          pollInterval: 100,
-        },
-      });
+    const watcher = chokidar.watch(resolvedPath, {
+      ignored: this.buildIgnorePatterns(source),
+      persistent: true,
+      ignoreInitial: true,
+      awaitWriteFinish: {
+        stabilityThreshold: source.debounceMs,
+        pollInterval: 100,
+      },
+    });
 
-      const emitter = watcher as unknown as EventEmitter;
-      emitter.on('add', (filePath: string) => this.handleFileAdded(filePath, source.id));
-      emitter.on('change', (filePath: string) => this.handleFileChanged(filePath, source.id));
-      emitter.on('unlink', (filePath: string) => this.handleFileDeleted(filePath, source.id));
-      emitter.on('error', (error: unknown) => {
-        this.logger.error(
-          `Watcher error: source="${source.id}", path="${resolvedPath}", error="${error instanceof Error ? error.message : String(error)}"`,
-        );
-      });
-
-      this.watchers.set(source.id, { watcher, sourceId: source.id, sourcePath: resolvedPath });
-      return Result.ok(undefined as unknown as void);
-    } catch (error) {
-      return Result.ko(
-        new ErrorWithDetails(error instanceof Error ? error.message : String(error), 'WatcherStartError'),
+    const emitter = watcher as unknown as EventEmitter;
+    emitter.on('add', (filePath: string) => this.handleFileAdded(filePath, source.id));
+    emitter.on('change', (filePath: string) => this.handleFileChanged(filePath, source.id));
+    emitter.on('unlink', (filePath: string) => this.handleFileDeleted(filePath, source.id));
+    emitter.on('error', (error: unknown) => {
+      this.logger.error(
+        `Watcher error: source="${source.id}", path="${resolvedPath}", error="${error instanceof Error ? error.message : String(error)}"`,
       );
-    }
+    });
+
+    this.watchers.set(source.id, { watcher, sourceId: source.id, sourcePath: resolvedPath });
+    return Result.ok(undefined as unknown as void);
   }
 
   private handleFileAdded(filePath: string, sourceId: string): void {
