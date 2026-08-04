@@ -151,9 +151,12 @@ describe('Chunk', () => {
     });
 
     it('defaults importance to 0.5 when omitted', () => {
-      const chunk = aContentChunk();
+      const p = baseProps();
+      const { importance: _imp, ...propsWithoutImportance } = p;
+      const result = ContentChunk.of(propsWithoutImportance as ContentChunkProps);
 
-      expect(chunk.importance).toBe(0.5);
+      expect(result.isOk()).toBe(true);
+      expect(result.getValue().importance).toBe(0.5);
     });
 
     it('defaults tags to empty array when omitted', () => {

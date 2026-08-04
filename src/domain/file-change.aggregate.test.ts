@@ -3,11 +3,11 @@ import { FILE_CHANGE_STATUS, FileChange } from './file-change.aggregate';
 
 describe('FileChange', () => {
   describe('static add', () => {
-    it('creates FileChange with ADDED status and FileAddedEvent in Result events', () => {
+    it('creates FileChange with ADDED status and FileAddedEvent in AggregateResult', () => {
       const result = FileChange.add('/test/file.txt');
 
       expect(result.isOk()).toBe(true);
-      const fileChange = result.getValue();
+      const fileChange = result.getAggregate();
       expect(fileChange.filePath).toBe('/test/file.txt');
       expect(fileChange.status).toBe(FILE_CHANGE_STATUS.ADDED);
       const events = result.getEvents();
@@ -25,15 +25,15 @@ describe('FileChange', () => {
   });
 
   describe('instance change', () => {
-    it('transitions to CHANGED status and emits FileChangedEvent in Result events', () => {
+    it('transitions to CHANGED status and emits FileChangedEvent in AggregateResult', () => {
       const addResult = FileChange.add('/test/file.txt');
       expect(addResult.isOk()).toBe(true);
 
-      const fileChange = addResult.getValue();
+      const fileChange = addResult.getAggregate();
       const changeResult = fileChange.change();
 
       expect(changeResult.isOk()).toBe(true);
-      const changed = changeResult.getValue();
+      const changed = changeResult.getAggregate();
       expect(changed.filePath).toBe('/test/file.txt');
       expect(changed.status).toBe(FILE_CHANGE_STATUS.CHANGED);
       const events = changeResult.getEvents();
@@ -46,7 +46,7 @@ describe('FileChange', () => {
       const addResult = FileChange.add('/test/file.txt');
       expect(addResult.isOk()).toBe(true);
 
-      const fileChange = addResult.getValue();
+      const fileChange = addResult.getAggregate();
       expect(fileChange.status).toBe(FILE_CHANGE_STATUS.ADDED);
 
       const changeResult = fileChange.change();
@@ -57,15 +57,15 @@ describe('FileChange', () => {
   });
 
   describe('instance delete', () => {
-    it('transitions to DELETED status and emits FileDeletedEvent in Result events', () => {
+    it('transitions to DELETED status and emits FileDeletedEvent in AggregateResult', () => {
       const addResult = FileChange.add('/test/file.txt');
       expect(addResult.isOk()).toBe(true);
 
-      const fileChange = addResult.getValue();
+      const fileChange = addResult.getAggregate();
       const deleteResult = fileChange.delete();
 
       expect(deleteResult.isOk()).toBe(true);
-      const deleted = deleteResult.getValue();
+      const deleted = deleteResult.getAggregate();
       expect(deleted.filePath).toBe('/test/file.txt');
       expect(deleted.status).toBe(FILE_CHANGE_STATUS.DELETED);
       const events = deleteResult.getEvents();
@@ -78,7 +78,7 @@ describe('FileChange', () => {
       const addResult = FileChange.add('/test/file.txt');
       expect(addResult.isOk()).toBe(true);
 
-      const fileChange = addResult.getValue();
+      const fileChange = addResult.getAggregate();
       expect(fileChange.status).toBe(FILE_CHANGE_STATUS.ADDED);
 
       const deleteResult = fileChange.delete();
@@ -131,7 +131,7 @@ describe('FileChange', () => {
       const result = FileChange.add('/test/file.txt');
       expect(result.isOk()).toBe(true);
 
-      const fileChange = result.getValue();
+      const fileChange = result.getAggregate();
       const json = fileChange.toJson();
 
       expect(json).toEqual({

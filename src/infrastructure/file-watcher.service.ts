@@ -148,7 +148,7 @@ export class FileWatcherService implements OnApplicationBootstrap, OnApplication
     this.logger.debug(`File changed; path="${filePath}", source="${sourceId}"`);
     const addedResult = FileChange.add(filePath);
     if (addedResult.isOk()) {
-      const fileChange = addedResult.getValue();
+      const fileChange = addedResult.getAggregate();
       const changeResult = fileChange.change();
       if (changeResult.isOk()) {
         this.eventEmitter.publishMany(changeResult.getEvents());
@@ -160,7 +160,7 @@ export class FileWatcherService implements OnApplicationBootstrap, OnApplication
     this.logger.debug(`File deleted; path="${filePath}", source="${sourceId}"`);
     const addedResult = FileChange.add(filePath);
     if (addedResult.isOk()) {
-      const fileChange = addedResult.getValue();
+      const fileChange = addedResult.getAggregate();
       const deleteResult = fileChange.delete();
       if (deleteResult.isOk()) {
         this.eventEmitter.publishMany(deleteResult.getEvents());

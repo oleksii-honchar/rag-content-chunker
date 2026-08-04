@@ -1,3 +1,4 @@
+import { DomainEvent } from '@/utils/domain-event';
 import { Injectable } from '@nestjs/common';
 import { FileMemoryTracker } from '../domain/file-memory-tracker.aggregate';
 import { AggregateResult } from '../utils/aggregate-result';
@@ -9,14 +10,14 @@ import { PrismaService } from './prisma/prisma.service';
 export class FileMemoryTrackerRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findByFilePath(filePath: string): Promise<FileMemoryTracker | null> {
+  async findByFilePath(filePath: string): Promise<AggregateResult<FileMemoryTracker | null, DomainEvent>> {
     const tracker = await this.prisma.fileTracker.findUnique({
       where: { filePath },
       include: { memories: true },
     });
 
     if (!tracker) {
-      return null;
+      return AggregateResult.of(null, []);
     }
 
     const memoryIds = tracker.memories.map((m: { memoryId: string }) => m.memoryId);
@@ -29,14 +30,14 @@ export class FileMemoryTrackerRepository {
       memoryBank: tracker.memoryBank,
     });
 
-    return result.isOk() ? result.getValue() : null;
+    return result.isOk() ? result : AggregateResult.ko(new ErrorWithDetails('Invalid FileMemoryTracker', 'InvalidFileMemoryTracker'));
   }
 
   /**
    * Find existing tracker by filePath, or save the provided aggregate with a pre-generated ID.
    * Aggregate-first: caller creates the aggregate with domain logic, repository just persists it.
    */
-  async findOrCreate(tracker: FileMemoryTracker): Promise<FileMemoryTracker> {
+  async findOrCreate(tracker: FileMemoryTracker): Promise<AggregateResult<FileMemoryTracker, DomainEvent>> {
     const existing = await this.findByFilePath(tracker.filePath);
     if (existing) {
       return existing;
@@ -60,7 +61,7 @@ export class FileMemoryTrackerRepository {
    * Save (upsert) a FileMemoryTracker aggregate to the database.
    * Infrastructure term — just persists the aggregate as-is.
    */
-  async save(tracker: FileMemoryTracker): Promise<AggregateResult<FileMemoryTracker>> {
+  async save(tracker: FileMemoryTracker): Promise<AggregateResult<FileMemoryTracker, DomainEvent>> {
     const errors: ErrorWithDetails[] = [];
 
     try {
@@ -92,14 +93,14 @@ export class FileMemoryTrackerRepository {
       if (result.isKo()) {
         errors.push(result.getError());
       } else {
-        return AggregateResult.ok(result.getValue());
+        return AggregateResult.ok(result.getValue(), []);
       }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
       errors.push(new ErrorWithDetails(message, 'SaveFileMemoryTrackerError'));
     }
 
-    return AggregateResult.ko(errors);
+    return AggregateResult.ko(errors[0]);
   }
 
   /**
