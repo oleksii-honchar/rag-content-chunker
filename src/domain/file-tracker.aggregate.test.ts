@@ -1,37 +1,39 @@
 import { FILE_EVENTS, FileAddedEvent, FileChangedEvent, FileDeletedEvent } from './events/file-events';
-import { FILE_TRACKER_STATUS, FileTracker } from './file-tracker.aggregate';
+import { FILE_TRACKER_STATUS, FileTracker, FileTrackerProps } from './file-tracker.aggregate';
 
 describe('FileTracker', () => {
-  describe('static add', () => {
-    it('creates FileTracker with ADDED status and FileAddedEvent in AggregateResult', () => {
-      const result = FileTracker.add('/test/file.txt');
-
+  describe('instance add', () => {
+    it('transitions to ADDED status and emits FileAddedEvent in AggregateResult', () => {
+      const props: FileTrackerProps = { filePath: '/test/file.txt' };
+      const result = FileTracker.of(props);
       expect(result.isOk()).toBe(true);
       const fileTracker = result.getValue();
-      expect(fileTracker.filePath).toBe('/test/file.txt');
-      expect(fileTracker.status).toBe(FILE_TRACKER_STATUS.ADDED);
-      const events = result.getEvents();
+
+      const addResult = fileTracker.add();
+      expect(addResult.isOk()).toBe(true);
+      const added = addResult.getValue();
+      expect(added.filePath).toBe('/test/file.txt');
+      expect(added.status).toBe(FILE_TRACKER_STATUS.ADDED);
+      const events = addResult.getEvents();
       expect(events).toHaveLength(1);
       expect(events[0]).toBeInstanceOf(FileAddedEvent);
       expect((events[0] as FileAddedEvent).type).toBe(FILE_EVENTS.ADDED);
       expect((events[0] as FileAddedEvent).path).toBe('/test/file.txt');
     });
-
-    it('returns ko for empty path', () => {
-      const result = FileTracker.add('');
-
-      expect(result.isKo()).toBe(true);
-    });
   });
 
   describe('instance change', () => {
     it('transitions to CHANGED status and emits FileChangedEvent in AggregateResult', () => {
-      const addResult = FileTracker.add('/test/file.txt');
+      const props: FileTrackerProps = { filePath: '/test/file.txt' };
+      const result = FileTracker.of(props);
+      expect(result.isOk()).toBe(true);
+      const fileTracker = result.getValue();
+
+      const addResult = fileTracker.add();
       expect(addResult.isOk()).toBe(true);
+      const added = addResult.getValue();
 
-      const fileTracker = addResult.getValue();
-      const changeResult = fileTracker.change();
-
+      const changeResult = added.change();
       expect(changeResult.isOk()).toBe(true);
       const changed = changeResult.getValue();
       expect(changed.filePath).toBe('/test/file.txt');
@@ -43,27 +45,35 @@ describe('FileTracker', () => {
     });
 
     it('original aggregate remains unchanged after change', () => {
-      const addResult = FileTracker.add('/test/file.txt');
+      const props: FileTrackerProps = { filePath: '/test/file.txt' };
+      const result = FileTracker.of(props);
+      expect(result.isOk()).toBe(true);
+      const fileTracker = result.getValue();
+
+      const addResult = fileTracker.add();
       expect(addResult.isOk()).toBe(true);
+      const added = addResult.getValue();
+      expect(added.status).toBe(FILE_TRACKER_STATUS.ADDED);
 
-      const fileTracker = addResult.getValue();
-      expect(fileTracker.status).toBe(FILE_TRACKER_STATUS.ADDED);
-
-      const changeResult = fileTracker.change();
+      const changeResult = added.change();
       expect(changeResult.isOk()).toBe(true);
       // Original aggregate is immutable
-      expect(fileTracker.status).toBe(FILE_TRACKER_STATUS.ADDED);
+      expect(added.status).toBe(FILE_TRACKER_STATUS.ADDED);
     });
   });
 
   describe('instance delete', () => {
     it('transitions to DELETED status and emits FileDeletedEvent in AggregateResult', () => {
-      const addResult = FileTracker.add('/test/file.txt');
+      const props: FileTrackerProps = { filePath: '/test/file.txt' };
+      const result = FileTracker.of(props);
+      expect(result.isOk()).toBe(true);
+      const fileTracker = result.getValue();
+
+      const addResult = fileTracker.add();
       expect(addResult.isOk()).toBe(true);
+      const added = addResult.getValue();
 
-      const fileTracker = addResult.getValue();
-      const deleteResult = fileTracker.delete();
-
+      const deleteResult = added.delete();
       expect(deleteResult.isOk()).toBe(true);
       const deleted = deleteResult.getValue();
       expect(deleted.filePath).toBe('/test/file.txt');
@@ -75,65 +85,59 @@ describe('FileTracker', () => {
     });
 
     it('original aggregate remains unchanged after delete', () => {
-      const addResult = FileTracker.add('/test/file.txt');
+      const props: FileTrackerProps = { filePath: '/test/file.txt' };
+      const result = FileTracker.of(props);
+      expect(result.isOk()).toBe(true);
+      const fileTracker = result.getValue();
+
+      const addResult = fileTracker.add();
       expect(addResult.isOk()).toBe(true);
+      const added = addResult.getValue();
+      expect(added.status).toBe(FILE_TRACKER_STATUS.ADDED);
 
-      const fileTracker = addResult.getValue();
-      expect(fileTracker.status).toBe(FILE_TRACKER_STATUS.ADDED);
-
-      const deleteResult = fileTracker.delete();
+      const deleteResult = added.delete();
       expect(deleteResult.isOk()).toBe(true);
       // Original aggregate is immutable
-      expect(fileTracker.status).toBe(FILE_TRACKER_STATUS.ADDED);
+      expect(added.status).toBe(FILE_TRACKER_STATUS.ADDED);
     });
   });
 
   describe('static of', () => {
-    it('creates FileTracker with valid props', () => {
-      const result = FileTracker.of({
-        filePath: '/test/file.txt',
-        status: FILE_TRACKER_STATUS.ADDED,
-      });
-
+    it('creates FileTracker with just filePath — status is null until add()', () => {
+      const props: FileTrackerProps = { filePath: '/test/file.txt' };
+      const result = FileTracker.of(props);
       expect(result.isOk()).toBe(true);
       const fileTracker = result.getValue();
+
       expect(fileTracker.filePath).toBe('/test/file.txt');
-      expect(fileTracker.status).toBe(FILE_TRACKER_STATUS.ADDED);
+      expect(fileTracker.status).toBeNull();
     });
 
-    it('returns ko when filePath is missing', () => {
-      const result = FileTracker.of({} as never);
-
+    it('returns ko for empty filePath', () => {
+      const props: FileTrackerProps = { filePath: '' };
+      const result = FileTracker.of(props);
       expect(result.isKo()).toBe(true);
     });
 
-    it('returns ko when filePath is empty', () => {
-      const result = FileTracker.of({
-        filePath: '',
-        status: FILE_TRACKER_STATUS.ADDED,
-      });
-
-      expect(result.isKo()).toBe(true);
-    });
-
-    it('returns ko when status is invalid', () => {
-      const result = FileTracker.of({
-        filePath: '/test/file.txt',
-        status: 'invalid' as never,
-      });
-
+    it('returns ko for missing filePath', () => {
+      const props = {} as FileTrackerProps;
+      const result = FileTracker.of(props);
       expect(result.isKo()).toBe(true);
     });
   });
 
   describe('toJson', () => {
     it('serializes filePath and status without events', () => {
-      const result = FileTracker.add('/test/file.txt');
+      const props: FileTrackerProps = { filePath: '/test/file.txt' };
+      const result = FileTracker.of(props);
       expect(result.isOk()).toBe(true);
-
       const fileTracker = result.getValue();
-      const json = fileTracker.toJson();
 
+      const addResult = fileTracker.add();
+      expect(addResult.isOk()).toBe(true);
+      const added = addResult.getValue();
+
+      const json = added.toJson();
       expect(json).toEqual({
         filePath: '/test/file.txt',
         status: FILE_TRACKER_STATUS.ADDED,

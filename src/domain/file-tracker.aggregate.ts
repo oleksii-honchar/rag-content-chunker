@@ -17,7 +17,7 @@ export type FileTrackerStatus = ValuesType<typeof FILE_TRACKER_STATUS>;
 
 const fileTrackerSchema = z.object({
   filePath: z.string().min(1),
-  status: z.enum(Object.values(FILE_TRACKER_STATUS)),
+  status: z.enum(Object.values(FILE_TRACKER_STATUS)).nullish(),
 });
 
 export type FileTrackerProps = z.infer<typeof fileTrackerSchema>;
@@ -26,19 +26,29 @@ export class FileTracker {
   private constructor(private readonly props: FileTrackerProps) {}
 
   /**
-   * Create a new file tracker with ADDED status and emit FileAddedEvent.
+   * Create a file tracker from props, validating via zod schema. Returns Result.
    */
-  static add(filePath: string): Result<FileTracker> {
-    const eventResult = FileAddedEvent.of(filePath);
+  static of(props: FileTrackerProps): Result<FileTracker> {
+    const parsed = fileTrackerSchema.safeParse(props);
+    if (!parsed.success) {
+      return Result.ko([
+        new ErrorWithDetails('Invalid file tracker data: ' + parsed.error.message, 'InvalidFileTracker'),
+      ]);
+    }
+    return Result.ok(new FileTracker(parsed.data));
+  }
+
+  /**
+   * Transition to ADDED status and emit FileAddedEvent.
+   */
+  add(): Result<FileTracker> {
+    const eventResult = FileAddedEvent.of(this.props.filePath);
     if (eventResult.isKo()) {
       return Result.ko(eventResult.getErrors());
     }
     const event = eventResult.getValue();
-    const aggregateResult = FileTracker.of({ filePath, status: FILE_TRACKER_STATUS.ADDED });
-    if (aggregateResult.isKo()) {
-      return aggregateResult;
-    }
-    return Result.ok(aggregateResult.getValue(), [event]);
+    const added = new FileTracker({ ...this.props, status: FILE_TRACKER_STATUS.ADDED });
+    return Result.ok(added, [event]);
   }
 
   /**
@@ -50,14 +60,8 @@ export class FileTracker {
       return Result.ko(eventResult.getErrors());
     }
     const event = eventResult.getValue();
-    const aggregateResult = FileTracker.of({
-      ...this.props,
-      status: FILE_TRACKER_STATUS.CHANGED,
-    });
-    if (aggregateResult.isKo()) {
-      return aggregateResult;
-    }
-    return Result.ok(aggregateResult.getValue(), [event]);
+    const changed = new FileTracker({ ...this.props, status: FILE_TRACKER_STATUS.CHANGED });
+    return Result.ok(changed, [event]);
   }
 
   /**
@@ -69,32 +73,16 @@ export class FileTracker {
       return Result.ko(eventResult.getErrors());
     }
     const event = eventResult.getValue();
-    const aggregateResult = FileTracker.of({
-      ...this.props,
-      status: FILE_TRACKER_STATUS.DELETED,
-    });
-    if (aggregateResult.isKo()) {
-      return aggregateResult;
-    }
-    return Result.ok(aggregateResult.getValue(), [event]);
-  }
-
-  static of(props: FileTrackerProps): Result<FileTracker> {
-    const parsed = fileTrackerSchema.safeParse(props);
-    if (!parsed.success) {
-      return Result.ko([
-        new ErrorWithDetails('Invalid file tracker data: ' + parsed.error.message, 'InvalidFileTracker'),
-      ]);
-    }
-    return Result.ok(new FileTracker(parsed.data));
+    const deleted = new FileTracker({ ...this.props, status: FILE_TRACKER_STATUS.DELETED });
+    return Result.ok(deleted, [event]);
   }
 
   get filePath(): string {
     return this.props.filePath;
   }
 
-  get status(): FileTrackerStatus {
-    return this.props.status;
+  get status(): FileTrackerStatus | null | undefined {
+    return this.props.status ?? null;
   }
 
   toJson(): FileTrackerProps {

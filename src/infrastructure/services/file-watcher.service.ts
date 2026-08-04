@@ -131,7 +131,12 @@ export class FileWatcherService implements OnApplicationBootstrap, OnApplication
 
   private handleFileAdded(filePath: string, sourceId: string): void {
     this.logger.debug(`File added; path="${filePath}", source="${sourceId}"`);
-    const result = FileTracker.add(filePath);
+    const fileTracker = FileTracker.of({ filePath });
+    if (fileTracker.isKo()) {
+      this.logger.error(fileTracker.getFormattedErrors());
+      return;
+    }
+    const result = fileTracker.getValue().add();
     if (result.isOk()) {
       this.eventEmitter.publishMany(result.getEvents());
     }
@@ -139,10 +144,15 @@ export class FileWatcherService implements OnApplicationBootstrap, OnApplication
 
   private handleFileChanged(filePath: string, sourceId: string): void {
     this.logger.debug(`File changed; path="${filePath}", source="${sourceId}"`);
-    const addedResult = FileTracker.add(filePath);
+    const fileTrackerResult = FileTracker.of({ filePath });
+    if (fileTrackerResult.isKo()) {
+      this.logger.error(fileTrackerResult.getFormattedErrors());
+      return;
+    }
+    const addedResult = fileTrackerResult.getValue().add();
     if (addedResult.isOk()) {
-      const fileTracker = addedResult.getValue();
-      const changeResult = fileTracker.change();
+      const changedTracker = addedResult.getValue();
+      const changeResult = changedTracker.change();
       if (changeResult.isOk()) {
         this.eventEmitter.publishMany(changeResult.getEvents());
       }
@@ -151,10 +161,15 @@ export class FileWatcherService implements OnApplicationBootstrap, OnApplication
 
   private handleFileDeleted(filePath: string, sourceId: string): void {
     this.logger.debug(`File deleted; path="${filePath}", source="${sourceId}"`);
-    const addedResult = FileTracker.add(filePath);
+    const fileTrackerResult = FileTracker.of({ filePath });
+    if (fileTrackerResult.isKo()) {
+      this.logger.error(fileTrackerResult.getFormattedErrors());
+      return;
+    }
+    const addedResult = fileTrackerResult.getValue().add();
     if (addedResult.isOk()) {
-      const fileTracker = addedResult.getValue();
-      const deleteResult = fileTracker.delete();
+      const addedTracker = addedResult.getValue();
+      const deleteResult = addedTracker.delete();
       if (deleteResult.isOk()) {
         this.eventEmitter.publishMany(deleteResult.getEvents());
       }
