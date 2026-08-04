@@ -1,23 +1,22 @@
-import { DomainEvent } from '@/utils/domain-event';
+import { FileMemoryTracker } from '@/domain/file-memory-tracker.aggregate';
+import { generateId } from '@/utils/big-endian-id';
+import { ErrorWithDetails } from '@/utils/error-with-details';
+import { Result } from '@/utils/result';
 import { Injectable } from '@nestjs/common';
-import { FileMemoryTracker } from '../domain/file-memory-tracker.aggregate';
-import { AggregateResult } from '../utils/aggregate-result';
-import { generateId } from '../utils/big-endian-id';
-import { ErrorWithDetails } from '../utils/error-with-details';
-import { PrismaService } from './prisma/prisma.service';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class FileMemoryTrackerRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findByFilePath(filePath: string): Promise<AggregateResult<FileMemoryTracker | null, DomainEvent>> {
+  async findByFilePath(filePath: string): Promise<Result<FileMemoryTracker | null>> {
     const tracker = await this.prisma.fileTracker.findUnique({
       where: { filePath },
       include: { memories: true },
     });
 
     if (!tracker) {
-      return AggregateResult.of(null, []);
+      return Result.ko([new ErrorWithDetails(`Can't find tracker; filePath=${filePath}`)]);
     }
 
     const memoryIds = tracker.memories.map((m: { memoryId: string }) => m.memoryId);
@@ -32,71 +31,53 @@ export class FileMemoryTrackerRepository {
 
     return result.isOk()
       ? result
-      : AggregateResult.ko(new ErrorWithDetails('Invalid FileMemoryTracker', 'InvalidFileMemoryTracker'));
+      : Result.ko([new ErrorWithDetails('Invalid FileMemoryTracker', 'InvalidFileMemoryTracker')]);
   }
 
   /**
    * Find existing tracker by filePath, or save the provided aggregate with a pre-generated ID.
    * Aggregate-first: caller creates the aggregate with domain logic, repository just persists it.
    */
-  async findOrCreate(tracker: FileMemoryTracker): Promise<AggregateResult<FileMemoryTracker, DomainEvent>> {
+  async findOrCreate(tracker: FileMemoryTracker): Promise<Result<FileMemoryTracker>> {
     const existing = await this.findByFilePath(tracker.filePath);
-    if (existing && existing.isOk() && existing.getAggregate()) {
-      return AggregateResult.ok(existing.getAggregate() as FileMemoryTracker, []);
+    if (existing.isOk() && existing.getValue()) {
+      return existing as Result<FileMemoryTracker>;
     }
 
-    const result = await this.save(tracker);
-    if (result.isOk()) {
-      return AggregateResult.ok(result.getAggregate(), []);
-    }
-
-    throw new Error('Failed to create FileMemoryTracker: ' + result.getErrors().map(e => e.message).join('; '));
+    return await this.upsert(tracker);
   }
 
   /**
    * Save (upsert) a FileMemoryTracker aggregate to the database.
    * Infrastructure term — just persists the aggregate as-is.
    */
-  async save(tracker: FileMemoryTracker): Promise<AggregateResult<FileMemoryTracker, DomainEvent>> {
-    const errors: ErrorWithDetails[] = [];
+  async upsert(tracker: FileMemoryTracker): Promise<Result<FileMemoryTracker>> {
+    const saved = await this.prisma.fileTracker.upsert({
+      where: { filePath: tracker.filePath },
+      create: {
+        id: tracker.id,
+        filePath: tracker.filePath,
+        sourceId: tracker.sourceId,
+        memoryBank: tracker.memoryBank,
+      },
+      update: {
+        sourceId: tracker.sourceId,
+        memoryBank: tracker.memoryBank,
+      },
+      include: { memories: true },
+    });
 
-    try {
-      const saved = await this.prisma.fileTracker.upsert({
-        where: { filePath: tracker.filePath },
-        create: {
-          id: tracker.id,
-          filePath: tracker.filePath,
-          sourceId: tracker.sourceId,
-          memoryBank: tracker.memoryBank,
-        },
-        update: {
-          sourceId: tracker.sourceId,
-          memoryBank: tracker.memoryBank,
-        },
-        include: { memories: true },
-      });
+    const memoryIds = saved.memories.map((m: { memoryId: string }) => m.memoryId);
 
-      const memoryIds = saved.memories.map((m: { memoryId: string }) => m.memoryId);
+    const result = FileMemoryTracker.of({
+      id: saved.id,
+      filePath: saved.filePath,
+      memoryIds,
+      sourceId: saved.sourceId,
+      memoryBank: saved.memoryBank,
+    });
 
-      const result = FileMemoryTracker.of({
-        id: saved.id,
-        filePath: saved.filePath,
-        memoryIds,
-        sourceId: saved.sourceId,
-        memoryBank: saved.memoryBank,
-      });
-
-      if (result.isKo()) {
-        errors.push(...result.getErrors());
-      } else {
-        return AggregateResult.ok(result.getAggregate(), []);
-      }
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : String(error);
-      errors.push(new ErrorWithDetails(message, 'SaveFileMemoryTrackerError'));
-    }
-
-    return AggregateResult.ko(errors[0]);
+    return result;
   }
 
   /**
