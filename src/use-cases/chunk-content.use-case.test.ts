@@ -287,7 +287,7 @@ describe('ChunkContentUseCase', () => {
       const filePath = '/path/to/file.ts';
       const sourceId = 'test-source';
 
-      mockMastraChunkingService.chunkFile.mockResolvedValue(Result.ko(new Error('Mastra chunking failed')));
+      mockMastraChunkingService.chunkFile.mockResolvedValue(Result.ko([new Error('Mastra chunking failed')]));
 
       const result = await useCase.execute({
         content,
@@ -297,7 +297,7 @@ describe('ChunkContentUseCase', () => {
       });
 
       expect(result.isKo()).toBe(true);
-      expect(result.getError().message).toBe('Mastra chunking failed');
+      expect(result.getErrors()[0].message).toBe('Mastra chunking failed');
     });
   });
 
@@ -400,7 +400,7 @@ describe('ChunkContentUseCase', () => {
 
       mockMastraChunkingService.chunkFile.mockResolvedValue(Result.ok(rawChunks));
       mockEnhancementPipelineService.enhance.mockResolvedValue(
-        Result.ko(new Error('Enhancement pipeline failed')),
+        Result.ko([new Error('Enhancement pipeline failed')]),
       );
 
       const result = await useCase.execute({

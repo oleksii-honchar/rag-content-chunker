@@ -1,4 +1,5 @@
 import { FileMemoryTracker } from '@/domain/file-memory-tracker.aggregate';
+import { generateId } from '@/utils/big-endian-id';
 import { ErrorWithDetails } from '@/utils/error-with-details';
 import { Result } from '@/utils/result';
 import { Injectable } from '@nestjs/common';
@@ -83,7 +84,7 @@ export class FileMemoryTrackerRepository {
     for (const memId of trackerMemoryIds) {
       if (!existingMemoryIds.has(memId)) {
         await this.prisma.fileMemoryTracker.create({
-          data: { fileTrackerId: saved.id, memoryId: memId },
+          data: { id: generateId(), fileTrackerId: saved.id, memoryId: memId },
         });
       }
     }

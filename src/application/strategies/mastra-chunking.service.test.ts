@@ -627,7 +627,7 @@ describe('MastraChunkingService', () => {
       const result = await service.chunkFile('# Title', 'README.md', 'test-source');
 
       expect(result.isKo()).toBe(true);
-      expect(result.getError().message).toContain('Invalid markdown');
+      expect(result.getErrors()[0].message).toContain('Invalid markdown');
     });
 
     it('should return Result.ko when chunking throws', async () => {
@@ -644,7 +644,7 @@ describe('MastraChunkingService', () => {
       const result = await service.chunkFile('# Title', 'README.md', 'test-source');
 
       expect(result.isKo()).toBe(true);
-      expect(result.getError().message).toContain('Chunking failed');
+      expect(result.getErrors()[0].message).toContain('Chunking failed');
     });
 
     it('should gracefully continue when extractMetadata throws', async () => {

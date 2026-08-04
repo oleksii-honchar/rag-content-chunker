@@ -11,9 +11,9 @@ import { TagExtractionService } from './application/services/tag-extraction.serv
 import { MastraChunkingService } from './application/strategies/mastra-chunking.service';
 import { AppEventEmitter } from './infrastructure/app-event-emitter';
 import { ConfigurationModule } from './infrastructure/config/configuration.module';
-import { FileMemoryTrackerRepository } from './infrastructure/file-memory-tracker.repository';
 import { LoggerModule } from './infrastructure/logging/logger.module';
 import { PrismaModule } from './infrastructure/prisma/prisma.module';
+import { FileMemoryTrackerRepository } from './infrastructure/repositories/file-memory-tracker.repository';
 import { FileMemoryTrackerService } from './infrastructure/services/file-memory-tracker.service';
 import { FileProcessingQueue } from './infrastructure/services/file-processing-queue.service';
 import { FileWatcherService } from './infrastructure/services/file-watcher.service';

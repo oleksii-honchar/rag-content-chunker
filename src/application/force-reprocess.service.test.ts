@@ -21,10 +21,10 @@ jest.mock('@mastra/rag', () => ({
   },
 }));
 
+import { aWatchSource } from '@/domain/watch-source.entity.test-utils';
 import { Test, TestingModule } from '@nestjs/testing';
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
-import { aWatchSource } from '../infrastructure/config/watch-source-config.test-utils';
 import { BasePinoLogger } from '../infrastructure/logging/base-pino-logger';
 import { aLogger } from '../infrastructure/logging/logger.test-utils';
 import { FileProcessingQueue } from '../infrastructure/services/file-processing-queue.service';
@@ -191,7 +191,7 @@ describe('ForceReprocessService', () => {
       fsMock.stat.mockResolvedValue(mockDirStats());
       fsMock.readdir.mockResolvedValue([mockDirent('file1.md', false)]);
 
-      processFileUseCase.execute.mockResolvedValue(Result.ko(new Error('Processing failed')));
+      processFileUseCase.execute.mockResolvedValue(Result.ko([new Error('Processing failed')]));
 
       await service.forceReprocessAll([source]);
 

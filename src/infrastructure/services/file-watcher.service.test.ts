@@ -1,3 +1,4 @@
+import { aWatchSource } from '@/domain/watch-source.entity.test-utils';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Test, TestingModule } from '@nestjs/testing';
 import * as chokidar from 'chokidar';
@@ -7,7 +8,6 @@ import { Result } from '../../utils/result';
 import { AppEventEmitter } from '../app-event-emitter';
 import { ConfigurationService } from '../config/configuration.service';
 import { BasePinoLogger } from '../logging/base-pino-logger';
-import { aWatchSource } from './config/watch-source-config.test-utils';
 import { FileWatcherService } from './file-watcher.service';
 import { MnemosyneClient } from './mnemosyne-client.service';
 
@@ -321,7 +321,7 @@ describe('FileWatcherService', () => {
       // First call succeeds, second fails
       mockMnemosyneClient.registerBank
         .mockResolvedValueOnce(Result.ok(undefined as unknown as void))
-        .mockResolvedValueOnce(Result.ko(new Error('connection refused')));
+        .mockResolvedValueOnce(Result.ko([new Error('connection refused')]));
 
       await service.onApplicationBootstrap();
 
@@ -357,7 +357,7 @@ describe('FileWatcherService', () => {
     it('does not block startup when all registrations fail', async () => {
       const sources = [aWatchSource({ id: 'vault', memoryBank: 'vault', description: 'Vault' })];
       configService.getWatchSources.mockReturnValue(sources);
-      mockMnemosyneClient.registerBank.mockResolvedValue(Result.ko(new Error('MCP error')));
+      mockMnemosyneClient.registerBank.mockResolvedValue(Result.ko([new Error('MCP error')]));
 
       await service.onApplicationBootstrap();
 

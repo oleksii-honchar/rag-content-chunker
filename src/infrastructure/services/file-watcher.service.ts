@@ -58,7 +58,7 @@ export class FileWatcherService implements OnApplicationBootstrap, OnApplication
         );
       } else {
         this.logger.warn(
-          `Failed to register memory bank: id="${source.id}", memoryBank="${source.memoryBank}", error="${result.getError().message}"`,
+          `Failed to register memory bank: id="${source.id}", memoryBank="${source.memoryBank}", error="${result.getFormattedErrors()}"`,
         );
       }
     }
@@ -72,7 +72,7 @@ export class FileWatcherService implements OnApplicationBootstrap, OnApplication
       const startResult = await this.startWatchingSource(source);
       if (startResult.isKo()) {
         this.logger.error(
-          `Failed to start watching source: id="${source.id}", error="${startResult.getError().message}"`,
+          `Failed to start watching source: id="${source.id}", error="${startResult.getFormattedErrors()}"`,
         );
       }
     }
@@ -141,7 +141,7 @@ export class FileWatcherService implements OnApplicationBootstrap, OnApplication
     this.logger.debug(`File changed; path="${filePath}", source="${sourceId}"`);
     const addedResult = FileChange.add(filePath);
     if (addedResult.isOk()) {
-      const fileChange = addedResult.getAggregate();
+      const fileChange = addedResult.getValue();
       const changeResult = fileChange.change();
       if (changeResult.isOk()) {
         this.eventEmitter.publishMany(changeResult.getEvents());
@@ -153,7 +153,7 @@ export class FileWatcherService implements OnApplicationBootstrap, OnApplication
     this.logger.debug(`File deleted; path="${filePath}", source="${sourceId}"`);
     const addedResult = FileChange.add(filePath);
     if (addedResult.isOk()) {
-      const fileChange = addedResult.getAggregate();
+      const fileChange = addedResult.getValue();
       const deleteResult = fileChange.delete();
       if (deleteResult.isOk()) {
         this.eventEmitter.publishMany(deleteResult.getEvents());

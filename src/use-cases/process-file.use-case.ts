@@ -72,14 +72,14 @@ export class ProcessFileUseCase extends BaseUseCase<ProcessFileParams, void> {
           result = await this.handleDelete(params);
           break;
         default:
-          result = Result.ko(
+          result = Result.ko([
             new ErrorWithDetails(`Unknown event type: ${params.eventType}`, 'UnknownEventType'),
-          );
+          ]);
       }
 
       if (result.isKo()) {
         this.logger.error(
-          `File processing failed: path="${params.filePath}", event="${params.eventType}", error="${result.getError().message}"`,
+          `File processing failed: path="${params.filePath}", event="${params.eventType}", error="${result.getFormattedErrors()}"`,
         );
       }
     });
@@ -96,11 +96,11 @@ export class ProcessFileUseCase extends BaseUseCase<ProcessFileParams, void> {
       this.logger.error(
         `Failed to read file: path="${params.filePath}", error="${error instanceof Error ? error.message : String(error)}"`,
       );
-      return Result.ko(
+      return Result.ko([
         new ErrorWithDetails(error instanceof Error ? error.message : String(error), 'FileReadError', {
           filePath: params.filePath,
         }),
-      );
+      ]);
     }
 
     // Chunk content
@@ -113,7 +113,7 @@ export class ProcessFileUseCase extends BaseUseCase<ProcessFileParams, void> {
 
     if (chunksResult.isKo()) {
       this.logger.error(
-        `Failed to chunk content: path="${params.filePath}", error="${chunksResult.getError().message}"`,
+        `Failed to chunk content: path="${params.filePath}", error="${chunksResult.getFormattedErrors()}"`,
       );
       return chunksResult as unknown as Result<void>;
     }
@@ -138,7 +138,7 @@ export class ProcessFileUseCase extends BaseUseCase<ProcessFileParams, void> {
 
     if (ingestResult.isKo()) {
       this.logger.error(
-        `Failed to ingest chunks: path="${params.filePath}", error="${ingestResult.getError().message}"`,
+        `Failed to ingest chunks: path="${params.filePath}", error="${ingestResult.getFormattedErrors()}"`,
       );
       return ingestResult as unknown as Result<void>;
     }
@@ -169,7 +169,7 @@ export class ProcessFileUseCase extends BaseUseCase<ProcessFileParams, void> {
         if (result.isKo()) {
           failedCount++;
           this.logger.warn(
-            `Failed to forget memory; memoryId="${memoryId}", memoryBank="${params.memoryBank}", error="${result.getError().message}"`,
+            `Failed to forget memory; memoryId="${memoryId}", memoryBank="${params.memoryBank}", error="${result.getFormattedErrors()}"`,
           );
         }
       } catch (error) {

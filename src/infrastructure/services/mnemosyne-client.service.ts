@@ -5,8 +5,8 @@ import { ContentChunk } from '../../domain/content-chunk.entity';
 import { ErrorWithDetails } from '../../utils/error-with-details';
 import { Result } from '../../utils/result';
 import { ConfigurationService } from '../config/configuration.service';
+import { MnemosyneRememberDto } from '../dto/mnemosyne-remember.dto';
 import { BasePinoLogger } from '../logging/base-pino-logger';
-import { MnemosyneRememberDto } from './mnemosyne-remember.dto';
 
 /**
  * JSON-RPC 2.0 request sent to the MCP server.
@@ -110,7 +110,7 @@ export class MnemosyneClient implements OnApplicationBootstrap {
       // MCP protocol requires initialize handshake before tool calls
       const initResult = await this.initializeProtocol();
       if (!initResult.isOk()) {
-        this.logger.warn(`MCP init failed, will retry on use: ${initResult.getError().message}`);
+        this.logger.warn(`MCP init failed, will retry on use: ${initResult.getFormattedErrors()}`);
         return Result.ok(undefined as unknown as void);
       }
 
@@ -152,7 +152,7 @@ export class MnemosyneClient implements OnApplicationBootstrap {
       this.mcpSessionId = response._sessionId ?? null;
 
       if (response.error) {
-        return Result.ko(new ErrorWithDetails(`MCP init error: ${response.error.message}`, 'McpInitError'));
+        return Result.ko([new ErrorWithDetails(`MCP init error: ${response.error.message}`, 'McpInitError')]);
       }
 
       // Send initialized notification (fire-and-forget POST)
@@ -164,9 +164,9 @@ export class MnemosyneClient implements OnApplicationBootstrap {
 
       return Result.ok(undefined as unknown as void);
     } catch (error) {
-      return Result.ko(
+      return Result.ko([
         new ErrorWithDetails(error instanceof Error ? error.message : String(error), 'McpInitError'),
-      );
+      ]);
     }
   }
 
@@ -271,7 +271,7 @@ export class MnemosyneClient implements OnApplicationBootstrap {
       `Failed to remember chunk after ${this.maxRetries} retries: id="${chunk.id}", lastError="${lastError?.message}"`,
     );
 
-    return Result.ko(lastError || new ErrorWithDetails('Failed to remember chunk', 'RememberChunkFailed'));
+    return Result.ko([lastError || new ErrorWithDetails('Failed to remember chunk', 'RememberChunkFailed')]);
   }
 
   /**
@@ -299,7 +299,7 @@ export class MnemosyneClient implements OnApplicationBootstrap {
       const response = await this.sendRequest(request);
 
       if (response.error) {
-        return Result.ko(new ErrorWithDetails(`MCP error: ${response.error.message}`, 'McpToolError'));
+        return Result.ko([new ErrorWithDetails(`MCP error: ${response.error.message}`, 'McpToolError')]);
       }
 
       // Parse MCP response — result.content[0].text contains JSON from Mnemosyne
@@ -314,14 +314,14 @@ export class MnemosyneClient implements OnApplicationBootstrap {
           ? parsed.error
           : JSON.stringify(parsed) || 'Unexpected forget response';
       this.logger.warn(`Unexpected forget response: memoryId="${memoryId}", response="${errMsg}"`);
-      return Result.ko(new ErrorWithDetails(errMsg, 'UnexpectedMcpResponse'));
+      return Result.ko([new ErrorWithDetails(errMsg, 'UnexpectedMcpResponse')]);
     } catch (error) {
       this.logger.error(
         `Failed to forget memory: memoryId="${memoryId}", error="${error instanceof Error ? error.message : String(error)}"`,
       );
-      return Result.ko(
+      return Result.ko([
         new ErrorWithDetails(error instanceof Error ? error.message : String(error), 'ForgetMemoryError'),
-      );
+      ]);
     }
   }
 
@@ -350,7 +350,7 @@ export class MnemosyneClient implements OnApplicationBootstrap {
       const response = await this.sendRequest(request);
 
       if (response.error) {
-        return Result.ko(new ErrorWithDetails(`MCP error: ${response.error.message}`, 'McpToolError'));
+        return Result.ko([new ErrorWithDetails(`MCP error: ${response.error.message}`, 'McpToolError')]);
       }
 
       // Parse MCP response — result.content[0].text contains JSON from Mnemosyne
@@ -365,17 +365,17 @@ export class MnemosyneClient implements OnApplicationBootstrap {
           ? parsed.error
           : JSON.stringify(parsed) || 'Unexpected register_bank response';
       this.logger.warn(`Unexpected register_bank response: name="${name}", response="${errMsg}"`);
-      return Result.ko(new ErrorWithDetails(errMsg, 'UnexpectedMcpResponse'));
+      return Result.ko([new ErrorWithDetails(errMsg, 'UnexpectedMcpResponse')]);
     } catch (error) {
       this.logger.error(
         `Failed to register memory bank: name="${name}", error="${error instanceof Error ? error.message : String(error)}"`,
       );
-      return Result.ko(
+      return Result.ko([
         new ErrorWithDetails(
           error instanceof Error ? error.message : String(error),
           'MemoryBankRegistrationError',
         ),
-      );
+      ]);
     }
   }
 
@@ -401,9 +401,9 @@ export class MnemosyneClient implements OnApplicationBootstrap {
       return Result.ok(healthy);
     } catch (error) {
       this.logger.debug(`Health check failed: ${error instanceof Error ? error.message : String(error)}`);
-      return Result.ko(
+      return Result.ko([
         new ErrorWithDetails(error instanceof Error ? error.message : String(error), 'HealthCheckError'),
-      );
+      ]);
     }
   }
 
@@ -443,7 +443,7 @@ export class MnemosyneClient implements OnApplicationBootstrap {
         const response = await this.sendRequest(request);
 
         if (response.error) {
-          return Result.ko(new ErrorWithDetails(`MCP error: ${response.error.message}`, 'McpToolError'));
+          return Result.ko([new ErrorWithDetails(`MCP error: ${response.error.message}`, 'McpToolError')]);
         }
 
         // Parse MCP response — result.content[0].text contains JSON from Mnemosyne
@@ -452,7 +452,7 @@ export class MnemosyneClient implements OnApplicationBootstrap {
           const errMsg =
             (typeof parsed.message === 'string' ? parsed.message : JSON.stringify(parsed.message)) ||
             'Recall error';
-          return Result.ko(new ErrorWithDetails(errMsg, 'RecallError'));
+          return Result.ko([new ErrorWithDetails(errMsg, 'RecallError')]);
         }
 
         const rawResults = parsed.results;
@@ -476,9 +476,9 @@ export class MnemosyneClient implements OnApplicationBootstrap {
 
       return Result.ok([]);
     } catch (error) {
-      return Result.ko(
+      return Result.ko([
         new ErrorWithDetails(error instanceof Error ? error.message : String(error), 'RecallError'),
-      );
+      ]);
     }
   }
 

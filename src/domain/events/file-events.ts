@@ -24,7 +24,7 @@ export class FileAddedEvent implements DomainEvent {
 
   static of(path: string): Result<FileAddedEvent> {
     if (!path || typeof path !== 'string') {
-      return Result.ko(new ErrorWithDetails('File path must be a non-empty string', 'InvalidFilePath'));
+      return Result.ko([new ErrorWithDetails('File path must be a non-empty string', 'InvalidFilePath')]);
     }
     return Result.ok(new FileAddedEvent(path));
   }
@@ -43,7 +43,7 @@ export class FileChangedEvent implements DomainEvent {
 
   static of(path: string): Result<FileChangedEvent> {
     if (!path || typeof path !== 'string') {
-      return Result.ko(new ErrorWithDetails('File path must be a non-empty string', 'InvalidFilePath'));
+      return Result.ko([new ErrorWithDetails('File path must be a non-empty string', 'InvalidFilePath')]);
     }
     return Result.ok(new FileChangedEvent(path));
   }

@@ -3,9 +3,9 @@
  * Provides mock implementations for testing without real Prisma database.
  */
 
-import { FileMemoryTracker } from '../domain/file-memory-tracker.aggregate';
-import { generateId } from '../utils/big-endian-id';
-import { faker } from '../utils/test-faker';
+import { FileMemoryTracker } from '@/domain/file-memory-tracker.aggregate';
+import { generateId } from '@/utils/big-endian-id';
+import { faker } from '@/utils/test-faker';
 
 /**
  * Aggregate-level test builder for FileMemoryTracker domain entity.
@@ -28,7 +28,7 @@ export function aFileMemoryTracker(
     memoryBank: faker.word.adjective(),
     ...overrides,
   });
-  return result.getAggregate();
+  return result.getValue();
 }
 
 export interface PrismaFileMemoryTrackerRecord {
@@ -84,17 +84,17 @@ export function aFileMemoryTrackerRepositoryService() {
     findOrCreate: jest
       .fn()
       .mockImplementation((tracker: FileMemoryTracker) =>
-        Promise.resolve({ isOk: () => true, getAggregate: () => tracker }),
+        Promise.resolve({ isOk: () => true, getValue: () => tracker }),
       ),
     save: jest
       .fn()
       .mockImplementation((tracker: FileMemoryTracker) =>
-        Promise.resolve({ isOk: () => true, getAggregate: () => tracker }),
+        Promise.resolve({ isOk: () => true, getValue: () => tracker }),
       ),
     upsert: jest
       .fn()
       .mockImplementation((tracker: FileMemoryTracker) =>
-        Promise.resolve({ isOk: () => true, getAggregate: () => tracker }),
+        Promise.resolve({ isOk: () => true, getValue: () => tracker }),
       ),
     getMemoryIds: jest.fn().mockResolvedValue([]),
     deleteByFilePath: jest.fn().mockResolvedValue(undefined),

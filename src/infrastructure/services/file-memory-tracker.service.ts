@@ -31,18 +31,18 @@ export class FileMemoryTrackerService {
       throw new Error('Invalid FileMemoryTracker: ' + newTracker.getErrors()[0].message);
     }
 
-    const findOrCreateResult = await this.repository.findOrCreate(newTracker.getAggregate());
+    const findOrCreateResult = await this.repository.findOrCreate(newTracker.getValue());
     if (findOrCreateResult.isKo()) {
       throw new Error('Failed to find or create FileMemoryTracker');
     }
-    const tracker = findOrCreateResult.getAggregate();
+    const tracker = findOrCreateResult.getValue();
 
     // Use aggregate business logic for remember
     const remembered = tracker.remember(memoryId);
     if (remembered.isKo()) {
       throw new Error('Failed to remember memory: ' + remembered.getErrors()[0].message);
     }
-    const updatedTracker = remembered.getAggregate();
+    const updatedTracker = remembered.getValue();
 
     // Persist via upsert
     const savedResult = await this.repository.upsert(updatedTracker);
@@ -50,7 +50,7 @@ export class FileMemoryTrackerService {
       throw new Error('Failed to persist FileMemoryTracker');
     }
 
-    return savedResult.getAggregate();
+    return savedResult.getValue();
   }
 
   /**
@@ -60,18 +60,18 @@ export class FileMemoryTrackerService {
    */
   async forgetMemory(filePath: string, memoryId: string): Promise<FileMemoryTracker | null> {
     const trackerResult = await this.repository.findByFilePath(filePath);
-    if (!trackerResult.isOk() || !trackerResult.getAggregate()) {
+    if (!trackerResult.isOk() || !trackerResult.getValue()) {
       return null;
     }
 
-    const tracker = trackerResult.getAggregate() as FileMemoryTracker;
+    const tracker = trackerResult.getValue()!;
 
     // Use aggregate business logic for forget
     const forgotten = tracker.forget(memoryId);
     if (forgotten.isKo()) {
       throw new Error('Failed to forget memory: ' + forgotten.getErrors()[0].message);
     }
-    const updatedTracker = forgotten.getAggregate();
+    const updatedTracker = forgotten.getValue();
 
     // Persist via upsert
     const savedResult = await this.repository.upsert(updatedTracker);
@@ -79,7 +79,7 @@ export class FileMemoryTrackerService {
       throw new Error('Failed to persist FileMemoryTracker');
     }
 
-    return savedResult.getAggregate();
+    return savedResult.getValue();
   }
 
   async getMemoryIds(filePath: string): Promise<string[]> {

@@ -64,7 +64,7 @@ describe('IngestChunkUseCase', () => {
 
       mockMnemosyneClientService.remember
         .mockResolvedValueOnce(Result.ok({ memory_id: 'mem-1', status: 'stored' }))
-        .mockResolvedValueOnce(Result.ko(new Error('MCP error')))
+        .mockResolvedValueOnce(Result.ko([new Error('MCP error')]))
         .mockResolvedValueOnce(Result.ok({ memory_id: 'mem-3', status: 'stored' }));
 
       const result = await useCase.execute({
@@ -78,12 +78,12 @@ describe('IngestChunkUseCase', () => {
 
     it('should return error when all chunks fail', async () => {
       const chunks: ContentChunk[] = [aContentChunk({ chunkIndex: 0 }), aContentChunk({ chunkIndex: 1 })];
-      mockMnemosyneClientService.remember.mockResolvedValue(Result.ko(new Error('Connection refused')));
+      mockMnemosyneClientService.remember.mockResolvedValue(Result.ko([new Error('Connection refused')]));
 
       const result = await useCase.execute({ chunks, sourceId: 'test-source' });
 
       expect(result.isKo()).toBe(true);
-      const error = result.getError();
+      const error = result.getErrors()[0];
       expect(error.message).toContain('Failed to ingest all 2 chunks');
     });
 
@@ -218,7 +218,7 @@ describe('IngestChunkUseCase', () => {
 
     it('should NOT call trackMemory when MnemosyneClient.remember fails', async () => {
       const chunk = aContentChunk({ chunkIndex: 0, memoryBank: 'vault' });
-      mockMnemosyneClientService.remember.mockResolvedValue(Result.ko(new Error('MCP error')));
+      mockMnemosyneClientService.remember.mockResolvedValue(Result.ko([new Error('MCP error')]));
 
       await useCase.execute({
         chunks: [chunk],
@@ -249,7 +249,7 @@ describe('IngestChunkUseCase', () => {
 
       mockMnemosyneClientService.remember
         .mockResolvedValueOnce(Result.ok({ memory_id: 'mem-1', status: 'stored' }))
-        .mockResolvedValueOnce(Result.ko(new Error('MCP error')))
+        .mockResolvedValueOnce(Result.ko([new Error('MCP error')]))
         .mockResolvedValueOnce(Result.ok({ memory_id: 'mem-3', status: 'stored' }));
       mockFileMemoryTrackerService.trackMemory.mockResolvedValue(undefined);
 

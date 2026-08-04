@@ -6,6 +6,7 @@ import { ContentChunk } from '../domain/content-chunk.entity';
 import { ConfigurationService } from '../infrastructure/config/configuration.service';
 import { BasePinoLogger } from '../infrastructure/logging/base-pino-logger';
 import { BaseUseCase } from '../utils/base-use-case';
+import { ErrorWithDetails } from '../utils/error-with-details';
 import { Result } from '../utils/result';
 
 const chunkContentParamsSchema = z.object({
@@ -35,7 +36,12 @@ export class ChunkContentUseCase extends BaseUseCase<ChunkContentParams, Content
   protected validateParams(params: ChunkContentParams): Result<ChunkContentParams> {
     const parsed = chunkContentParamsSchema.safeParse(params);
     if (!parsed.success) {
-      return Result.ko(new Error('Invalid chunk content params: ' + parsed.error.message));
+      return Result.ko([
+        new ErrorWithDetails(
+          'Invalid chunk content params: ' + parsed.error.message,
+          'InvalidChunkContentParams',
+        ),
+      ]);
     }
     return Result.ok(parsed.data);
   }
@@ -53,7 +59,7 @@ export class ChunkContentUseCase extends BaseUseCase<ChunkContentParams, Content
 
     if (chunksResult.isKo()) {
       this.logger.error(
-        `Mastra chunking failed: path="${params.filePath}", error="${chunksResult.getError().message}"`,
+        `Mastra chunking failed: path="${params.filePath}", error="${chunksResult.getFormattedErrors()}"`,
       );
       return chunksResult;
     }
@@ -79,7 +85,7 @@ export class ChunkContentUseCase extends BaseUseCase<ChunkContentParams, Content
 
     // Fallback: log error and return raw chunks (resilient)
     this.logger.error(
-      `Enhancement pipeline failed, returning raw chunks: path="${params.filePath}", error="${enhancementResult.getError().message}"`,
+      `Enhancement pipeline failed, returning raw chunks: path="${params.filePath}", error="${enhancementResult.getFormattedErrors()}"`,
     );
     return Result.ok(chunks);
   }

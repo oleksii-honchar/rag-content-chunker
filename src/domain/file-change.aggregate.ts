@@ -33,7 +33,12 @@ export class FileChange {
     if (eventResult.isKo()) {
       return Result.ko(eventResult.getErrors());
     }
-    return FileChange.of({ filePath, status: FILE_CHANGE_STATUS.ADDED });
+    const event = eventResult.getValue();
+    const aggregateResult = FileChange.of({ filePath, status: FILE_CHANGE_STATUS.ADDED });
+    if (aggregateResult.isKo()) {
+      return aggregateResult;
+    }
+    return Result.ok(aggregateResult.getValue(), [event]);
   }
 
   /**
@@ -44,10 +49,15 @@ export class FileChange {
     if (eventResult.isKo()) {
       return Result.ko(eventResult.getErrors());
     }
-    return FileChange.of({
+    const event = eventResult.getValue();
+    const aggregateResult = FileChange.of({
       ...this.props,
       status: FILE_CHANGE_STATUS.CHANGED,
     });
+    if (aggregateResult.isKo()) {
+      return aggregateResult;
+    }
+    return Result.ok(aggregateResult.getValue(), [event]);
   }
 
   /**
@@ -58,10 +68,15 @@ export class FileChange {
     if (eventResult.isKo()) {
       return Result.ko(eventResult.getErrors());
     }
-    return FileChange.of({
+    const event = eventResult.getValue();
+    const aggregateResult = FileChange.of({
       ...this.props,
       status: FILE_CHANGE_STATUS.DELETED,
     });
+    if (aggregateResult.isKo()) {
+      return aggregateResult;
+    }
+    return Result.ok(aggregateResult.getValue(), [event]);
   }
 
   static of(props: FileChangeProps): Result<FileChange> {

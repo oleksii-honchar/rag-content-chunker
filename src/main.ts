@@ -118,7 +118,7 @@ async function bootstrap(): Promise<void> {
     if (startResult.isOk()) {
       logger.info('File watcher started. Watching for changes...');
     } else {
-      logger.error(`Failed to start file watcher: ${startResult.getError().message}`);
+      logger.error(`Failed to start file watcher: ${startResult.getFormattedErrors()}`);
     }
   }
 

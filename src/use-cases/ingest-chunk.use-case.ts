@@ -30,12 +30,12 @@ export class IngestChunkUseCase extends BaseUseCase<IngestChunkParams, void> {
   protected validateParams(params: IngestChunkParams): Result<IngestChunkParams> {
     const parsed = ingestChunkParamsSchema.safeParse(params);
     if (!parsed.success) {
-      return Result.ko(
+      return Result.ko([
         new ErrorWithDetails(
           'Invalid ingest chunk params: ' + parsed.error.message,
           'InvalidIngestChunkParams',
         ),
-      );
+      ]);
     }
     return Result.ok(parsed.data);
   }
@@ -82,9 +82,11 @@ export class IngestChunkUseCase extends BaseUseCase<IngestChunkParams, void> {
           failureCount++;
           errors.push({
             chunkId: chunk.id,
-            error: result.getError().message,
+            error: result.getFormattedErrors(),
           });
-          this.logger.error(`Chunk ingestion failed; id="${chunk.id}", error="${result.getError().message}"`);
+          this.logger.error(
+            `Chunk ingestion failed; id="${chunk.id}", error="${result.getFormattedErrors()}"`,
+          );
         }
       } catch (error) {
         failureCount++;
@@ -103,12 +105,12 @@ export class IngestChunkUseCase extends BaseUseCase<IngestChunkParams, void> {
     );
 
     if (failureCount > 0 && successCount === 0) {
-      return Result.ko(
+      return Result.ko([
         new ErrorWithDetails(
           `Failed to ingest all ${failureCount} chunks: ${errors.map(e => e.error).join('; ')}`,
           'IngestionFailed',
         ),
-      );
+      ]);
     }
 
     if (failureCount > 0) {

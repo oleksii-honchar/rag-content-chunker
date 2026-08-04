@@ -58,7 +58,7 @@ export class ForceReprocessService {
 
           if (result.isKo()) {
             this.logger.error(
-              `File reprocessing failed: path="${file}", error="${result.getError().message}"`,
+              `File reprocessing failed: path="${file}", error="${result.getFormattedErrors()}"`,
             );
           }
         });

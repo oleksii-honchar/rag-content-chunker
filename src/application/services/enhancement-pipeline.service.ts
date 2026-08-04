@@ -1,8 +1,9 @@
+import { ContentChunk } from '@/domain/content-chunk.entity';
+import { EnhancementConfig } from '@/infrastructure/config/config-schemas';
+import { BasePinoLogger } from '@/infrastructure/logging/base-pino-logger';
+import { ErrorWithDetails } from '@/utils/error-with-details';
+import { Result } from '@/utils/result';
 import { Injectable } from '@nestjs/common';
-import { ContentChunk } from '../../domain/content-chunk.entity';
-import { EnhancementConfig } from '../../infrastructure/config/config-schemas';
-import { BasePinoLogger } from '../../infrastructure/logging/base-pino-logger';
-import { Result } from '../../utils/result';
 import { ImportanceScoringService } from './importance-scoring.service';
 import { TagExtractionService } from './tag-extraction.service';
 
@@ -56,13 +57,15 @@ export class EnhancementPipelineService {
       } else {
         this.logger.error(
           `Chunk enhancement failed entirely for chunk; chunkId=${chunk.id}, sourceId=${sourceId}`,
-          { chunkId: chunk.id, sourceId, error: enhancedResult.getError().message },
+          { chunkId: chunk.id, sourceId, error: enhancedResult.getFormattedErrors() },
         );
       }
     }
 
     if (allFailed) {
-      return Result.ko(new Error('All chunks failed enhancement validation'));
+      return Result.ko([
+        new ErrorWithDetails('All chunks failed enhancement validation', 'EnhancementValidationFailed'),
+      ]);
     }
 
     return Result.ok(enhancedChunks);

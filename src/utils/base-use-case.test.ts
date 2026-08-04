@@ -49,7 +49,7 @@ class TestUseCase extends BaseUseCase<{ id: string }, string> {
 class FailingValidationUseCase extends BaseUseCase<{ id: string }, string> {
   protected validateParams(params: { id: string }): Result<{ id: string }> {
     if (!params.id) {
-      return Result.ko(new Error('id is required'));
+      return Result.ko([new Error('id is required')]);
     }
     return Result.ok(params);
   }
@@ -101,7 +101,7 @@ describe('BaseUseCase', () => {
       const result = await useCase.execute({ id: '' });
 
       expect(result.isKo()).toBe(true);
-      expect(result.getError().message).toBe('id is required');
+      expect(result.getErrors()[0].message).toBe('id is required');
     });
 
     it('should log error when validation fails', async () => {

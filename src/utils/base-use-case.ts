@@ -4,7 +4,6 @@
  * Simplified for rag-content-chunker — no DEFAULT_PROPERTIES_TO_LOG complexity.
  */
 
-import { ErrorWithDetails } from './error-with-details';
 import { Result } from './result';
 
 export interface BasePinoLogger {
@@ -47,7 +46,7 @@ export abstract class BaseUseCase<TParams, TResult> {
         error: validated.getErrors(),
       };
       this.logger.error(`[use-case] Validation failed: ${requestName}`, metadata);
-      return Result.ko<TResult>(new ErrorWithDetails(validated.getErrors(), 'UseCaseValidationFailed'));
+      return Result.ko(validated.getErrors()) as Result<TResult>;
     }
     const validParams = validated.getValue();
 

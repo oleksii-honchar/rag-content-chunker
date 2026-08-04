@@ -28,7 +28,7 @@ export class ProcessFileCommand implements DomainCommand {
 
   static of(path: string, sourceId: string): Result<ProcessFileCommand> {
     if (!path || !sourceId) {
-      return Result.ko(new ErrorWithDetails('Path and sourceId are required', 'InvalidProcessFileCommand'));
+      return Result.ko([new ErrorWithDetails('Path and sourceId are required', 'InvalidProcessFileCommand')]);
     }
     return Result.ok(new ProcessFileCommand(path, sourceId));
   }

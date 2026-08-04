@@ -157,7 +157,7 @@ describe('ProcessFileUseCase', () => {
       const fileContent = 'Test content';
 
       (fs.readFile as jest.Mock).mockResolvedValue(fileContent);
-      mockChunkContentUseCase.execute.mockResolvedValue(Result.ko(new Error('Chunking failed')));
+      mockChunkContentUseCase.execute.mockResolvedValue(Result.ko([new Error('Chunking failed')]));
 
       mockProcessingQueue.addToQueue.mockImplementation(async task => {
         await task();
@@ -181,7 +181,7 @@ describe('ProcessFileUseCase', () => {
 
       (fs.readFile as jest.Mock).mockResolvedValue(fileContent);
       mockChunkContentUseCase.execute.mockResolvedValue(Result.ok(chunks));
-      mockIngestChunkUseCase.execute.mockResolvedValue(Result.ko(new Error('Ingestion failed')));
+      mockIngestChunkUseCase.execute.mockResolvedValue(Result.ko([new Error('Ingestion failed')]));
 
       mockProcessingQueue.addToQueue.mockImplementation(async task => {
         await task();
@@ -318,7 +318,7 @@ describe('ProcessFileUseCase', () => {
       mockFileMemoryTrackerService.getMemoryIds.mockResolvedValue(memoryIds);
       mockMnemosyneClient.forget
         .mockResolvedValueOnce(Result.ok(undefined as unknown as void))
-        .mockResolvedValueOnce(Result.ko(new Error('MCP error')))
+        .mockResolvedValueOnce(Result.ko([new Error('MCP error')]))
         .mockResolvedValueOnce(Result.ok(undefined as unknown as void));
       mockFileMemoryTrackerService.deleteByFilePath.mockResolvedValue(undefined);
       mockProcessingQueue.addToQueue.mockImplementation(task => task());
