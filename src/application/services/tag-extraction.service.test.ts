@@ -1,52 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ContentChunk, FILE_ROLES } from '../../domain/content-chunk.entity';
+import { aContentChunk } from '../../domain/content-chunk.entity.test-utils';
 import { EnhancementConfig } from '../../infrastructure/config/config-schemas';
+import { DEFAULT_CONFIG } from '../../infrastructure/config/configuration.service';
 import { TagExtractionService } from './tag-extraction.service';
 
 describe('TagExtractionService', () => {
   let service: TagExtractionService;
 
-  const defaultConfig: EnhancementConfig = {
-    maxCharacters: { prose: 200, code: 400, configuration: 300, documentation: 300 },
-    importance: {
-      enabled: true,
-      defaultScore: 0.5,
-      factors: [
-        { name: 'fileRole', weight: 0.4 },
-        { name: 'length', weight: 0.2 },
-        { name: 'keywords', weight: 0.3 },
-        { name: 'header', weight: 0.1 },
-      ],
-    },
-    tags: { enabled: true, maxTags: 10 },
-    source: { includePath: true, includeSection: true, includeMetadata: false },
-  };
-
-  const createChunk = (
-    overrides?: Partial<{
-      text: string;
-      namespace: string;
-      metadata?: Record<string, string>;
-      language?: string;
-    }>,
-  ) => {
-    const props = {
-      id: crypto.randomUUID(),
-      text: 'Test chunk content with some meaningful words for extraction',
-      chunkIndex: 0,
-      totalChunks: 1,
-      sectionHeader: '',
-      breadcrumb: 'root > test',
-      fileRole: FILE_ROLES.DOCS,
-      oversized: false,
-      metadata: {},
-      importance: 0.5,
-      tags: [],
-      namespace: 'default',
-      ...overrides,
-    };
-    return ContentChunk.of(props).getValue();
-  };
+  const defaultConfig: EnhancementConfig = DEFAULT_CONFIG.enhancement;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -59,7 +20,7 @@ describe('TagExtractionService', () => {
   describe('extract', () => {
     describe('disabled tags', () => {
       it('should return empty array when tags are disabled', () => {
-        const chunk = createChunk();
+        const chunk = aContentChunk();
         const config: EnhancementConfig = {
           ...defaultConfig,
           tags: { enabled: false, maxTags: 10 },
@@ -73,7 +34,7 @@ describe('TagExtractionService', () => {
 
     describe('file-type tag', () => {
       it('should add file-type:typescript from language', () => {
-        const chunk = createChunk({ language: 'typescript', text: 'const x = 1;' });
+        const chunk = aContentChunk({ language: 'typescript', text: 'const x = 1;' });
 
         const tags = service.extract(chunk, defaultConfig);
 
@@ -81,7 +42,7 @@ describe('TagExtractionService', () => {
       });
 
       it('should add file-type:markdown from language', () => {
-        const chunk = createChunk({ language: 'markdown', text: '# Hello World' });
+        const chunk = aContentChunk({ language: 'markdown', text: '# Hello World' });
 
         const tags = service.extract(chunk, defaultConfig);
 
@@ -89,7 +50,7 @@ describe('TagExtractionService', () => {
       });
 
       it('should add file-type from metadata extension when language is not set', () => {
-        const chunk = createChunk({
+        const chunk = aContentChunk({
           metadata: { extension: 'json' },
           text: '{"key": "value"}',
         });
@@ -100,7 +61,7 @@ describe('TagExtractionService', () => {
       });
 
       it('should prefer language over metadata extension', () => {
-        const chunk = createChunk({
+        const chunk = aContentChunk({
           language: 'typescript',
           metadata: { extension: 'json' },
           text: 'const x = 1;',
@@ -113,7 +74,7 @@ describe('TagExtractionService', () => {
       });
 
       it('should not add file-type tag when neither language nor extension is available', () => {
-        const chunk = createChunk({ text: 'some plain text content here' });
+        const chunk = aContentChunk({ text: 'some plain text content here' });
 
         const tags = service.extract(chunk, defaultConfig);
 
@@ -122,24 +83,24 @@ describe('TagExtractionService', () => {
     });
 
     describe('location tag', () => {
-      it('should add location tag from chunk namespace', () => {
-        const chunk = createChunk({ namespace: 'vault-docs' });
+      it('should add location tag from chunk memoryBank', () => {
+        const chunk = aContentChunk({ memoryBank: 'vault-docs' });
 
         const tags = service.extract(chunk, defaultConfig);
 
         expect(tags).toContain('location:vault-docs');
       });
 
-      it('should add location tag with default namespace', () => {
-        const chunk = createChunk({ namespace: 'default' });
+      it('should add location tag with default memoryBank', () => {
+        const chunk = aContentChunk({ memoryBank: 'default' });
 
         const tags = service.extract(chunk, defaultConfig);
 
         expect(tags).toContain('location:default');
       });
 
-      it('should add location tag with complex namespace', () => {
-        const chunk = createChunk({ namespace: 'agent-sessions/26/07/28' });
+      it('should add location tag with complex memoryBank', () => {
+        const chunk = aContentChunk({ memoryBank: 'agent-sessions/26/07/28' });
 
         const tags = service.extract(chunk, defaultConfig);
 
@@ -149,7 +110,7 @@ describe('TagExtractionService', () => {
 
     describe('keyword extraction', () => {
       it('should extract significant words from text', () => {
-        const chunk = createChunk({
+        const chunk = aContentChunk({
           text: 'This implementation provides authentication middleware for the application',
         });
 
@@ -163,7 +124,7 @@ describe('TagExtractionService', () => {
       });
 
       it('should filter out stopwords', () => {
-        const chunk = createChunk({
+        const chunk = aContentChunk({
           text: 'the a an is it in on at to for of and or but not this that was are',
         });
 
@@ -197,7 +158,7 @@ describe('TagExtractionService', () => {
       });
 
       it('should filter out words shorter than 4 characters', () => {
-        const chunk = createChunk({
+        const chunk = aContentChunk({
           text: 'the big red dog ran fast but the cat sat on the mat now',
         });
 
@@ -217,7 +178,7 @@ describe('TagExtractionService', () => {
       });
 
       it('should limit extracted keywords to 5', () => {
-        const chunk = createChunk({
+        const chunk = aContentChunk({
           text: 'This implementation provides authentication middleware configuration validation parsing serialization',
         });
 
@@ -229,7 +190,7 @@ describe('TagExtractionService', () => {
       });
 
       it('should take first 5 unique significant words in order', () => {
-        const chunk = createChunk({
+        const chunk = aContentChunk({
           text: 'authentication authorization middleware configuration validation parsing serialization deserialization',
         });
 
@@ -245,7 +206,7 @@ describe('TagExtractionService', () => {
       });
 
       it('should lowercase extracted keywords', () => {
-        const chunk = createChunk({
+        const chunk = aContentChunk({
           text: 'Authentication Middleware CONFIGURATION',
         });
 
@@ -259,7 +220,7 @@ describe('TagExtractionService', () => {
       });
 
       it('should deduplicate keywords', () => {
-        const chunk = createChunk({
+        const chunk = aContentChunk({
           text: 'authentication authentication authentication middleware middleware configuration',
         });
 
@@ -270,7 +231,7 @@ describe('TagExtractionService', () => {
       });
 
       it('should handle text with punctuation and special characters', () => {
-        const chunk = createChunk({
+        const chunk = aContentChunk({
           text: 'The implementation (v2.0) provides authentication, middleware; configuration! validation...',
         });
 
@@ -284,7 +245,7 @@ describe('TagExtractionService', () => {
       });
 
       it('should return no keyword tags when text has only stopwords and short words', () => {
-        const chunk = createChunk({
+        const chunk = aContentChunk({
           text: 'the a an is it in on at to',
         });
 
@@ -297,7 +258,7 @@ describe('TagExtractionService', () => {
 
     describe('metadata tags', () => {
       it('should extract tags from Mastra keywords metadata', () => {
-        const chunk = createChunk({
+        const chunk = aContentChunk({
           metadata: { keywords: 'billing, payroll, compensation' },
           text: 'This is some content about billing',
         });
@@ -310,7 +271,7 @@ describe('TagExtractionService', () => {
       });
 
       it('should extract tags from Mastra keywords with different separators', () => {
-        const chunk = createChunk({
+        const chunk = aContentChunk({
           metadata: { keywords: 'billing; payroll | compensation' },
           text: 'content',
         });
@@ -323,9 +284,10 @@ describe('TagExtractionService', () => {
       });
 
       it('should not add metadata tags when keywords metadata is not present', () => {
-        const chunk = createChunk({
+        const chunk = aContentChunk({
           metadata: { extension: 'ts' },
           text: 'xyz',
+          memoryBank: 'default',
         });
 
         const tags = service.extract(chunk, defaultConfig);
@@ -337,7 +299,7 @@ describe('TagExtractionService', () => {
       });
 
       it('should handle empty keywords metadata', () => {
-        const chunk = createChunk({
+        const chunk = aContentChunk({
           metadata: { keywords: '' },
           text: 'content',
         });
@@ -351,9 +313,9 @@ describe('TagExtractionService', () => {
 
     describe('maxTags enforcement', () => {
       it('should enforce maxTags default of 10', () => {
-        const chunk = createChunk({
+        const chunk = aContentChunk({
           language: 'typescript',
-          namespace: 'my-namespace',
+          memoryBank: 'my-memoryBank',
           metadata: { keywords: 'meta1, meta2, meta3, meta4, meta5, meta6, meta7, meta8' },
           text: 'one two three four five six seven eight nine ten eleven twelve thirteen',
         });
@@ -364,9 +326,9 @@ describe('TagExtractionService', () => {
       });
 
       it('should enforce custom maxTags limit', () => {
-        const chunk = createChunk({
+        const chunk = aContentChunk({
           language: 'typescript',
-          namespace: 'my-namespace',
+          memoryBank: 'my-memoryBank',
           metadata: { keywords: 'meta1, meta2, meta3, meta4, meta5, meta6' },
           text: 'keyword1 keyword2 keyword3 keyword4 keyword5',
         });
@@ -382,9 +344,9 @@ describe('TagExtractionService', () => {
       });
 
       it('should prioritize file-type and location tags over keywords when truncating', () => {
-        const chunk = createChunk({
+        const chunk = aContentChunk({
           language: 'typescript',
-          namespace: 'my-namespace',
+          memoryBank: 'my-memoryBank',
           text: 'keyword1 keyword2 keyword3 keyword4 keyword5 keyword6 keyword7 keyword8 keyword9 keyword10',
         });
 
@@ -398,14 +360,14 @@ describe('TagExtractionService', () => {
         // file-type and location tags have highest priority — preserved
         // keywords are dropped first when exceeding maxTags
         expect(tags).toContain('file-type:typescript');
-        expect(tags).toContain('location:my-namespace');
+        expect(tags).toContain('location:my-memoryBank');
         expect(tags.length).toBeLessThanOrEqual(3);
       });
 
       it('should prioritize location and file-type tags when at maxTags', () => {
-        const chunk = createChunk({
+        const chunk = aContentChunk({
           language: 'typescript',
-          namespace: 'my-namespace',
+          memoryBank: 'my-memoryBank',
           text: 'keyword1 keyword2 keyword3 keyword4 keyword5 keyword6 keyword7 keyword8 keyword9 keyword10',
         });
 
@@ -418,14 +380,14 @@ describe('TagExtractionService', () => {
 
         // file-type and location have highest priority — both preserved
         expect(tags).toContain('file-type:typescript');
-        expect(tags).toContain('location:my-namespace');
+        expect(tags).toContain('location:my-memoryBank');
         expect(tags.length).toBe(2);
       });
 
       it('should drop keywords before dropping location/file-type tags', () => {
-        const chunk = createChunk({
+        const chunk = aContentChunk({
           language: 'typescript',
-          namespace: 'my-namespace',
+          memoryBank: 'my-memoryBank',
           text: 'keyword1 keyword2 keyword3 keyword4 keyword5 keyword6 keyword7 keyword8 keyword9 keyword10',
         });
 
@@ -438,7 +400,7 @@ describe('TagExtractionService', () => {
 
         // file-type and location preserved, plus some keywords
         expect(tags).toContain('file-type:typescript');
-        expect(tags).toContain('location:my-namespace');
+        expect(tags).toContain('location:my-memoryBank');
         expect(tags).toContain('keyword1');
         expect(tags).toContain('keyword2');
         expect(tags.length).toBeLessThanOrEqual(4);
@@ -447,9 +409,9 @@ describe('TagExtractionService', () => {
 
     describe('deduplication', () => {
       it('should deduplicate tags across all sources', () => {
-        const chunk = createChunk({
+        const chunk = aContentChunk({
           language: 'typescript',
-          namespace: 'typescript',
+          memoryBank: 'typescript',
           metadata: { keywords: 'typescript' },
           text: 'typescript typescript typescript',
         });
@@ -466,7 +428,7 @@ describe('TagExtractionService', () => {
       });
 
       it('should deduplicate metadata keywords with extracted keywords', () => {
-        const chunk = createChunk({
+        const chunk = aContentChunk({
           metadata: { keywords: 'billing, payroll' },
           text: 'billing payroll accounting finance',
         });
@@ -482,7 +444,7 @@ describe('TagExtractionService', () => {
 
     describe('return type and safety', () => {
       it('should return string[] (not Result)', () => {
-        const chunk = createChunk();
+        const chunk = aContentChunk();
         const tags = service.extract(chunk, defaultConfig);
 
         expect(Array.isArray(tags)).toBe(true);
@@ -490,7 +452,7 @@ describe('TagExtractionService', () => {
       });
 
       it('should never throw — always returns valid string[]', () => {
-        const chunk = createChunk({
+        const chunk = aContentChunk({
           text: '',
           metadata: undefined,
         });
@@ -499,7 +461,7 @@ describe('TagExtractionService', () => {
       });
 
       it('should handle empty text gracefully', () => {
-        const chunk = createChunk({ text: '' });
+        const chunk = aContentChunk({ text: '', memoryBank: 'default' });
 
         const tags = service.extract(chunk, defaultConfig);
 
@@ -509,7 +471,7 @@ describe('TagExtractionService', () => {
       });
 
       it('should handle undefined metadata gracefully', () => {
-        const chunk = createChunk({ metadata: undefined });
+        const chunk = aContentChunk({ metadata: undefined });
 
         const tags = service.extract(chunk, defaultConfig);
 
@@ -517,7 +479,7 @@ describe('TagExtractionService', () => {
       });
 
       it('should handle chunk with no language and no extension', () => {
-        const chunk = createChunk({
+        const chunk = aContentChunk({
           language: undefined,
           metadata: {},
           text: 'some content here',
@@ -532,9 +494,9 @@ describe('TagExtractionService', () => {
 
     describe('integration scenarios', () => {
       it('should extract all tag types from a realistic code chunk', () => {
-        const chunk = createChunk({
+        const chunk = aContentChunk({
           language: 'typescript',
-          namespace: 'voqaria/backend',
+          memoryBank: 'voqaria/backend',
           metadata: { keywords: 'api, rest, controller' },
           text: 'This controller handles authentication requests and provides JWT token validation middleware',
         });
@@ -552,9 +514,9 @@ describe('TagExtractionService', () => {
       });
 
       it('should extract all tag types from a markdown docs chunk', () => {
-        const chunk = createChunk({
+        const chunk = aContentChunk({
           language: 'markdown',
-          namespace: 'vault-docs',
+          memoryBank: 'vault-docs',
           text: 'Deployment guide for production environment with Kubernetes cluster configuration',
         });
 
@@ -570,9 +532,9 @@ describe('TagExtractionService', () => {
       });
 
       it('should respect maxTags while preserving high-priority tags', () => {
-        const chunk = createChunk({
+        const chunk = aContentChunk({
           language: 'python',
-          namespace: 'ml-pipeline',
+          memoryBank: 'ml-pipeline',
           metadata: { keywords: 'training, inference, model, dataset, features, pipeline, batch, streaming' },
           text: 'This module implements neural network training with gradient descent optimization',
         });

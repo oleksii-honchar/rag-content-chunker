@@ -18,12 +18,12 @@ import {
   WatchSourceConfig,
 } from './config-schemas';
 
-const DEFAULT_CONFIG: Configuration = {
+export const DEFAULT_CONFIG: Configuration = {
   watchSources: [
     {
       id: 'agent-sessions',
       path: '~/.agent-sessions',
-      namespace: 'agent-sessions',
+      memoryBank: 'agent-sessions',
       exclude: ['archive/**', '**/archive/**', '.smart-env/**'],
       debounceMs: 5000,
     },

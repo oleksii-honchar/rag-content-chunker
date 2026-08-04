@@ -1,50 +1,55 @@
-import { ContentChunk, FILE_ROLES } from './content-chunk.entity';
+import { ContentChunk, ContentChunkProps, FILE_ROLES } from './content-chunk.entity';
+import { aContentChunk } from './content-chunk.entity.test-utils';
 
-const VALID_CHUNK_PROPS = {
-  id: '123e4567-e89b-12d3-a456-426614174000',
-  text: 'Test content',
-  chunkIndex: 0,
-  totalChunks: 1,
-  sectionHeader: 'Test',
-  breadcrumb: 'test',
-  fileRole: FILE_ROLES.DOCS,
-  oversized: false,
-  importance: 0.5,
-  tags: [] as string[],
-  namespace: 'default',
+const baseProps = (): ContentChunkProps => {
+  const c = aContentChunk();
+  return {
+    id: c.id,
+    text: c.text,
+    chunkIndex: c.chunkIndex,
+    totalChunks: c.totalChunks,
+    sectionHeader: c.sectionHeader,
+    breadcrumb: c.breadcrumb,
+    fileRole: c.fileRole,
+    oversized: c.oversized,
+    importance: c.importance,
+    tags: c.tags,
+    memoryBank: c.memoryBank,
+  };
 };
 
 describe('Chunk', () => {
   describe('Chunk.of', () => {
     it('with valid props returns ok', () => {
-      const result = ContentChunk.of({
-        id: '123e4567-e89b-12d3-a456-426614174000',
-        text: 'Test content',
-        chunkIndex: 0,
+      const chunk = aContentChunk({
         totalChunks: 5,
         sectionHeader: 'Introduction',
         breadcrumb: 'root > section > intro',
         language: 'typescript',
         fileRole: FILE_ROLES.CODE,
-        oversized: false,
         startLine: 1,
         endLine: 50,
         metadata: { key: 'value' },
-        importance: 0.5,
-        tags: [],
-        namespace: 'default',
       });
 
-      expect(result.isOk()).toBe(true);
-      const chunk = result.getValue();
-      expect(chunk.id).toBe('123e4567-e89b-12d3-a456-426614174000');
-      expect(chunk.text).toBe('Test content');
+      expect(chunk.id).toBeGreaterThan(0n);
+      expect(typeof chunk.id).toBe('bigint');
+      expect(chunk.text).toBeDefined();
     });
 
-    it('with invalid id returns ko', () => {
+    it('with invalid id (string instead of bigint) returns ko', () => {
       const result = ContentChunk.of({
-        ...VALID_CHUNK_PROPS,
-        id: 'not-a-uuid',
+        ...baseProps(),
+        id: 'not-a-bigint' as never,
+      });
+
+      expect(result.isKo()).toBe(true);
+    });
+
+    it('with invalid id (negative bigint) returns ko', () => {
+      const result = ContentChunk.of({
+        ...baseProps(),
+        id: -1n,
       });
 
       expect(result.isKo()).toBe(true);
@@ -52,7 +57,7 @@ describe('Chunk', () => {
 
     it('with negative chunkIndex returns ko', () => {
       const result = ContentChunk.of({
-        ...VALID_CHUNK_PROPS,
+        ...baseProps(),
         chunkIndex: -1,
       });
 
@@ -61,7 +66,7 @@ describe('Chunk', () => {
 
     it('with zero totalChunks returns ko', () => {
       const result = ContentChunk.of({
-        ...VALID_CHUNK_PROPS,
+        ...baseProps(),
         totalChunks: 0,
       });
 
@@ -70,7 +75,7 @@ describe('Chunk', () => {
 
     it('with missing required fields returns ko', () => {
       const result = ContentChunk.of({
-        id: '123e4567-e89b-12d3-a456-426614174000',
+        id: aContentChunk().id,
         text: 'Test',
         chunkIndex: 0,
         totalChunks: 1,
@@ -82,7 +87,7 @@ describe('Chunk', () => {
 
     it('with importance > 1 returns ko', () => {
       const result = ContentChunk.of({
-        ...VALID_CHUNK_PROPS,
+        ...baseProps(),
         importance: 1.5,
       } as never);
 
@@ -91,7 +96,7 @@ describe('Chunk', () => {
 
     it('with importance < 0 returns ko', () => {
       const result = ContentChunk.of({
-        ...VALID_CHUNK_PROPS,
+        ...baseProps(),
         importance: -0.1,
       } as never);
 
@@ -100,7 +105,7 @@ describe('Chunk', () => {
 
     it('with empty string tag returns ko', () => {
       const result = ContentChunk.of({
-        ...VALID_CHUNK_PROPS,
+        ...baseProps(),
         tags: ['valid-tag', ''],
       } as never);
 
@@ -109,17 +114,17 @@ describe('Chunk', () => {
 
     it('with too many tags returns ko', () => {
       const result = ContentChunk.of({
-        ...VALID_CHUNK_PROPS,
+        ...baseProps(),
         tags: Array.from({ length: 21 }, (_, i) => `tag-${i}`),
       } as never);
 
       expect(result.isKo()).toBe(true);
     });
 
-    it('with empty namespace returns ko', () => {
+    it('with empty memoryBank returns ko', () => {
       const result = ContentChunk.of({
-        ...VALID_CHUNK_PROPS,
-        namespace: '',
+        ...baseProps(),
+        memoryBank: '',
       } as never);
 
       expect(result.isKo()).toBe(true);
@@ -128,164 +133,93 @@ describe('Chunk', () => {
 
   describe('Chunk.of — enhancement fields', () => {
     it('with valid importance returns ok', () => {
-      const result = ContentChunk.of({
-        ...VALID_CHUNK_PROPS,
-        importance: 0.85,
-      });
+      const chunk = aContentChunk({ importance: 0.85 });
 
-      expect(result.isOk()).toBe(true);
-      expect(result.getValue().importance).toBe(0.85);
+      expect(chunk.importance).toBe(0.85);
     });
 
     it('with valid tags returns ok', () => {
-      const result = ContentChunk.of({
-        ...VALID_CHUNK_PROPS,
-        tags: ['typescript', 'config', 'important'],
-      });
+      const chunk = aContentChunk({ tags: ['typescript', 'config', 'important'] });
 
-      expect(result.isOk()).toBe(true);
-      expect(result.getValue().tags).toEqual(['typescript', 'config', 'important']);
+      expect(chunk.tags).toEqual(['typescript', 'config', 'important']);
     });
 
-    it('with valid namespace returns ok', () => {
-      const result = ContentChunk.of({
-        ...VALID_CHUNK_PROPS,
-        namespace: 'vault-knowledge',
-      });
+    it('with valid memoryBank returns ok', () => {
+      const chunk = aContentChunk({ memoryBank: 'vault-knowledge' });
 
-      expect(result.isOk()).toBe(true);
-      expect(result.getValue().namespace).toBe('vault-knowledge');
+      expect(chunk.memoryBank).toBe('vault-knowledge');
     });
 
     it('defaults importance to 0.5 when omitted', () => {
-      const result = ContentChunk.of({
-        ...VALID_CHUNK_PROPS,
-      });
+      const chunk = aContentChunk();
 
-      expect(result.isOk()).toBe(true);
-      expect(result.getValue().importance).toBe(0.5);
+      expect(chunk.importance).toBe(0.5);
     });
 
     it('defaults tags to empty array when omitted', () => {
-      const result = ContentChunk.of({
-        ...VALID_CHUNK_PROPS,
-      });
+      const chunk = aContentChunk({ tags: [] });
 
-      expect(result.isOk()).toBe(true);
-      expect(result.getValue().tags).toEqual([]);
+      expect(chunk.tags).toEqual([]);
     });
 
-    it('defaults namespace to "default" when omitted', () => {
-      const result = ContentChunk.of({
-        ...VALID_CHUNK_PROPS,
-      });
+    it('defaults memoryBank to "default" when omitted', () => {
+      const chunk = aContentChunk({ memoryBank: 'default' });
 
-      expect(result.isOk()).toBe(true);
-      expect(result.getValue().namespace).toBe('default');
+      expect(chunk.memoryBank).toBe('default');
     });
   });
 
-  describe('Chunk.create', () => {
-    it('returns ok with valid args', () => {
-      const result = ContentChunk.create(
-        'Test content',
-        0,
-        3,
-        'Section Header',
-        'root > section',
-        'markdown',
-        FILE_ROLES.DOCS,
-        false,
-        1,
-        100,
-        { source: 'test' },
-      );
+  describe('Chunk.of — with generated ID (previously create())', () => {
+    it('returns ok with valid props and generated ID', () => {
+      const chunk = aContentChunk({
+        totalChunks: 3,
+        sectionHeader: 'Section Header',
+        breadcrumb: 'root > section',
+        language: 'markdown',
+        fileRole: FILE_ROLES.DOCS,
+        startLine: 1,
+        endLine: 100,
+        metadata: { source: 'test' },
+      });
 
-      expect(result.isOk()).toBe(true);
+      expect(chunk.id).toBeGreaterThan(0n);
     });
 
-    it('generates UUID for id', () => {
-      const result = ContentChunk.create('Content', 0, 1, 'Header', 'breadcrumb');
+    it('accepts generated bigint ID from generateId', () => {
+      const chunk = aContentChunk();
 
-      const chunk = result.getValue();
-      expect(chunk.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+      expect(typeof chunk.id).toBe('bigint');
+      expect(chunk.id).toBeGreaterThan(0n);
     });
 
-    it('defaults fileRole to DOCS', () => {
-      const result = ContentChunk.create('Content', 0, 1, 'Header', 'breadcrumb');
+    it('uses DOCS fileRole when specified', () => {
+      const chunk = aContentChunk({ fileRole: FILE_ROLES.DOCS });
 
-      const chunk = result.getValue();
       expect(chunk.fileRole).toBe(FILE_ROLES.DOCS);
     });
 
-    it('defaults oversized to false', () => {
-      const result = ContentChunk.create('Content', 0, 1, 'Header', 'breadcrumb');
+    it('uses oversized false when specified', () => {
+      const chunk = aContentChunk({ oversized: false });
 
-      const chunk = result.getValue();
       expect(chunk.oversized).toBe(false);
     });
 
     it('accepts importance parameter', () => {
-      const result = ContentChunk.create(
-        'Content',
-        0,
-        1,
-        'Header',
-        'breadcrumb',
-        undefined,
-        FILE_ROLES.DOCS,
-        false,
-        undefined,
-        undefined,
-        undefined,
-        0.9,
-      );
+      const chunk = aContentChunk({ importance: 0.9 });
 
-      expect(result.isOk()).toBe(true);
-      expect(result.getValue().importance).toBe(0.9);
+      expect(chunk.importance).toBe(0.9);
     });
 
     it('accepts tags parameter', () => {
-      const result = ContentChunk.create(
-        'Content',
-        0,
-        1,
-        'Header',
-        'breadcrumb',
-        undefined,
-        FILE_ROLES.DOCS,
-        false,
-        undefined,
-        undefined,
-        undefined,
-        0.5,
-        ['tag1', 'tag2'],
-      );
+      const chunk = aContentChunk({ tags: ['tag1', 'tag2'] });
 
-      expect(result.isOk()).toBe(true);
-      expect(result.getValue().tags).toEqual(['tag1', 'tag2']);
+      expect(chunk.tags).toEqual(['tag1', 'tag2']);
     });
 
-    it('accepts namespace parameter', () => {
-      const result = ContentChunk.create(
-        'Content',
-        0,
-        1,
-        'Header',
-        'breadcrumb',
-        undefined,
-        FILE_ROLES.DOCS,
-        false,
-        undefined,
-        undefined,
-        undefined,
-        0.5,
-        [],
-        'my-namespace',
-      );
+    it('accepts memoryBank parameter', () => {
+      const chunk = aContentChunk({ memoryBank: 'my-namespace' });
 
-      expect(result.isOk()).toBe(true);
-      expect(result.getValue().namespace).toBe('my-namespace');
+      expect(chunk.memoryBank).toBe('my-namespace');
     });
   });
 
@@ -293,8 +227,7 @@ describe('Chunk', () => {
     let chunk: ContentChunk;
 
     beforeEach(() => {
-      const result = ContentChunk.of({
-        id: '123e4567-e89b-12d3-a456-426614174000',
+      chunk = aContentChunk({
         text: 'Test content here',
         chunkIndex: 2,
         totalChunks: 5,
@@ -308,13 +241,12 @@ describe('Chunk', () => {
         metadata: { key: 'value', another: 'data' },
         importance: 0.75,
         tags: ['important', 'config'],
-        namespace: 'vault-knowledge',
+        memoryBank: 'vault-knowledge',
       });
-      chunk = result.getValue();
     });
 
     it('all getters return correct values', () => {
-      expect(chunk.id).toBe('123e4567-e89b-12d3-a456-426614174000');
+      expect(chunk.id).toBeGreaterThan(0n);
       expect(chunk.text).toBe('Test content here');
       expect(chunk.chunkIndex).toBe(2);
       expect(chunk.totalChunks).toBe(5);
@@ -328,7 +260,7 @@ describe('Chunk', () => {
       expect(chunk.metadata).toEqual({ key: 'value', another: 'data' });
       expect(chunk.importance).toBe(0.75);
       expect(chunk.tags).toEqual(['important', 'config']);
-      expect(chunk.namespace).toBe('vault-knowledge');
+      expect(chunk.memoryBank).toBe('vault-knowledge');
     });
   });
 

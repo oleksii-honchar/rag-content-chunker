@@ -5,7 +5,6 @@ import { Result } from '../utils/result';
 import { FileAddedEvent, FileChangedEvent, FileDeletedEvent } from './events/file-events';
 
 const fileChangeSchema = z.object({
-  path: z.string().min(1),
   events: z.array(z.custom<DomainEvent>()),
 });
 
@@ -13,6 +12,10 @@ export type FileChangeProps = z.infer<typeof fileChangeSchema>;
 
 export class FileChange {
   private constructor(private readonly props: FileChangeProps) {}
+
+  static empty(): FileChange {
+    return new FileChange({ events: [] });
+  }
 
   static of(props: FileChangeProps): Result<FileChange> {
     const parsed = fileChangeSchema.safeParse(props);
@@ -24,41 +27,34 @@ export class FileChange {
     return Result.ok(new FileChange(parsed.data));
   }
 
-  static add(path: string): Result<FileChange> {
-    const eventResult = FileAddedEvent.of(path);
+  add(filePath: string): Result<FileChange> {
+    const eventResult = FileAddedEvent.of(filePath);
     if (eventResult.isKo()) {
       return eventResult as unknown as Result<FileChange>;
     }
-    return FileChange.of({
-      path,
-      events: [eventResult.getValue()],
-    });
+    const fileChange = FileChange.empty();
+    fileChange.props.events.push(eventResult.getValue());
+    return Result.ok(fileChange);
   }
 
-  static change(path: string): Result<FileChange> {
-    const eventResult = FileChangedEvent.of(path);
+  change(filePath: string): Result<FileChange> {
+    const eventResult = FileChangedEvent.of(filePath);
     if (eventResult.isKo()) {
       return eventResult as unknown as Result<FileChange>;
     }
-    return FileChange.of({
-      path,
-      events: [eventResult.getValue()],
-    });
+    const fileChange = FileChange.empty();
+    fileChange.props.events.push(eventResult.getValue());
+    return Result.ok(fileChange);
   }
 
-  static delete(path: string): Result<FileChange> {
-    const eventResult = FileDeletedEvent.of(path);
+  delete(filePath: string): Result<FileChange> {
+    const eventResult = FileDeletedEvent.of(filePath);
     if (eventResult.isKo()) {
       return eventResult as unknown as Result<FileChange>;
     }
-    return FileChange.of({
-      path,
-      events: [eventResult.getValue()],
-    });
-  }
-
-  get path(): string {
-    return this.props.path;
+    const fileChange = FileChange.empty();
+    fileChange.props.events.push(eventResult.getValue());
+    return Result.ok(fileChange);
   }
 
   get events(): DomainEvent[] {

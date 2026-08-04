@@ -26,7 +26,7 @@ export class FileMemoryTrackerRepository {
       filePath: tracker.filePath,
       memoryIds,
       sourceId: tracker.sourceId,
-      namespace: tracker.namespace,
+      memoryBank: tracker.memoryBank,
     });
 
     return result.isOk() ? result.getValue() : null;
@@ -70,11 +70,11 @@ export class FileMemoryTrackerRepository {
           id: tracker.id,
           filePath: tracker.filePath,
           sourceId: tracker.sourceId,
-          namespace: tracker.namespace,
+          memoryBank: tracker.memoryBank,
         },
         update: {
           sourceId: tracker.sourceId,
-          namespace: tracker.namespace,
+          memoryBank: tracker.memoryBank,
         },
         include: { memories: true },
       });
@@ -86,7 +86,7 @@ export class FileMemoryTrackerRepository {
         filePath: saved.filePath,
         memoryIds,
         sourceId: saved.sourceId,
-        namespace: saved.namespace,
+        memoryBank: saved.memoryBank,
       });
 
       if (result.isKo()) {

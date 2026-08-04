@@ -272,8 +272,8 @@ describe('ConfigurationService', () => {
     });
   });
 
-  describe('watch source namespace', () => {
-    it('defaults namespace to source id when not provided', async () => {
+  describe('watch source memory bank', () => {
+    it('defaults memoryBank to source id when not provided', async () => {
       const validConfig = {
         watchSources: [{ id: 'my-source', path: '/path' }],
       };
@@ -283,12 +283,12 @@ describe('ConfigurationService', () => {
       await service.load();
 
       const sources = service.getWatchSources();
-      expect(sources[0].namespace).toBe('my-source');
+      expect(sources[0].memoryBank).toBe('my-source');
     });
 
-    it('uses explicit namespace when provided', async () => {
+    it('uses explicit memoryBank when provided', async () => {
       const validConfig = {
-        watchSources: [{ id: 'my-source', path: '/path', namespace: 'custom-ns' }],
+        watchSources: [{ id: 'my-source', path: '/path', memoryBank: 'custom-ns' }],
       };
 
       await fs.writeFile(configPath, yaml.dump(validConfig));
@@ -296,7 +296,7 @@ describe('ConfigurationService', () => {
       await service.load();
 
       const sources = service.getWatchSources();
-      expect(sources[0].namespace).toBe('custom-ns');
+      expect(sources[0].memoryBank).toBe('custom-ns');
     });
   });
 

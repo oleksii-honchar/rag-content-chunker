@@ -1,45 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ContentChunk, FILE_ROLES, FileRole } from '../../domain/content-chunk.entity';
+import { FILE_ROLES } from '../../domain/content-chunk.entity';
+import { aContentChunk } from '../../domain/content-chunk.entity.test-utils';
 import { EnhancementConfig } from '../../infrastructure/config/config-schemas';
+import { DEFAULT_CONFIG } from '../../infrastructure/config/configuration.service';
 import { ImportanceScoringService } from './importance-scoring.service';
 
 describe('ImportanceScoringService', () => {
   let service: ImportanceScoringService;
 
-  const defaultConfig: EnhancementConfig = {
-    maxCharacters: { prose: 200, code: 400, configuration: 300, documentation: 300 },
-    importance: {
-      enabled: true,
-      defaultScore: 0.5,
-      factors: [
-        { name: 'fileRole', weight: 0.4 },
-        { name: 'length', weight: 0.2 },
-        { name: 'keywords', weight: 0.3 },
-        { name: 'header', weight: 0.1 },
-      ],
-    },
-    tags: { enabled: true, maxTags: 10 },
-    source: { includePath: true, includeSection: true, includeMetadata: false },
-  };
-
-  const createChunk = (overrides?: Partial<{ text: string; fileRole: FileRole; sectionHeader: string }>) => {
-    const props = {
-      id: crypto.randomUUID(),
-      text: 'Test chunk content',
-      chunkIndex: 0,
-      totalChunks: 1,
-      sectionHeader: '',
-      breadcrumb: 'root > test',
-      fileRole: FILE_ROLES.DOCS,
-      oversized: false,
-      metadata: {},
-      importance: 0.5,
-      tags: [],
-      namespace: 'default',
-      ...overrides,
-    };
-    return ContentChunk.of(props).getValue();
-  };
+  const defaultConfig: EnhancementConfig = DEFAULT_CONFIG.enhancement;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -52,7 +21,7 @@ describe('ImportanceScoringService', () => {
   describe('score', () => {
     describe('disabled scoring', () => {
       it('should return defaultScore when importance scoring is disabled', () => {
-        const chunk = createChunk();
+        const chunk = aContentChunk();
         const config: EnhancementConfig = {
           ...defaultConfig,
           importance: { ...defaultConfig.importance, enabled: false, defaultScore: 0.3 },
@@ -64,7 +33,7 @@ describe('ImportanceScoringService', () => {
       });
 
       it('should return 0.5 as defaultScore when not specified and scoring disabled', () => {
-        const chunk = createChunk();
+        const chunk = aContentChunk();
         const config: EnhancementConfig = {
           ...defaultConfig,
           importance: { enabled: false, defaultScore: 0.5, factors: [] },
@@ -78,7 +47,7 @@ describe('ImportanceScoringService', () => {
 
     describe('fileRole factor', () => {
       it('should produce highest score for DOCS fileRole', () => {
-        const docsChunk = createChunk({ fileRole: FILE_ROLES.DOCS, text: 'x', sectionHeader: '' });
+        const docsChunk = aContentChunk({ fileRole: FILE_ROLES.DOCS, text: 'x', sectionHeader: '' });
         const config: EnhancementConfig = {
           ...defaultConfig,
           importance: {
@@ -95,7 +64,7 @@ describe('ImportanceScoringService', () => {
       });
 
       it('should produce lower score for CODE fileRole than DOCS', () => {
-        const codeChunk = createChunk({ fileRole: FILE_ROLES.CODE, text: 'x', sectionHeader: '' });
+        const codeChunk = aContentChunk({ fileRole: FILE_ROLES.CODE, text: 'x', sectionHeader: '' });
         const config: EnhancementConfig = {
           ...defaultConfig,
           importance: {
@@ -112,7 +81,7 @@ describe('ImportanceScoringService', () => {
       });
 
       it('should produce lower score for CONFIG fileRole than CODE', () => {
-        const configChunk = createChunk({ fileRole: FILE_ROLES.CONFIG, text: 'x', sectionHeader: '' });
+        const configChunk = aContentChunk({ fileRole: FILE_ROLES.CONFIG, text: 'x', sectionHeader: '' });
         const config: EnhancementConfig = {
           ...defaultConfig,
           importance: {
@@ -129,7 +98,7 @@ describe('ImportanceScoringService', () => {
       });
 
       it('should produce lowest score for AGENT_OUTPUT fileRole', () => {
-        const agentChunk = createChunk({ fileRole: FILE_ROLES.AGENT_OUTPUT, text: 'x', sectionHeader: '' });
+        const agentChunk = aContentChunk({ fileRole: FILE_ROLES.AGENT_OUTPUT, text: 'x', sectionHeader: '' });
         const config: EnhancementConfig = {
           ...defaultConfig,
           importance: {
@@ -146,7 +115,7 @@ describe('ImportanceScoringService', () => {
       });
 
       it('should apply fileRole weight multiplier', () => {
-        const chunk = createChunk({ fileRole: FILE_ROLES.DOCS, text: 'x', sectionHeader: '' });
+        const chunk = aContentChunk({ fileRole: FILE_ROLES.DOCS, text: 'x', sectionHeader: '' });
         const config: EnhancementConfig = {
           ...defaultConfig,
           importance: {
@@ -165,7 +134,7 @@ describe('ImportanceScoringService', () => {
 
     describe('length factor', () => {
       it('should give no bonus for very short content', () => {
-        const chunk = createChunk({ text: 'hi', sectionHeader: '' });
+        const chunk = aContentChunk({ text: 'hi', sectionHeader: '' });
         const config: EnhancementConfig = {
           ...defaultConfig,
           importance: {
@@ -182,8 +151,8 @@ describe('ImportanceScoringService', () => {
       });
 
       it('should give higher bonus for longer content', () => {
-        const shortChunk = createChunk({ text: 'a'.repeat(50), sectionHeader: '' });
-        const longChunk = createChunk({ text: 'a'.repeat(300), sectionHeader: '' });
+        const shortChunk = aContentChunk({ text: 'a'.repeat(50), sectionHeader: '' });
+        const longChunk = aContentChunk({ text: 'a'.repeat(300), sectionHeader: '' });
         const config: EnhancementConfig = {
           ...defaultConfig,
           importance: {
@@ -200,8 +169,8 @@ describe('ImportanceScoringService', () => {
       });
 
       it('should cap length bonus at longer content lengths', () => {
-        const mediumChunk = createChunk({ text: 'a'.repeat(1000), sectionHeader: '' });
-        const hugeChunk = createChunk({ text: 'a'.repeat(5000), sectionHeader: '' });
+        const mediumChunk = aContentChunk({ text: 'a'.repeat(1000), sectionHeader: '' });
+        const hugeChunk = aContentChunk({ text: 'a'.repeat(5000), sectionHeader: '' });
         const config: EnhancementConfig = {
           ...defaultConfig,
           importance: {
@@ -219,7 +188,7 @@ describe('ImportanceScoringService', () => {
       });
 
       it('should apply length weight multiplier', () => {
-        const chunk = createChunk({ text: 'a'.repeat(500), sectionHeader: '' });
+        const chunk = aContentChunk({ text: 'a'.repeat(500), sectionHeader: '' });
         const config: EnhancementConfig = {
           ...defaultConfig,
           importance: {
@@ -239,7 +208,7 @@ describe('ImportanceScoringService', () => {
 
     describe('keywords factor', () => {
       it('should give no bonus when no keywords present', () => {
-        const chunk = createChunk({
+        const chunk = aContentChunk({
           text: 'This is normal content without any special markers.',
           sectionHeader: '',
         });
@@ -259,7 +228,7 @@ describe('ImportanceScoringService', () => {
       });
 
       it('should give +0.1 bonus for TODO keyword', () => {
-        const chunk = createChunk({ text: 'This has a TODO item to fix.', sectionHeader: '' });
+        const chunk = aContentChunk({ text: 'This has a TODO item to fix.', sectionHeader: '' });
         const config: EnhancementConfig = {
           ...defaultConfig,
           importance: {
@@ -275,7 +244,7 @@ describe('ImportanceScoringService', () => {
       });
 
       it('should give +0.1 bonus for FIXME keyword', () => {
-        const chunk = createChunk({ text: 'This has a FIXME issue.', sectionHeader: '' });
+        const chunk = aContentChunk({ text: 'This has a FIXME issue.', sectionHeader: '' });
         const config: EnhancementConfig = {
           ...defaultConfig,
           importance: {
@@ -291,7 +260,7 @@ describe('ImportanceScoringService', () => {
       });
 
       it('should give +0.1 bonus for IMPORTANT keyword', () => {
-        const chunk = createChunk({ text: 'This is IMPORTANT information.', sectionHeader: '' });
+        const chunk = aContentChunk({ text: 'This is IMPORTANT information.', sectionHeader: '' });
         const config: EnhancementConfig = {
           ...defaultConfig,
           importance: {
@@ -307,7 +276,7 @@ describe('ImportanceScoringService', () => {
       });
 
       it('should give +0.1 bonus for breaking keyword', () => {
-        const chunk = createChunk({ text: 'This is a breaking change.', sectionHeader: '' });
+        const chunk = aContentChunk({ text: 'This is a breaking change.', sectionHeader: '' });
         const config: EnhancementConfig = {
           ...defaultConfig,
           importance: {
@@ -323,7 +292,7 @@ describe('ImportanceScoringService', () => {
       });
 
       it('should give +0.1 bonus for CRITICAL keyword', () => {
-        const chunk = createChunk({ text: 'This is CRITICAL.', sectionHeader: '' });
+        const chunk = aContentChunk({ text: 'This is CRITICAL.', sectionHeader: '' });
         const config: EnhancementConfig = {
           ...defaultConfig,
           importance: {
@@ -339,7 +308,7 @@ describe('ImportanceScoringService', () => {
       });
 
       it('should accumulate bonuses for multiple keywords up to max +0.3', () => {
-        const chunk = createChunk({
+        const chunk = aContentChunk({
           text: 'TODO: fix this FIXME issue. IMPORTANT: this is breaking and CRITICAL.',
           sectionHeader: '',
         });
@@ -359,7 +328,7 @@ describe('ImportanceScoringService', () => {
       });
 
       it('should cap keyword bonus at +0.3 even with many keywords', () => {
-        const chunk = createChunk({
+        const chunk = aContentChunk({
           text: 'TODO FIXME IMPORTANT breaking CRITICAL TODO FIXME IMPORTANT breaking CRITICAL',
           sectionHeader: '',
         });
@@ -379,7 +348,7 @@ describe('ImportanceScoringService', () => {
       });
 
       it('should apply keywords weight multiplier', () => {
-        const chunk = createChunk({ text: 'TODO FIXME IMPORTANT', sectionHeader: '' });
+        const chunk = aContentChunk({ text: 'TODO FIXME IMPORTANT', sectionHeader: '' });
         const config: EnhancementConfig = {
           ...defaultConfig,
           importance: {
@@ -398,7 +367,7 @@ describe('ImportanceScoringService', () => {
 
     describe('header factor', () => {
       it('should give no bonus when sectionHeader is empty', () => {
-        const chunk = createChunk({ text: 'Content', sectionHeader: '' });
+        const chunk = aContentChunk({ text: 'Content', sectionHeader: '' });
         const config: EnhancementConfig = {
           ...defaultConfig,
           importance: {
@@ -414,7 +383,7 @@ describe('ImportanceScoringService', () => {
       });
 
       it('should give +0.05 bonus for level 2 header (##)', () => {
-        const chunk = createChunk({ text: 'Content', sectionHeader: '## Section Title' });
+        const chunk = aContentChunk({ text: 'Content', sectionHeader: '## Section Title' });
         const config: EnhancementConfig = {
           ...defaultConfig,
           importance: {
@@ -430,7 +399,7 @@ describe('ImportanceScoringService', () => {
       });
 
       it('should give +0.10 bonus for level 3 header (###)', () => {
-        const chunk = createChunk({ text: 'Content', sectionHeader: '### Subsection' });
+        const chunk = aContentChunk({ text: 'Content', sectionHeader: '### Subsection' });
         const config: EnhancementConfig = {
           ...defaultConfig,
           importance: {
@@ -446,7 +415,7 @@ describe('ImportanceScoringService', () => {
       });
 
       it('should give +0.15 bonus for level 4 header (####)', () => {
-        const chunk = createChunk({ text: 'Content', sectionHeader: '#### Detail' });
+        const chunk = aContentChunk({ text: 'Content', sectionHeader: '#### Detail' });
         const config: EnhancementConfig = {
           ...defaultConfig,
           importance: {
@@ -462,7 +431,7 @@ describe('ImportanceScoringService', () => {
       });
 
       it('should give no bonus for plain text header without ## prefix', () => {
-        const chunk = createChunk({ text: 'Content', sectionHeader: 'Plain Title' });
+        const chunk = aContentChunk({ text: 'Content', sectionHeader: 'Plain Title' });
         const config: EnhancementConfig = {
           ...defaultConfig,
           importance: {
@@ -478,7 +447,7 @@ describe('ImportanceScoringService', () => {
       });
 
       it('should apply header weight multiplier', () => {
-        const chunk = createChunk({ text: 'Content', sectionHeader: '## Section' });
+        const chunk = aContentChunk({ text: 'Content', sectionHeader: '## Section' });
         const config: EnhancementConfig = {
           ...defaultConfig,
           importance: {
@@ -497,7 +466,7 @@ describe('ImportanceScoringService', () => {
 
     describe('combined scoring', () => {
       it('should combine all factors with their weights', () => {
-        const chunk = createChunk({
+        const chunk = aContentChunk({
           fileRole: FILE_ROLES.DOCS,
           text: 'a'.repeat(500) + ' TODO FIXME',
           sectionHeader: '## Important Section',
@@ -524,12 +493,12 @@ describe('ImportanceScoringService', () => {
       });
 
       it('should produce higher score for important docs than agent output', () => {
-        const docsChunk = createChunk({
+        const docsChunk = aContentChunk({
           fileRole: FILE_ROLES.DOCS,
           text: 'a'.repeat(400) + ' IMPORTANT',
           sectionHeader: '## Key Section',
         });
-        const agentChunk = createChunk({
+        const agentChunk = aContentChunk({
           fileRole: FILE_ROLES.AGENT_OUTPUT,
           text: 'short',
           sectionHeader: '',
@@ -544,7 +513,7 @@ describe('ImportanceScoringService', () => {
 
     describe('score clamping', () => {
       it('should clamp score to maximum of 1.0', () => {
-        const chunk = createChunk({
+        const chunk = aContentChunk({
           fileRole: FILE_ROLES.DOCS,
           text: 'a'.repeat(10000) + ' TODO FIXME IMPORTANT breaking CRITICAL',
           sectionHeader: '#### Deep Section',
@@ -569,7 +538,7 @@ describe('ImportanceScoringService', () => {
       });
 
       it('should clamp score to minimum of 0.0', () => {
-        const chunk = createChunk({
+        const chunk = aContentChunk({
           fileRole: FILE_ROLES.AGENT_OUTPUT,
           text: '',
           sectionHeader: '',
@@ -596,14 +565,14 @@ describe('ImportanceScoringService', () => {
 
     describe('edge cases', () => {
       it('should return a number (not Result)', () => {
-        const chunk = createChunk();
+        const chunk = aContentChunk();
         const score = service.score(chunk, defaultConfig);
 
         expect(typeof score).toBe('number');
       });
 
       it('should never throw — always produces a score', () => {
-        const chunk = createChunk({
+        const chunk = aContentChunk({
           text: '',
           sectionHeader: '',
           fileRole: FILE_ROLES.DOCS,
@@ -613,7 +582,7 @@ describe('ImportanceScoringService', () => {
       });
 
       it('should handle empty factors array by returning defaultScore', () => {
-        const chunk = createChunk();
+        const chunk = aContentChunk();
         const config: EnhancementConfig = {
           ...defaultConfig,
           importance: { enabled: true, defaultScore: 0.5, factors: [] },
@@ -625,7 +594,7 @@ describe('ImportanceScoringService', () => {
       });
 
       it('should ignore unknown factor names gracefully', () => {
-        const chunk = createChunk();
+        const chunk = aContentChunk();
         const config: EnhancementConfig = {
           ...defaultConfig,
           importance: {
@@ -640,7 +609,10 @@ describe('ImportanceScoringService', () => {
       });
 
       it('should handle case-insensitive keyword matching', () => {
-        const chunk = createChunk({ text: 'this has a todo item and a breaking change', sectionHeader: '' });
+        const chunk = aContentChunk({
+          text: 'this has a todo item and a breaking change',
+          sectionHeader: '',
+        });
         const config: EnhancementConfig = {
           ...defaultConfig,
           importance: {

@@ -1,16 +1,16 @@
 import { ContentChunk } from '../domain/content-chunk.entity';
 
 /**
- * Payload shape for the mnemosyne_remember MCP tool call arguments.
+ * Payload shape for the memory_remember MCP tool call arguments.
  * Maps domain Chunk entity properties to the MCP request format.
  */
 export interface MnemosyneRememberPayload {
   content: string;
-  namespace: string;
+  memory_bank: string;
   importance: number;
   source: string;
   metadata: {
-    id: string;
+    id: bigint;
     chunkIndex: number;
     totalChunks: number;
     sectionHeader: string;
@@ -21,7 +21,7 @@ export interface MnemosyneRememberPayload {
     endLine?: number;
     importance: number;
     tags: string[];
-    namespace: string;
+    memoryBank: string;
     [key: string]: unknown;
   };
 }
@@ -34,9 +34,9 @@ export class MnemosyneRememberDto {
   static fromChunk(chunk: ContentChunk): MnemosyneRememberPayload {
     return {
       content: chunk.text,
-      namespace: chunk.namespace,
+      memory_bank: chunk.memoryBank,
       importance: chunk.importance,
-      source: chunk.namespace,
+      source: chunk.memoryBank,
       metadata: {
         id: chunk.id,
         chunkIndex: chunk.chunkIndex,
@@ -49,7 +49,7 @@ export class MnemosyneRememberDto {
         ...(chunk.endLine !== undefined && { endLine: chunk.endLine }),
         importance: chunk.importance,
         tags: chunk.tags,
-        namespace: chunk.namespace,
+        memoryBank: chunk.memoryBank,
         ...(chunk.metadata || {}),
       },
     };

@@ -573,7 +573,7 @@ describe('MastraChunkingService', () => {
       expect(firstChunk.metadata?.sourceId).toBe('test-source');
       expect(firstChunk.importance).toBe(0.5);
       expect(firstChunk.tags).toEqual([]);
-      expect(firstChunk.namespace).toBe('default');
+      expect(firstChunk.memoryBank).toBe('default');
     });
 
     it('should include Mastra metadata in Chunk metadata', async () => {

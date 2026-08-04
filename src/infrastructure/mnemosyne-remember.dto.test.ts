@@ -5,7 +5,7 @@ describe('MnemosyneRememberDto', () => {
   describe('fromChunk', () => {
     it('maps all required chunk properties to remember payload', () => {
       const chunk = ContentChunk.of({
-        id: '550e8400-e29b-41d4-a716-446655440000',
+        id: 1111111111111111111n,
         text: 'Test chunk content',
         chunkIndex: 2,
         totalChunks: 5,
@@ -17,16 +17,16 @@ describe('MnemosyneRememberDto', () => {
         endLine: 45,
         importance: 0.8,
         tags: ['important', 'guide'],
-        namespace: 'vault-knowledge',
+        memoryBank: 'vault-knowledge',
       }).getValue();
 
       const dto = MnemosyneRememberDto.fromChunk(chunk);
 
       expect(dto.content).toBe('Test chunk content');
-      expect(dto.namespace).toBe('vault-knowledge');
+      expect(dto.memory_bank).toBe('vault-knowledge');
       expect(dto.importance).toBe(0.8);
       expect(dto.source).toBe('vault-knowledge');
-      expect(dto.metadata.id).toBe('550e8400-e29b-41d4-a716-446655440000');
+      expect(dto.metadata.id).toBe(1111111111111111111n);
       expect(dto.metadata.chunkIndex).toBe(2);
       expect(dto.metadata.totalChunks).toBe(5);
       expect(dto.metadata.sectionHeader).toBe('## Getting Started');
@@ -36,12 +36,12 @@ describe('MnemosyneRememberDto', () => {
       expect(dto.metadata.endLine).toBe(45);
       expect(dto.metadata.importance).toBe(0.8);
       expect(dto.metadata.tags).toEqual(['important', 'guide']);
-      expect(dto.metadata.namespace).toBe('vault-knowledge');
+      expect(dto.metadata.memoryBank).toBe('vault-knowledge');
     });
 
     it('includes language in metadata when present', () => {
       const chunk = ContentChunk.of({
-        id: '550e8400-e29b-41d4-a716-446655440001',
+        id: 2222222222222222222n,
         text: 'function hello() {}',
         chunkIndex: 0,
         totalChunks: 1,
@@ -54,7 +54,7 @@ describe('MnemosyneRememberDto', () => {
         endLine: 10,
         importance: 0.5,
         tags: [],
-        namespace: 'default',
+        memoryBank: 'default',
       }).getValue();
 
       const dto = MnemosyneRememberDto.fromChunk(chunk);
@@ -64,7 +64,7 @@ describe('MnemosyneRememberDto', () => {
 
     it('omits language from metadata when not present', () => {
       const chunk = ContentChunk.of({
-        id: '550e8400-e29b-41d4-a716-446655440002',
+        id: 3333333333333333333n,
         text: 'Some docs',
         chunkIndex: 0,
         totalChunks: 1,
@@ -74,7 +74,7 @@ describe('MnemosyneRememberDto', () => {
         oversized: false,
         importance: 0.5,
         tags: [],
-        namespace: 'default',
+        memoryBank: 'default',
       }).getValue();
 
       const dto = MnemosyneRememberDto.fromChunk(chunk);
@@ -84,7 +84,7 @@ describe('MnemosyneRememberDto', () => {
 
     it('omits startLine and endLine from metadata when not present', () => {
       const chunk = ContentChunk.of({
-        id: '550e8400-e29b-41d4-a716-446655440003',
+        id: 4444444444444444444n,
         text: 'No line numbers',
         chunkIndex: 0,
         totalChunks: 1,
@@ -94,7 +94,7 @@ describe('MnemosyneRememberDto', () => {
         oversized: false,
         importance: 0.5,
         tags: [],
-        namespace: 'default',
+        memoryBank: 'default',
       }).getValue();
 
       const dto = MnemosyneRememberDto.fromChunk(chunk);
@@ -105,7 +105,7 @@ describe('MnemosyneRememberDto', () => {
 
     it('merges chunk metadata into result metadata', () => {
       const chunk = ContentChunk.of({
-        id: '550e8400-e29b-41d4-a716-446655440004',
+        id: 5555555555555555555n,
         text: 'Custom metadata test',
         chunkIndex: 0,
         totalChunks: 1,
@@ -119,7 +119,7 @@ describe('MnemosyneRememberDto', () => {
         },
         importance: 0.5,
         tags: [],
-        namespace: 'default',
+        memoryBank: 'default',
       }).getValue();
 
       const dto = MnemosyneRememberDto.fromChunk(chunk);
@@ -127,27 +127,39 @@ describe('MnemosyneRememberDto', () => {
       expect(dto.metadata.customKey).toBe('customValue');
       expect(dto.metadata.anotherKey).toBe('anotherValue');
       // Standard fields still present
-      expect(dto.metadata.id).toBe('550e8400-e29b-41d4-a716-446655440004');
-      expect(dto.metadata.namespace).toBe('default');
+      expect(dto.metadata.id).toBe(5555555555555555555n);
+      expect(dto.metadata.memoryBank).toBe('default');
     });
 
     it('uses default values for chunk with defaults', () => {
-      const chunk = ContentChunk.create('default test', 0, 1, 'Header', 'breadcrumb').getValue();
+      const chunk = ContentChunk.of({
+        id: 7777777777777777777n,
+        text: 'default test',
+        chunkIndex: 0,
+        totalChunks: 1,
+        sectionHeader: 'Header',
+        breadcrumb: 'breadcrumb',
+        fileRole: 'docs' as const,
+        oversized: false,
+        importance: 0.5,
+        tags: [],
+        memoryBank: 'default',
+      }).getValue();
 
       const dto = MnemosyneRememberDto.fromChunk(chunk);
 
-      expect(dto.namespace).toBe('default');
+      expect(dto.memory_bank).toBe('default');
       expect(dto.importance).toBe(0.5);
       expect(dto.source).toBe('default');
-      expect(dto.metadata.namespace).toBe('default');
+      expect(dto.metadata.memoryBank).toBe('default');
       expect(dto.metadata.importance).toBe(0.5);
       expect(dto.metadata.tags).toEqual([]);
       expect(dto.metadata.fileRole).toBe('docs');
     });
 
-    it('sets source equal to namespace (not literal "chunk")', () => {
+    it('sets source equal to memory bank (not literal "chunk")', () => {
       const chunk = ContentChunk.of({
-        id: '550e8400-e29b-41d4-a716-446655440005',
+        id: 6666666666666666666n,
         text: 'Source test',
         chunkIndex: 0,
         totalChunks: 1,
@@ -157,7 +169,7 @@ describe('MnemosyneRememberDto', () => {
         oversized: false,
         importance: 0.5,
         tags: [],
-        namespace: 'obsidian-notes',
+        memoryBank: 'obsidian-notes',
       }).getValue();
 
       const dto = MnemosyneRememberDto.fromChunk(chunk);

@@ -12,7 +12,7 @@ const chunkContentParamsSchema = z.object({
   content: z.string().min(1),
   filePath: z.string().min(1),
   sourceId: z.string().min(1),
-  namespace: z.string().min(1),
+  memoryBank: z.string().min(1),
   maxTokens: z.number().positive().optional(),
   overlapTokens: z.number().nonnegative().optional(),
   hardCapTokens: z.number().positive().optional(),
@@ -42,7 +42,7 @@ export class ChunkContentUseCase extends BaseUseCase<ChunkContentParams, Content
 
   protected async executeInternal(params: ChunkContentParams): Promise<Result<ContentChunk[]>> {
     this.logger.debug(
-      `Chunking content; path="${params.filePath}", length=${params.content.length}, namespace="${params.namespace}"`,
+      `Chunking content; path="${params.filePath}", length=${params.content.length}, memoryBank="${params.memoryBank}"`,
     );
 
     const chunksResult = await this.mastraChunkingService.chunkFile(
@@ -66,7 +66,7 @@ export class ChunkContentUseCase extends BaseUseCase<ChunkContentParams, Content
     const enhancementResult = await this.enhancementPipelineService.enhance(
       chunks,
       params.sourceId,
-      params.namespace,
+      params.memoryBank,
       enhancementConfig,
     );
 

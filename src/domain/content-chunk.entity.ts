@@ -13,7 +13,7 @@ export const FILE_ROLES = {
 export type FileRole = ValuesType<typeof FILE_ROLES>;
 
 export const contentChunkSchema = z.object({
-  id: z.uuid(),
+  id: z.bigint().positive(),
   text: z.string(),
   chunkIndex: z.number().nonnegative(),
   totalChunks: z.number().positive(),
@@ -27,7 +27,7 @@ export const contentChunkSchema = z.object({
   metadata: z.record(z.string(), z.string()).optional(),
   importance: z.number().min(0).max(1).default(0.5),
   tags: z.array(z.string().min(1)).max(20).default([]),
-  namespace: z.string().min(1).default('default'),
+  memoryBank: z.string().min(1).default('default'),
 });
 
 export type ContentChunkProps = z.infer<typeof contentChunkSchema>;
@@ -43,42 +43,7 @@ export class ContentChunk {
     return Result.ok(new ContentChunk(parsed.data));
   }
 
-  static create(
-    text: string,
-    chunkIndex: number,
-    totalChunks: number,
-    sectionHeader: string,
-    breadcrumb: string,
-    language?: string,
-    fileRole: FileRole = FILE_ROLES.DOCS,
-    oversized = false,
-    startLine?: number,
-    endLine?: number,
-    metadata?: Record<string, string>,
-    importance = 0.5,
-    tags = [] as string[],
-    namespace = 'default',
-  ): Result<ContentChunk> {
-    return ContentChunk.of({
-      id: crypto.randomUUID(),
-      text,
-      chunkIndex,
-      totalChunks,
-      sectionHeader,
-      breadcrumb,
-      language,
-      fileRole,
-      oversized,
-      startLine,
-      endLine,
-      metadata,
-      importance,
-      tags,
-      namespace,
-    });
-  }
-
-  get id(): string {
+  get id(): bigint {
     return this.props.id;
   }
   get text(): string {
@@ -120,7 +85,7 @@ export class ContentChunk {
   get tags(): string[] {
     return this.props.tags;
   }
-  get namespace(): string {
-    return this.props.namespace;
+  get memoryBank(): string {
+    return this.props.memoryBank;
   }
 }

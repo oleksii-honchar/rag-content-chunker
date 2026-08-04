@@ -3,7 +3,7 @@ import { ErrorWithDetails } from '../utils/error-with-details';
 import { Result } from '../utils/result';
 
 export const watchSourceEntitySchema = z.object({
-  id: z.string(),
+  id: z.bigint().positive(),
   path: z.string(),
   include: z.array(z.string()),
   exclude: z.array(z.string()),
@@ -27,7 +27,7 @@ export class WatchSource {
   }
 
   static create(
-    id: string,
+    id: bigint,
     path: string,
     include: string[],
     exclude: string[],
@@ -44,7 +44,7 @@ export class WatchSource {
     });
   }
 
-  get id(): string {
+  get id(): bigint {
     return this.props.id;
   }
   get path(): string {

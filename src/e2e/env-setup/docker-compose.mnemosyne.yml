@@ -1,4 +1,4 @@
-# Better Mnemosyne — multi-tenant namespace-aware MCP server for e2e tests.
+# Better Mnemosyne — multi-tenant memory-bank-aware MCP server for e2e tests.
 # Usage:
 #   docker compose -f docker-compose.mnemosyne.yml -p rag-e2e-mnemosyne up -d --wait
 #   docker compose -f docker-compose.mnemosyne.yml -p rag-e2e-mnemosyne down -v
@@ -11,7 +11,10 @@ services:
     environment:
       - LOG_LEVEL=DEBUG
     volumes:
-      - ../../../data/e2e:/data/mnemosyne/data
+      # E2E data dir is injected per-run by global-setup.ts (fresh temp dir) so
+      # each e2e run starts with a clean Mnemosyne state (no cross-run pollution).
+      # Falls back to the repo data/e2e dir for manual `npm run mnemosyne:start`.
+      - ${E2E_DATA_DIR:-../../../data/e2e}:/data/mnemosyne/data
     command: ['python', 'main.py']
     healthcheck:
       test: ['CMD', 'curl', '-f', 'http://localhost:3000/health']

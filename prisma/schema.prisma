@@ -15,8 +15,8 @@ model FileTracker {
   filePath  String
   // Watch source identifier from rag-content-chunker config
   sourceId  String
-  // Mnemosyne namespace where this file's memories are stored
-  namespace String
+  // Mnemosyne memory bank where this file's memories are stored
+  memoryBank String
   // Record creation timestamp
   createdAt DateTime       @default(now())
   // Last modification timestamp
@@ -27,7 +27,7 @@ model FileTracker {
 
   @@unique([filePath])
   @@index([filePath])
-  @@index([sourceId, namespace])
+  @@index([sourceId, memoryBank])
 }
 
 // Links a file to a specific Mnemosyne memory ID — enables cleanup on file deletion

@@ -50,7 +50,7 @@ export class IngestChunkUseCase extends BaseUseCase<IngestChunkParams, void> {
 
     let successCount = 0;
     let failureCount = 0;
-    const errors: { chunkId: string; error: string }[] = [];
+    const errors: { chunkId: bigint; error: string }[] = [];
 
     for (const chunk of params.chunks) {
       try {
@@ -70,7 +70,7 @@ export class IngestChunkUseCase extends BaseUseCase<IngestChunkParams, void> {
                 filePath,
                 memory_id,
                 params.sourceId,
-                chunk.namespace,
+                chunk.memoryBank,
               );
             } catch (error) {
               this.logger.warn(

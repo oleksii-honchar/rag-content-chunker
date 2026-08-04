@@ -22,7 +22,7 @@ const processFileParamsSchema = z.object({
   filePath: z.string().min(1),
   eventType: z.enum(['add', 'change', 'delete']),
   sourceId: z.string().min(1),
-  namespace: z.string().min(1),
+  memoryBank: z.string().min(1),
 });
 
 export type ProcessFileParams = z.infer<typeof processFileParamsSchema>;
@@ -108,7 +108,7 @@ export class ProcessFileUseCase extends BaseUseCase<ProcessFileParams, void> {
       content,
       filePath: params.filePath,
       sourceId: params.sourceId,
-      namespace: params.namespace,
+      memoryBank: params.memoryBank,
     });
 
     if (chunksResult.isKo()) {
@@ -165,17 +165,17 @@ export class ProcessFileUseCase extends BaseUseCase<ProcessFileParams, void> {
     let failedCount = 0;
     for (const memoryId of memoryIds) {
       try {
-        const result = await this.mnemosyneClient.forget(memoryId, params.namespace);
+        const result = await this.mnemosyneClient.forget(memoryId, params.memoryBank);
         if (result.isKo()) {
           failedCount++;
           this.logger.warn(
-            `Failed to forget memory; memoryId="${memoryId}", namespace="${params.namespace}", error="${result.getError().message}"`,
+            `Failed to forget memory; memoryId="${memoryId}", memoryBank="${params.memoryBank}", error="${result.getError().message}"`,
           );
         }
       } catch (error) {
         failedCount++;
         this.logger.warn(
-          `Error forgetting memory; memoryId="${memoryId}", namespace="${params.namespace}", error="${error instanceof Error ? error.message : String(error)}"`,
+          `Error forgetting memory; memoryId="${memoryId}", memoryBank="${params.memoryBank}", error="${error instanceof Error ? error.message : String(error)}"`,
         );
       }
     }
@@ -201,7 +201,7 @@ export class ProcessFileUseCase extends BaseUseCase<ProcessFileParams, void> {
       filePath: event.path,
       eventType: 'add',
       sourceId: 'default',
-      namespace: 'default',
+      memoryBank: 'default',
     });
   }
 
@@ -211,7 +211,7 @@ export class ProcessFileUseCase extends BaseUseCase<ProcessFileParams, void> {
       filePath: event.path,
       eventType: 'change',
       sourceId: 'default',
-      namespace: 'default',
+      memoryBank: 'default',
     });
   }
 
@@ -221,7 +221,7 @@ export class ProcessFileUseCase extends BaseUseCase<ProcessFileParams, void> {
       filePath: event.path,
       eventType: 'delete',
       sourceId: 'default',
-      namespace: 'default',
+      memoryBank: 'default',
     });
   }
 }

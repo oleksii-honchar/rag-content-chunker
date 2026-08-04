@@ -53,7 +53,7 @@ interface McpToolResponse {
  * Streamable HTTP transport (POST to /mcp). Handles:
  * - MCP initialization handshake (initialize + notifications/initialized)
  * - Session tracking via Mcp-Session-Id header
- * - Tool calls: mnemosyne_remember (ingest chunks), mnemosyne_recall (semantic search)
+ * - Tool calls: memory_remember (ingest chunks), memory_recall (semantic search)
  * - Health checks via ping
  * - Retry logic with exponential backoff for remember operations
  */
@@ -200,7 +200,7 @@ export class MnemosyneClient implements OnApplicationBootstrap {
   }
 
   /**
-   * Ingest a content chunk via the mnemosyne_remember MCP tool.
+   * Ingest a content chunk via the memory_remember MCP tool.
    *
    * Sends the chunk text and metadata to Mnemosyne for embedding and storage.
    * Retries up to maxRetries times on transient failures.
@@ -216,7 +216,7 @@ export class MnemosyneClient implements OnApplicationBootstrap {
       id: this.nextRequestId++,
       method: 'tools/call',
       params: {
-        name: 'mnemosyne_remember',
+        name: 'memory_remember',
         arguments: payload,
       },
     };
@@ -275,23 +275,23 @@ export class MnemosyneClient implements OnApplicationBootstrap {
   }
 
   /**
-   * Forget (delete) a memory via the mnemosyne_forget MCP tool.
+   * Forget (delete) a memory via the memory_forget MCP tool.
    *
    * @param memoryId - Memory ID to delete
-   * @param namespace - Namespace where the memory resides
+   * @param memoryBank - Memory bank where the memory resides
    * @returns Result.ok on success (response.status === "deleted"); Result.ko on error
    */
-  async forget(memoryId: string, namespace: string): Promise<Result<void>> {
+  async forget(memoryId: string, memoryBank: string): Promise<Result<void>> {
     this.ensureConfigLoaded();
-    this.logger.debug(`Forgetting memory: memoryId="${memoryId}", namespace="${namespace}"`);
+    this.logger.debug(`Forgetting memory: memoryId="${memoryId}", memoryBank="${memoryBank}"`);
 
     const request: McpToolRequest = {
       jsonrpc: '2.0',
       id: this.nextRequestId++,
       method: 'tools/call',
       params: {
-        name: 'mnemosyne_forget',
-        arguments: { memory_id: memoryId, namespace },
+        name: 'memory_forget',
+        arguments: { memory_id: memoryId, memory_bank: memoryBank },
       },
     };
 
@@ -326,22 +326,22 @@ export class MnemosyneClient implements OnApplicationBootstrap {
   }
 
   /**
-   * Register a namespace with a description via the mnemosyne_register_namespace MCP tool.
+   * Register a memory bank with a description via the memory_register_bank MCP tool.
    *
-   * @param name - Namespace name
-   * @param description - Human-readable description of what this namespace contains
+   * @param name - Memory bank name
+   * @param description - Human-readable description of what this memory bank contains
    * @returns Result.ok on success (response.status === "registered"); Result.ko on error
    */
-  async registerNamespace(name: string, description: string): Promise<Result<void>> {
+  async registerBank(name: string, description: string): Promise<Result<void>> {
     this.ensureConfigLoaded();
-    this.logger.debug(`Registering namespace: name="${name}", description="${description}"`);
+    this.logger.debug(`Registering memory bank: name="${name}", description="${description}"`);
 
     const request: McpToolRequest = {
       jsonrpc: '2.0',
       id: this.nextRequestId++,
       method: 'tools/call',
       params: {
-        name: 'mnemosyne_register_namespace',
+        name: 'memory_register_bank',
         arguments: { name, description },
       },
     };
@@ -356,24 +356,24 @@ export class MnemosyneClient implements OnApplicationBootstrap {
       // Parse MCP response — result.content[0].text contains JSON from Mnemosyne
       const parsed = this.parseMcpResponse(response);
       if (parsed.status === 'registered') {
-        this.logger.info(`Namespace registered: name="${name}"`);
+        this.logger.info(`Memory bank registered: name="${name}"`);
         return Result.ok(undefined as unknown as void);
       }
 
       const errMsg =
         typeof parsed.error === 'string'
           ? parsed.error
-          : JSON.stringify(parsed) || 'Unexpected register_namespace response';
-      this.logger.warn(`Unexpected register_namespace response: name="${name}", response="${errMsg}"`);
+          : JSON.stringify(parsed) || 'Unexpected register_bank response';
+      this.logger.warn(`Unexpected register_bank response: name="${name}", response="${errMsg}"`);
       return Result.ko(new ErrorWithDetails(errMsg, 'UnexpectedMcpResponse'));
     } catch (error) {
       this.logger.error(
-        `Failed to register namespace: name="${name}", error="${error instanceof Error ? error.message : String(error)}"`,
+        `Failed to register memory bank: name="${name}", error="${error instanceof Error ? error.message : String(error)}"`,
       );
       return Result.ko(
         new ErrorWithDetails(
           error instanceof Error ? error.message : String(error),
-          'NamespaceRegistrationError',
+          'MemoryBankRegistrationError',
         ),
       );
     }
@@ -408,7 +408,7 @@ export class MnemosyneClient implements OnApplicationBootstrap {
   }
 
   /**
-   * Perform semantic search via the mnemosyne_recall MCP tool.
+   * Perform semantic search via the memory_recall MCP tool.
    *
    * Queries Mnemosyne for memories matching the query. Retries if empty results
    * are returned (to allow for eventual consistency after recent ingests).
@@ -416,19 +416,25 @@ export class MnemosyneClient implements OnApplicationBootstrap {
    * @param query - Search query string
    * @param maxRetries - Maximum retry attempts on empty results (default: 5)
    * @param retryDelayMs - Base delay between retries in ms (default: 1000)
+   * @param memoryBank - Memory bank to search (default: 'default')
    * @returns Result.ok with array of matching content strings; Result.ko on error
    */
-  async recall(query: string, maxRetries = 5, retryDelayMs = 1000): Promise<Result<string[]>> {
+  async recall(
+    query: string,
+    maxRetries = 5,
+    retryDelayMs = 1000,
+    memoryBank = 'default',
+  ): Promise<Result<string[]>> {
     this.ensureConfigLoaded();
-    this.logger.debug(`Recalling memories; query="${query}"`);
+    this.logger.debug(`Recalling memories; query="${query}", memoryBank="${memoryBank}"`);
 
     const request: McpToolRequest = {
       jsonrpc: '2.0',
       id: this.nextRequestId++,
       method: 'tools/call',
       params: {
-        name: 'mnemosyne_recall',
-        arguments: { query, limit: 20 },
+        name: 'memory_recall',
+        arguments: { query, limit: 20, memory_bank: memoryBank },
       },
     };
 
@@ -519,7 +525,9 @@ export class MnemosyneClient implements OnApplicationBootstrap {
 
     const parsedUrl = new URL(this.baseUrl);
     const lib = parsedUrl.protocol === 'https:' ? https : http;
-    const data = JSON.stringify(request);
+    const data = JSON.stringify(request, (_, value) =>
+      typeof value === 'bigint' ? value.toString() : value,
+    );
 
     const options = this.buildRequestOptions(parsedUrl, data);
 

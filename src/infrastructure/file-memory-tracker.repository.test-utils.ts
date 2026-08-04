@@ -16,7 +16,7 @@ export function aFileMemoryTracker(
     filePath: string;
     memoryIds: string[];
     sourceId: string;
-    namespace: string;
+    memoryBank: string;
   }>,
 ): FileMemoryTracker {
   const result = FileMemoryTracker.of({
@@ -24,7 +24,7 @@ export function aFileMemoryTracker(
     filePath: faker.system.filePath(),
     memoryIds: [],
     sourceId: faker.string.alphanumeric(12),
-    namespace: faker.word.adjective(),
+    memoryBank: faker.word.adjective(),
     ...overrides,
   });
   return result.getValue();
@@ -34,7 +34,7 @@ export interface PrismaFileMemoryTrackerRecord {
   id: bigint;
   filePath: string;
   sourceId: string;
-  namespace: string;
+  memoryBank: string;
   createdAt: Date;
   updatedAt: Date;
   memories: { id: bigint; memoryId: string; fileTrackerId: bigint }[];
@@ -54,7 +54,7 @@ export function aPrismaFileMemoryTracker(
     id: faker.number.bigInt({ min: 1n, max: 9223372036854775807n }),
     filePath: faker.system.filePath(),
     sourceId: faker.string.alphanumeric(12),
-    namespace: faker.word.adjective(),
+    memoryBank: faker.word.adjective(),
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
     updatedAt: new Date('2026-01-01T00:00:00.000Z'),
     memories: [],

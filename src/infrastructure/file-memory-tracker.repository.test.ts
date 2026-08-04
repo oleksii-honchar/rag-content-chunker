@@ -22,14 +22,14 @@ describe('FileMemoryTrackerRepository', () => {
   };
 
   const createPrismaTrackerRecord = (
-    tracker: { id: bigint; filePath: string; sourceId: string; namespace: string },
+    tracker: { id: bigint; filePath: string; sourceId: string; memoryBank: string },
     memories: PrismaFileMemoryTrackerRecord['memories'] = [],
   ): PrismaFileMemoryTrackerRecord =>
     aPrismaFileMemoryTracker({
       id: tracker.id,
       filePath: tracker.filePath,
       sourceId: tracker.sourceId,
-      namespace: tracker.namespace,
+      memoryBank: tracker.memoryBank,
       memories,
     });
 
@@ -107,7 +107,7 @@ describe('FileMemoryTrackerRepository', () => {
           id: 1001n,
           filePath: '/test/file.txt',
           sourceId: 'source-001',
-          namespace: 'vault-knowledge',
+          memoryBank: 'vault-knowledge',
           createdAt: new Date(),
           updatedAt: new Date(),
         }),

@@ -19,7 +19,7 @@ export type AWatchSourceConfig = WatchSourceConfig;
  * Defaults match the common patterns used in existing test files:
  * - id: 'test-source'
  * - path: '/tmp/test-source'
- * - namespace: derived from id (same as WatchSourceConfig schema behavior)
+ * - memoryBank: derived from id (same as WatchSourceConfig schema behavior)
  * - exclude: single-element array with git ignore pattern
  * - debounceMs: 3000
  *
@@ -33,7 +33,7 @@ export type AWatchSourceConfig = WatchSourceConfig;
 export const aWatchSource = (overrides?: Partial<WatchSourceConfig>): AWatchSourceConfig => ({
   id: overrides?.id ?? 'test-source',
   path: overrides?.path ?? '/tmp/test-source',
-  namespace: overrides?.namespace ?? overrides?.id ?? 'test-source',
+  memoryBank: overrides?.memoryBank ?? overrides?.id ?? 'test-source',
   exclude: overrides?.exclude ?? ['**/.git/**'],
   debounceMs: overrides?.debounceMs ?? 3000,
   ...overrides,

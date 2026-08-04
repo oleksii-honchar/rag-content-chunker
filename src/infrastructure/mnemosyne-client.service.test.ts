@@ -2,8 +2,9 @@ import { Test, TestingModule } from '@nestjs/testing';
 import * as http from 'http';
 import * as https from 'https';
 import { ContentChunk } from '../domain/content-chunk.entity';
+import { aContentChunk } from '../domain/content-chunk.entity.test-utils';
 import { ConfigurationService } from './config/configuration.service';
-import { aConfigService } from './config/configuration.test-utils';
+import { aConfigService } from './config/configuration.service.test-utils';
 import { BasePinoLogger } from './logging/base-pino-logger';
 import { aLogger } from './logging/logger.test-utils';
 import { MnemosyneClient } from './mnemosyne-client.service';
@@ -52,25 +53,6 @@ function createMockResponse(
     return res;
   });
   return res;
-}
-
-function testChunk(text = 'Test chunk content'): ContentChunk {
-  return ContentChunk.of({
-    id: '550e8400-e29b-41d4-a716-446655440000',
-    text,
-    chunkIndex: 0,
-    totalChunks: 1,
-    sectionHeader: 'Test Section',
-    breadcrumb: 'root > test',
-    fileRole: 'docs' as const,
-    oversized: false,
-    startLine: 1,
-    endLine: 10,
-    metadata: {},
-    importance: 0.5,
-    tags: [],
-    namespace: 'default',
-  }).getValue();
 }
 
 function createMockReq(): MockReq {
@@ -189,10 +171,20 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
       await client.initialize();
 
       // Trigger a remember call to verify session header is included
-      const chunkResult = ContentChunk.create('test', 0, 1, 'test', 'test');
-      if (chunkResult.isOk()) {
-        await client.remember(chunkResult.getValue());
-      }
+      const chunk = ContentChunk.of({
+        id: 9999999999999999999n,
+        text: 'test',
+        chunkIndex: 0,
+        totalChunks: 1,
+        sectionHeader: 'test',
+        breadcrumb: 'test',
+        fileRole: 'docs' as const,
+        oversized: false,
+        importance: 0.5,
+        tags: [],
+        memoryBank: 'default',
+      }).getValue();
+      await client.remember(chunk);
 
       const rememberCall = calls[2];
       const headers = rememberCall.options as { headers: Record<string, string> };
@@ -238,7 +230,7 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
       await client.initialize();
     });
 
-    it('sends POST to /mcp with correct JSON-RPC for mnemosyne_remember', async () => {
+    it('sends POST to /mcp with correct JSON-RPC for memory_remember', async () => {
       let lastOptions: unknown = null;
       let lastReq: MockReq | null = null;
 
@@ -261,7 +253,7 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
       });
 
       const chunk = ContentChunk.of({
-        id: '6ba7b810-9dad-11d1-80b4-00c04fd430c8',
+        id: 1234567890123456789n,
         text: 'test content',
         chunkIndex: 0,
         totalChunks: 2,
@@ -274,7 +266,7 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
         endLine: 10,
         importance: 0.5,
         tags: [],
-        namespace: 'default',
+        memoryBank: 'default',
       }).getValue();
 
       const result = await client.remember(chunk);
@@ -287,12 +279,13 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
       const body = JSON.parse(lastReq!.write.mock.calls[0][0]);
       expect(body.jsonrpc).toBe('2.0');
       expect(body.method).toBe('tools/call');
-      expect(body.params.name).toBe('mnemosyne_remember');
+      expect(body.params.name).toBe('memory_remember');
       expect(body.params.arguments.content).toBe('test content');
-      expect(body.params.arguments.namespace).toBe('default');
+      expect(body.params.arguments.memory_bank).toBe('default');
       expect(body.params.arguments.importance).toBe(0.5);
       expect(body.params.arguments.source).toBe('default');
-      expect(body.params.arguments.metadata.id).toBe('6ba7b810-9dad-11d1-80b4-00c04fd430c8');
+      // BigInt serialized to string by JSON replacer
+      expect(body.params.arguments.metadata.id).toBe('1234567890123456789');
       expect(body.params.arguments.metadata.chunkIndex).toBe(0);
       expect(body.params.arguments.metadata.totalChunks).toBe(2);
       expect(body.params.arguments.metadata.sectionHeader).toBe('Test Header');
@@ -303,7 +296,7 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
       expect(body.params.arguments.metadata.endLine).toBe(10);
       expect(body.params.arguments.metadata.importance).toBe(0.5);
       expect(body.params.arguments.metadata.tags).toEqual([]);
-      expect(body.params.arguments.metadata.namespace).toBe('default');
+      expect(body.params.arguments.metadata.memoryBank).toBe('default');
     });
 
     it('parses stored response and returns ok with memory_id and status', async () => {
@@ -325,7 +318,7 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
         },
       );
 
-      const result = await client.remember(testChunk());
+      const result = await client.remember(aContentChunk({ text: 'Test chunk content' }));
       expect(result.isOk()).toBe(true);
       const value = result.getValue();
       expect(value.memory_id).toBe('mem-456');
@@ -353,12 +346,12 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
         },
       );
 
-      const result = await client.remember(testChunk());
+      const result = await client.remember(aContentChunk({ text: 'Test chunk content' }));
       expect(result.isOk()).toBe(true);
       expect(result.getValue()).toEqual({ memory_id: 'abc-123-xyz', status: 'stored' });
     });
 
-    it('includes namespace in both top-level args and metadata', async () => {
+    it('includes memory_bank in top-level args and memoryBank in metadata', async () => {
       let lastReq: MockReq | null = null;
 
       (http.request as jest.Mock).mockImplementation(
@@ -380,28 +373,19 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
         },
       );
 
-      const chunk = ContentChunk.of({
-        id: '550e8400-e29b-41d4-a716-446655440001',
+      const chunk = aContentChunk({
         text: 'namespace test',
-        chunkIndex: 0,
-        totalChunks: 1,
-        sectionHeader: 'Test',
-        breadcrumb: 'test',
-        fileRole: 'docs' as const,
-        oversized: false,
-        startLine: 1,
-        endLine: 5,
         importance: 0.7,
         tags: ['vault', 'session'],
-        namespace: 'vault-knowledge',
-      }).getValue();
+        memoryBank: 'vault-knowledge',
+      });
 
       const result = await client.remember(chunk);
       expect(result.isOk()).toBe(true);
 
       const body = JSON.parse(lastReq!.write.mock.calls[0][0]);
-      expect(body.params.arguments.namespace).toBe('vault-knowledge');
-      expect(body.params.arguments.metadata.namespace).toBe('vault-knowledge');
+      expect(body.params.arguments.memory_bank).toBe('vault-knowledge');
+      expect(body.params.arguments.metadata.memoryBank).toBe('vault-knowledge');
     });
 
     it('includes importance in both top-level args and metadata', async () => {
@@ -427,7 +411,7 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
       );
 
       const chunk = ContentChunk.of({
-        id: '550e8400-e29b-41d4-a716-446655440002',
+        id: 2222222222222222222n,
         text: 'importance test',
         chunkIndex: 0,
         totalChunks: 1,
@@ -439,7 +423,7 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
         endLine: 5,
         importance: 0.9,
         tags: [],
-        namespace: 'default',
+        memoryBank: 'default',
       }).getValue();
 
       const result = await client.remember(chunk);
@@ -473,7 +457,7 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
       );
 
       const chunk = ContentChunk.of({
-        id: '550e8400-e29b-41d4-a716-446655440003',
+        id: 3333333333333333333n,
         text: 'tags test',
         chunkIndex: 0,
         totalChunks: 1,
@@ -485,7 +469,7 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
         endLine: 5,
         importance: 0.5,
         tags: ['important', 'breaking-change', 'api'],
-        namespace: 'default',
+        memoryBank: 'default',
       }).getValue();
 
       const result = await client.remember(chunk);
@@ -495,7 +479,7 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
       expect(body.params.arguments.metadata.tags).toEqual(['important', 'breaking-change', 'api']);
     });
 
-    it('sets source equal to namespace not chunk', async () => {
+    it('sets source equal to memoryBank not chunk', async () => {
       let lastReq: MockReq | null = null;
 
       (http.request as jest.Mock).mockImplementation(
@@ -518,7 +502,7 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
       );
 
       const chunk = ContentChunk.of({
-        id: '550e8400-e29b-41d4-a716-446655440004',
+        id: 4444444444444444444n,
         text: 'source test',
         chunkIndex: 0,
         totalChunks: 1,
@@ -530,7 +514,7 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
         endLine: 5,
         importance: 0.5,
         tags: [],
-        namespace: 'obsidian-notes',
+        memoryBank: 'obsidian-notes',
       }).getValue();
 
       const result = await client.remember(chunk);
@@ -563,16 +547,28 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
         },
       );
 
-      const chunk = ContentChunk.create('default values test', 0, 1, 'Test', 'test').getValue();
+      const chunk = ContentChunk.of({
+        id: 8888888888888888888n,
+        text: 'default values test',
+        chunkIndex: 0,
+        totalChunks: 1,
+        sectionHeader: 'Test',
+        breadcrumb: 'test',
+        fileRole: 'docs' as const,
+        oversized: false,
+        importance: 0.5,
+        tags: [],
+        memoryBank: 'default',
+      }).getValue();
 
       const result = await client.remember(chunk);
       expect(result.isOk()).toBe(true);
 
       const body = JSON.parse(lastReq!.write.mock.calls[0][0]);
-      expect(body.params.arguments.namespace).toBe('default');
+      expect(body.params.arguments.memory_bank).toBe('default');
       expect(body.params.arguments.importance).toBe(0.5);
       expect(body.params.arguments.source).toBe('default');
-      expect(body.params.arguments.metadata.namespace).toBe('default');
+      expect(body.params.arguments.metadata.memoryBank).toBe('default');
       expect(body.params.arguments.metadata.importance).toBe(0.5);
       expect(body.params.arguments.metadata.tags).toEqual([]);
     });
@@ -590,7 +586,7 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
         },
       );
 
-      const result = await client.remember(testChunk());
+      const result = await client.remember(aContentChunk({ text: 'Test chunk content' }));
       expect(result.isKo()).toBe(true);
       expect(result.getError().message).toContain('Internal error');
     });
@@ -605,7 +601,7 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
         },
       );
 
-      const result = await client.remember(testChunk());
+      const result = await client.remember(aContentChunk({ text: 'Test chunk content' }));
       expect(result.isKo()).toBe(true);
     });
 
@@ -632,7 +628,7 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
         },
       );
 
-      const result = await client.remember(testChunk());
+      const result = await client.remember(aContentChunk({ text: 'Test chunk content' }));
       expect(result.isOk()).toBe(true);
       expect(attemptCount).toBe(3);
     });
@@ -659,7 +655,7 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
       await client.initialize();
     });
 
-    it('sends POST to /mcp with mnemosyne_recall tool call', async () => {
+    it('sends POST to /mcp with memory_recall tool call', async () => {
       let lastOptions: unknown = null;
       let lastReq: MockReq | null = null;
 
@@ -698,8 +694,9 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
 
       const body = JSON.parse(lastReq!.write.mock.calls[0][0]);
       expect(body.method).toBe('tools/call');
-      expect(body.params.name).toBe('mnemosyne_recall');
+      expect(body.params.name).toBe('memory_recall');
       expect(body.params.arguments.query).toBe('test query');
+      expect(body.params.arguments.memory_bank).toBe('default');
     });
 
     it('returns empty array when no results found', async () => {
@@ -978,7 +975,7 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
       await client.initialize();
     });
 
-    it('sends POST to /mcp with mnemosyne_forget tool call', async () => {
+    it('sends POST to /mcp with memory_forget tool call', async () => {
       let lastReq: MockReq | null = null;
 
       (http.request as jest.Mock).mockImplementation(
@@ -1007,9 +1004,9 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
 
       const body = JSON.parse(lastReq!.write.mock.calls[0][0]);
       expect(body.method).toBe('tools/call');
-      expect(body.params.name).toBe('mnemosyne_forget');
+      expect(body.params.name).toBe('memory_forget');
       expect(body.params.arguments.memory_id).toBe('mem-to-forget');
-      expect(body.params.arguments.namespace).toBe('test-ns');
+      expect(body.params.arguments.memory_bank).toBe('test-ns');
     });
 
     it('returns ok when response status is deleted', async () => {
@@ -1078,7 +1075,7 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
     });
   });
 
-  describe('registerNamespace', () => {
+  describe('registerBank', () => {
     let client: MnemosyneClient;
 
     beforeEach(async () => {
@@ -1099,7 +1096,7 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
       await client.initialize();
     });
 
-    it('sends POST to /mcp with mnemosyne_register_namespace tool call', async () => {
+    it('sends POST to /mcp with memory_register_bank tool call', async () => {
       let lastReq: MockReq | null = null;
 
       (http.request as jest.Mock).mockImplementation(
@@ -1121,12 +1118,12 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
         },
       );
 
-      const result = await client.registerNamespace('test-ns', 'Test namespace description');
+      const result = await client.registerBank('test-ns', 'Test namespace description');
       expect(result.isOk()).toBe(true);
 
       const body = JSON.parse(lastReq!.write.mock.calls[0][0]);
       expect(body.method).toBe('tools/call');
-      expect(body.params.name).toBe('mnemosyne_register_namespace');
+      expect(body.params.name).toBe('memory_register_bank');
       expect(body.params.arguments.name).toBe('test-ns');
       expect(body.params.arguments.description).toBe('Test namespace description');
     });
@@ -1150,7 +1147,7 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
         },
       );
 
-      const result = await client.registerNamespace('my-ns', 'My namespace');
+      const result = await client.registerBank('my-ns', 'My namespace');
       expect(result.isOk()).toBe(true);
     });
 
@@ -1167,7 +1164,7 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
         },
       );
 
-      const result = await client.registerNamespace('bad-ns', 'Bad namespace');
+      const result = await client.registerBank('bad-ns', 'Bad namespace');
       expect(result.isKo()).toBe(true);
       expect(result.getError().message).toContain('Internal error');
     });
@@ -1190,7 +1187,7 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
         return req;
       });
 
-      const result = await client.registerNamespace('ns', 'desc');
+      const result = await client.registerBank('ns', 'desc');
       expect(result.isKo()).toBe(true);
     });
   });

@@ -23,7 +23,7 @@ describe('FileTracker and FileMemoryTracker Schema Integration', () => {
         "id" INTEGER NOT NULL,
         "filePath" TEXT NOT NULL,
         "sourceId" TEXT NOT NULL,
-        "namespace" TEXT NOT NULL,
+        "memoryBank" TEXT NOT NULL,
         "createdAt" DATETIME NOT NULL DEFAULT (datetime('now')),
         "updatedAt" DATETIME NOT NULL DEFAULT (datetime('now')),
         PRIMARY KEY ("id"),
@@ -48,7 +48,7 @@ describe('FileTracker and FileMemoryTracker Schema Integration', () => {
       `CREATE INDEX IF NOT EXISTS "FileTracker_filePath_idx" ON "FileTracker" ("filePath")`,
     );
     await prisma.$executeRawUnsafe(
-      `CREATE INDEX IF NOT EXISTS "FileTracker_sourceId_namespace_idx" ON "FileTracker" ("sourceId", "namespace")`,
+      `CREATE INDEX IF NOT EXISTS "FileTracker_sourceId_memoryBank_idx" ON "FileTracker" ("sourceId", "memoryBank")`,
     );
     await prisma.$executeRawUnsafe(
       `CREATE INDEX IF NOT EXISTS "FileMemoryTracker_fileTrackerId_idx" ON "FileMemoryTracker" ("fileTrackerId")`,
@@ -80,7 +80,7 @@ describe('FileTracker and FileMemoryTracker Schema Integration', () => {
         id: 1001n,
         filePath: '/test/path/to/file.md',
         sourceId: 'source-1',
-        namespace: 'test-namespace',
+        memoryBank: 'test-namespace',
       },
     });
 
@@ -89,7 +89,7 @@ describe('FileTracker and FileMemoryTracker Schema Integration', () => {
     expect(typeof record.id).toBe('bigint');
     expect(record.filePath).toBe('/test/path/to/file.md');
     expect(record.sourceId).toBe('source-1');
-    expect(record.namespace).toBe('test-namespace');
+    expect(record.memoryBank).toBe('test-namespace');
     expect(record.createdAt).toBeInstanceOf(Date);
     expect(record.updatedAt).toBeInstanceOf(Date);
   });
@@ -100,7 +100,7 @@ describe('FileTracker and FileMemoryTracker Schema Integration', () => {
         id: 1002n,
         filePath: '/unique/test/file.txt',
         sourceId: 'source-1',
-        namespace: 'test',
+        memoryBank: 'test',
       },
     });
 
@@ -110,7 +110,7 @@ describe('FileTracker and FileMemoryTracker Schema Integration', () => {
           id: 1003n,
           filePath: '/unique/test/file.txt',
           sourceId: 'source-2',
-          namespace: 'test',
+          memoryBank: 'test',
         },
       }),
     ).rejects.toThrow();
@@ -126,9 +126,9 @@ describe('FileTracker and FileMemoryTracker Schema Integration', () => {
     expect(found!.sourceId).toBe('source-1');
   });
 
-  it('should support querying by sourceId and namespace via index', async () => {
+  it('should support querying by sourceId and memoryBank via index', async () => {
     const records = await prisma.fileTracker.findMany({
-      where: { sourceId: 'source-1', namespace: 'test-namespace' },
+      where: { sourceId: 'source-1', memoryBank: 'test-namespace' },
     });
 
     expect(records.length).toBeGreaterThanOrEqual(1);
@@ -157,7 +157,7 @@ describe('FileTracker and FileMemoryTracker Schema Integration', () => {
         id: 1004n,
         filePath: '/cascade/test/file.md',
         sourceId: 'source-1',
-        namespace: 'test',
+        memoryBank: 'test',
       },
     });
 
@@ -190,7 +190,7 @@ describe('FileTracker and FileMemoryTracker Schema Integration', () => {
         id: 1005n,
         filePath: '/memory/test/file.md',
         sourceId: 'source-1',
-        namespace: 'test',
+        memoryBank: 'test',
       },
     });
 
@@ -214,7 +214,7 @@ describe('FileTracker and FileMemoryTracker Schema Integration', () => {
         id: 1006n,
         filePath: '/unique-memory/test/file.md',
         sourceId: 'source-1',
-        namespace: 'test',
+        memoryBank: 'test',
       },
     });
 
@@ -243,7 +243,7 @@ describe('FileTracker and FileMemoryTracker Schema Integration', () => {
         id: 1007n,
         filePath: '/upsert-memory/test/file.md',
         sourceId: 'source-1',
-        namespace: 'test',
+        memoryBank: 'test',
       },
     });
 
@@ -290,7 +290,7 @@ describe('FileTracker and FileMemoryTracker Schema Integration', () => {
         id: 1008n,
         filePath: '/include/test/file.md',
         sourceId: 'source-1',
-        namespace: 'test',
+        memoryBank: 'test',
       },
     });
 
@@ -321,7 +321,7 @@ describe('FileTracker and FileMemoryTracker Schema Integration', () => {
         id: 1009n,
         filePath: '/upsert-tracker/file.md',
         sourceId: 'source-create',
-        namespace: 'test',
+        memoryBank: 'test',
       },
       update: {
         sourceId: 'source-update',
@@ -337,7 +337,7 @@ describe('FileTracker and FileMemoryTracker Schema Integration', () => {
         id: 1010n,
         filePath: '/upsert-tracker/file.md',
         sourceId: 'source-should-not-use',
-        namespace: 'test',
+        memoryBank: 'test',
       },
       update: {
         sourceId: 'source-update',

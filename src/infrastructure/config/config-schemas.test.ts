@@ -63,25 +63,25 @@ describe('config-schemas', () => {
       expect(result.success).toBe(false);
     });
 
-    it('accepts namespace field', () => {
+    it('accepts memoryBank field', () => {
       const input = {
         id: 'test-source',
         path: '/path',
-        namespace: 'my-namespace',
+        memoryBank: 'my-namespace',
       };
       const result = watchSourceConfigSchema.safeParse(input);
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data.namespace).toBe('my-namespace');
+        expect(result.data.memoryBank).toBe('my-namespace');
       }
     });
 
-    it('defaults namespace to source id when not provided', () => {
+    it('defaults memoryBank to source id when not provided', () => {
       const input = { id: 'my-source', path: '/path' };
       const result = watchSourceConfigSchema.safeParse(input);
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data.namespace).toBe('my-source');
+        expect(result.data.memoryBank).toBe('my-source');
       }
     });
 

@@ -3,75 +3,100 @@ import { FileChange } from './file-change.aggregate';
 
 describe('FileChange', () => {
   describe('of', () => {
-    it('with valid props returns ok', () => {
-      const event = FileAddedEvent.of('/test/file.txt').getValue();
-      const result = FileChange.of({ path: '/test/file.txt', events: [event] });
+    it('creates FileChange with valid props', () => {
+      const result = FileChange.of({ events: [] });
 
       expect(result.isOk()).toBe(true);
-      const aggregate = result.getValue();
-      expect(aggregate.path).toBe('/test/file.txt');
-      expect(aggregate.events).toHaveLength(1);
+      const fileChange = result.getValue();
+      expect(fileChange.events).toEqual([]);
     });
 
-    it('with invalid props returns ko', () => {
-      const result = FileChange.of({ path: '', events: [] });
+    it('creates FileChange with events in props', () => {
+      const event = FileAddedEvent.of('/test/file.txt').getValue();
+      const result = FileChange.of({ events: [event] });
+
+      expect(result.isOk()).toBe(true);
+      const fileChange = result.getValue();
+      expect(fileChange.events).toHaveLength(1);
+      expect(fileChange.events[0]).toBe(event);
+    });
+
+    it('returns ko when events is missing', () => {
+      const result = FileChange.of({} as never);
+
+      expect(result.isKo()).toBe(true);
+    });
+
+    it('returns ko when events is not an array', () => {
+      const result = FileChange.of({ events: 'not-an-array' } as never);
 
       expect(result.isKo()).toBe(true);
     });
   });
 
+  describe('empty', () => {
+    it('creates empty aggregate', () => {
+      const fileChange = FileChange.empty();
+
+      expect(fileChange.events).toEqual([]);
+    });
+  });
+
   describe('add', () => {
-    it('with valid path returns FileChange with FileAddedEvent', () => {
-      const result = FileChange.add('/test/file.txt');
+    it('creates FileChange with FileAddedEvent for valid path', () => {
+      const fileChange = FileChange.empty();
+      const result = fileChange.add('/test/file.txt');
 
       expect(result.isOk()).toBe(true);
-      const aggregate = result.getValue();
-      expect(aggregate.path).toBe('/test/file.txt');
-      expect(aggregate.events).toHaveLength(1);
-      expect(aggregate.events[0]).toBeInstanceOf(FileAddedEvent);
-      expect((aggregate.events[0] as FileAddedEvent).type).toBe(FILE_EVENTS.ADDED);
+      const changed = result.getValue();
+      expect(changed.events).toHaveLength(1);
+      expect(changed.events[0]).toBeInstanceOf(FileAddedEvent);
+      expect((changed.events[0] as FileAddedEvent).type).toBe(FILE_EVENTS.ADDED);
     });
 
-    it('with empty path returns ko', () => {
-      const result = FileChange.add('');
+    it('returns ko for empty path', () => {
+      const fileChange = FileChange.empty();
+      const result = fileChange.add('');
 
       expect(result.isKo()).toBe(true);
     });
   });
 
   describe('change', () => {
-    it('with valid path returns FileChange with FileChangedEvent', () => {
-      const result = FileChange.change('/test/file.txt');
+    it('creates FileChange with FileChangedEvent for valid path', () => {
+      const fileChange = FileChange.empty();
+      const result = fileChange.change('/test/file.txt');
 
       expect(result.isOk()).toBe(true);
-      const aggregate = result.getValue();
-      expect(aggregate.path).toBe('/test/file.txt');
-      expect(aggregate.events).toHaveLength(1);
-      expect(aggregate.events[0]).toBeInstanceOf(FileChangedEvent);
-      expect((aggregate.events[0] as FileChangedEvent).type).toBe(FILE_EVENTS.CHANGED);
+      const changed = result.getValue();
+      expect(changed.events).toHaveLength(1);
+      expect(changed.events[0]).toBeInstanceOf(FileChangedEvent);
+      expect((changed.events[0] as FileChangedEvent).type).toBe(FILE_EVENTS.CHANGED);
     });
 
-    it('with empty path returns ko', () => {
-      const result = FileChange.change('');
+    it('returns ko for empty path', () => {
+      const fileChange = FileChange.empty();
+      const result = fileChange.change('');
 
       expect(result.isKo()).toBe(true);
     });
   });
 
   describe('delete', () => {
-    it('with valid path returns FileChange with FileDeletedEvent', () => {
-      const result = FileChange.delete('/test/file.txt');
+    it('creates FileChange with FileDeletedEvent for valid path', () => {
+      const fileChange = FileChange.empty();
+      const result = fileChange.delete('/test/file.txt');
 
       expect(result.isOk()).toBe(true);
-      const aggregate = result.getValue();
-      expect(aggregate.path).toBe('/test/file.txt');
-      expect(aggregate.events).toHaveLength(1);
-      expect(aggregate.events[0]).toBeInstanceOf(FileDeletedEvent);
-      expect((aggregate.events[0] as FileDeletedEvent).type).toBe(FILE_EVENTS.DELETED);
+      const changed = result.getValue();
+      expect(changed.events).toHaveLength(1);
+      expect(changed.events[0]).toBeInstanceOf(FileDeletedEvent);
+      expect((changed.events[0] as FileDeletedEvent).type).toBe(FILE_EVENTS.DELETED);
     });
 
-    it('with empty path returns ko', () => {
-      const result = FileChange.delete('');
+    it('returns ko for empty path', () => {
+      const fileChange = FileChange.empty();
+      const result = fileChange.delete('');
 
       expect(result.isKo()).toBe(true);
     });

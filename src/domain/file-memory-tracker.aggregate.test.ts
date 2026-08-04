@@ -6,7 +6,7 @@ describe('FileMemoryTracker', () => {
     filePath: '/test/file.txt',
     memoryIds: ['mem-001'],
     sourceId: 'source-001',
-    namespace: 'vault-knowledge',
+    memoryBank: 'vault-knowledge',
   };
 
   describe('of', () => {
@@ -20,7 +20,7 @@ describe('FileMemoryTracker', () => {
       expect(tracker.filePath).toBe(validProps.filePath);
       expect(tracker.memoryIds).toEqual(validProps.memoryIds);
       expect(tracker.sourceId).toBe(validProps.sourceId);
-      expect(tracker.namespace).toBe(validProps.namespace);
+      expect(tracker.memoryBank).toBe(validProps.memoryBank);
     });
 
     it('with string id returns ko (id must be a bigint)', () => {
@@ -60,10 +60,10 @@ describe('FileMemoryTracker', () => {
       expect(result.isKo()).toBe(true);
     });
 
-    it('with empty namespace returns ko', () => {
+    it('with empty memoryBank returns ko', () => {
       const result = FileMemoryTracker.of({
         ...validProps,
-        namespace: '',
+        memoryBank: '',
       });
 
       expect(result.isKo()).toBe(true);
@@ -73,7 +73,7 @@ describe('FileMemoryTracker', () => {
       const result = FileMemoryTracker.of({
         id: 1n,
         filePath: '/test/file.txt',
-        // missing memoryIds, sourceId, namespace
+        // missing memoryIds, sourceId, memoryBank
       } as never);
 
       expect(result.isKo()).toBe(true);
@@ -96,7 +96,7 @@ describe('FileMemoryTracker', () => {
         filePath: '/test/file.txt',
         memoryIds: ['mem-001', 'mem-002'],
         sourceId: 'source-001',
-        namespace: 'vault-knowledge',
+        memoryBank: 'vault-knowledge',
       });
 
       expect(result.isOk()).toBe(true);
@@ -105,7 +105,7 @@ describe('FileMemoryTracker', () => {
       expect(tracker.filePath).toBe('/test/file.txt');
       expect(tracker.memoryIds).toEqual(['mem-001', 'mem-002']);
       expect(tracker.sourceId).toBe('source-001');
-      expect(tracker.namespace).toBe('vault-knowledge');
+      expect(tracker.memoryBank).toBe('vault-knowledge');
     });
 
     it('with invalid filePath returns ko', () => {
@@ -114,7 +114,7 @@ describe('FileMemoryTracker', () => {
         filePath: '',
         memoryIds: ['mem-001'],
         sourceId: 'source-001',
-        namespace: 'vault-knowledge',
+        memoryBank: 'vault-knowledge',
       });
 
       expect(result.isKo()).toBe(true);
@@ -126,7 +126,7 @@ describe('FileMemoryTracker', () => {
         filePath: '/test/file.txt',
         memoryIds: [],
         sourceId: 'source-001',
-        namespace: 'vault-knowledge',
+        memoryBank: 'vault-knowledge',
       });
 
       expect(result.isOk()).toBe(true);
@@ -137,7 +137,7 @@ describe('FileMemoryTracker', () => {
       const result = FileMemoryTracker.of({
         id: 1n,
         filePath: '/test/file.txt',
-        // missing memoryIds, sourceId, namespace
+        // missing memoryIds, sourceId, memoryBank
       } as never);
 
       expect(result.isKo()).toBe(true);
@@ -189,7 +189,7 @@ describe('FileMemoryTracker', () => {
         filePath: '/test/file.txt',
         memoryIds: ['mem-001', 'mem-002', 'mem-003'],
         sourceId: 'source-001',
-        namespace: 'vault-knowledge',
+        memoryBank: 'vault-knowledge',
       }).getValue();
 
       const result = tracker.forget('mem-002');
@@ -205,7 +205,7 @@ describe('FileMemoryTracker', () => {
         filePath: '/test/file.txt',
         memoryIds: ['mem-001', 'mem-002'],
         sourceId: 'source-001',
-        namespace: 'vault-knowledge',
+        memoryBank: 'vault-knowledge',
       }).getValue();
 
       tracker.forget('mem-001');
@@ -219,7 +219,7 @@ describe('FileMemoryTracker', () => {
         filePath: '/test/file.txt',
         memoryIds: ['mem-001'],
         sourceId: 'source-001',
-        namespace: 'vault-knowledge',
+        memoryBank: 'vault-knowledge',
       }).getValue();
 
       const result = tracker.forget('mem-999');
@@ -239,7 +239,7 @@ describe('FileMemoryTracker', () => {
         filePath: '/test/file.txt',
         memoryIds: ['mem-001', 'mem-002'],
         sourceId: 'source-001',
-        namespace: 'vault-knowledge',
+        memoryBank: 'vault-knowledge',
       });
       tracker = result.getValue();
     });
@@ -249,7 +249,7 @@ describe('FileMemoryTracker', () => {
       expect(tracker.filePath).toBe('/test/file.txt');
       expect(tracker.memoryIds).toEqual(['mem-001', 'mem-002']);
       expect(tracker.sourceId).toBe('source-001');
-      expect(tracker.namespace).toBe('vault-knowledge');
+      expect(tracker.memoryBank).toBe('vault-knowledge');
     });
   });
 
@@ -260,7 +260,7 @@ describe('FileMemoryTracker', () => {
         filePath: '/test/file.txt',
         memoryIds: ['mem-001', 'mem-002'],
         sourceId: 'source-001',
-        namespace: 'vault-knowledge',
+        memoryBank: 'vault-knowledge',
       }).getValue();
 
       const json = tracker.toJson();
@@ -270,7 +270,7 @@ describe('FileMemoryTracker', () => {
         filePath: '/test/file.txt',
         memoryIds: ['mem-001', 'mem-002'],
         sourceId: 'source-001',
-        namespace: 'vault-knowledge',
+        memoryBank: 'vault-knowledge',
       });
     });
 

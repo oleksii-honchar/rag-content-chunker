@@ -23,7 +23,7 @@ jest.mock('@mastra/rag', () => ({
 
 import { EnhancementPipelineService } from '../application/services/enhancement-pipeline.service';
 import { MastraChunkingService } from '../application/strategies/mastra-chunking.service';
-import { aChunk } from '../domain/content-chunk.entity.test-utils';
+import { aContentChunk } from '../domain/content-chunk.entity.test-utils';
 import { EnhancementConfig } from '../infrastructure/config/config-schemas';
 import { ConfigurationService } from '../infrastructure/config/configuration.service';
 import { BasePinoLogger } from '../infrastructure/logging/base-pino-logger';
@@ -116,7 +116,7 @@ describe('ChunkContentUseCase', () => {
       const content = 'Test content';
       const filePath = '/path/to/file.ts';
       const sourceId = 'test-source';
-      const chunks = [aChunk({ text: 'chunk 1' }), aChunk({ text: 'chunk 2' })];
+      const chunks = [aContentChunk({ text: 'chunk 1' }), aContentChunk({ text: 'chunk 2' })];
 
       mockMastraChunkingService.chunkFile.mockResolvedValue(Result.ok(chunks));
 
@@ -124,7 +124,7 @@ describe('ChunkContentUseCase', () => {
         content,
         filePath,
         sourceId,
-        namespace: 'test-namespace',
+        memoryBank: 'test-memoryBank',
       });
 
       expect(result.isOk()).toBe(true);
@@ -135,7 +135,7 @@ describe('ChunkContentUseCase', () => {
       const content = 'Test content';
       const filePath = '/path/to/file.md';
       const sourceId = 'test-source';
-      const chunks = [aChunk()];
+      const chunks = [aContentChunk()];
 
       mockMastraChunkingService.chunkFile.mockResolvedValue(Result.ok(chunks));
 
@@ -143,7 +143,7 @@ describe('ChunkContentUseCase', () => {
         content,
         filePath,
         sourceId,
-        namespace: 'test-namespace',
+        memoryBank: 'test-memoryBank',
       });
 
       expect(mockMastraChunkingService.chunkFile).toHaveBeenCalledWith(content, filePath, sourceId);
@@ -153,7 +153,7 @@ describe('ChunkContentUseCase', () => {
       const content = '# Title\n\nContent';
       const filePath = '/path/to/README.md';
       const sourceId = 'test-source';
-      const chunks = [aChunk()];
+      const chunks = [aContentChunk()];
 
       mockMastraChunkingService.chunkFile.mockResolvedValue(Result.ok(chunks));
 
@@ -161,7 +161,7 @@ describe('ChunkContentUseCase', () => {
         content,
         filePath,
         sourceId,
-        namespace: 'test-namespace',
+        memoryBank: 'test-memoryBank',
       });
 
       expect(mockMastraChunkingService.chunkFile).toHaveBeenCalledWith(content, filePath, sourceId);
@@ -171,7 +171,7 @@ describe('ChunkContentUseCase', () => {
       const content = 'const x = 1;';
       const filePath = '/path/to/app.ts';
       const sourceId = 'test-source';
-      const chunks = [aChunk()];
+      const chunks = [aContentChunk()];
 
       mockMastraChunkingService.chunkFile.mockResolvedValue(Result.ok(chunks));
 
@@ -179,7 +179,7 @@ describe('ChunkContentUseCase', () => {
         content,
         filePath,
         sourceId,
-        namespace: 'test-namespace',
+        memoryBank: 'test-memoryBank',
       });
 
       expect(mockMastraChunkingService.chunkFile).toHaveBeenCalledWith(content, filePath, sourceId);
@@ -189,7 +189,7 @@ describe('ChunkContentUseCase', () => {
       const content = '{"key": "value"}';
       const filePath = '/path/to/config.json';
       const sourceId = 'test-source';
-      const chunks = [aChunk()];
+      const chunks = [aContentChunk()];
 
       mockMastraChunkingService.chunkFile.mockResolvedValue(Result.ok(chunks));
 
@@ -197,7 +197,7 @@ describe('ChunkContentUseCase', () => {
         content,
         filePath,
         sourceId,
-        namespace: 'test-namespace',
+        memoryBank: 'test-memoryBank',
       });
 
       expect(mockMastraChunkingService.chunkFile).toHaveBeenCalledWith(content, filePath, sourceId);
@@ -207,7 +207,7 @@ describe('ChunkContentUseCase', () => {
       const content = 'First sentence. Second sentence.';
       const filePath = '/path/to/notes.txt';
       const sourceId = 'test-source';
-      const chunks = [aChunk()];
+      const chunks = [aContentChunk()];
 
       mockMastraChunkingService.chunkFile.mockResolvedValue(Result.ok(chunks));
 
@@ -215,7 +215,7 @@ describe('ChunkContentUseCase', () => {
         content,
         filePath,
         sourceId,
-        namespace: 'test-namespace',
+        memoryBank: 'test-memoryBank',
       });
 
       expect(mockMastraChunkingService.chunkFile).toHaveBeenCalledWith(content, filePath, sourceId);
@@ -228,7 +228,7 @@ describe('ChunkContentUseCase', () => {
         content: '',
         filePath: '/path/to/file.ts',
         sourceId: 'test-source',
-        namespace: 'test-namespace',
+        memoryBank: 'test-memoryBank',
       });
 
       expect(result.isKo()).toBe(true);
@@ -239,7 +239,7 @@ describe('ChunkContentUseCase', () => {
         content: 'test',
         filePath: '',
         sourceId: 'test-source',
-        namespace: 'test-namespace',
+        memoryBank: 'test-memoryBank',
       });
 
       expect(result.isKo()).toBe(true);
@@ -250,7 +250,7 @@ describe('ChunkContentUseCase', () => {
         content: 'test',
         filePath: '/path/to/file.ts',
         sourceId: '',
-        namespace: 'test-namespace',
+        memoryBank: 'test-memoryBank',
       });
 
       expect(result.isKo()).toBe(true);
@@ -261,7 +261,7 @@ describe('ChunkContentUseCase', () => {
         content: 'test',
         filePath: '/path/to/file.ts',
         sourceId: 'test-source',
-        namespace: 'test-namespace',
+        memoryBank: 'test-memoryBank',
         maxTokens: -10,
       });
 
@@ -273,7 +273,7 @@ describe('ChunkContentUseCase', () => {
         content: 'test',
         filePath: '/path/to/file.ts',
         sourceId: 'test-source',
-        namespace: 'test-namespace',
+        memoryBank: 'test-memoryBank',
         overlapTokens: -10,
       });
 
@@ -293,7 +293,7 @@ describe('ChunkContentUseCase', () => {
         content,
         filePath,
         sourceId,
-        namespace: 'test-namespace',
+        memoryBank: 'test-memoryBank',
       });
 
       expect(result.isKo()).toBe(true);
@@ -306,7 +306,7 @@ describe('ChunkContentUseCase', () => {
       const content = 'Test content';
       const filePath = '/path/to/file.ts';
       const sourceId = 'test-source';
-      const chunks = [aChunk()];
+      const chunks = [aContentChunk()];
 
       mockMastraChunkingService.chunkFile.mockResolvedValue(Result.ok(chunks));
 
@@ -314,7 +314,7 @@ describe('ChunkContentUseCase', () => {
         content,
         filePath,
         sourceId,
-        namespace: 'test-namespace',
+        memoryBank: 'test-memoryBank',
       });
     });
   });
@@ -324,10 +324,12 @@ describe('ChunkContentUseCase', () => {
       const content = 'Test content';
       const filePath = '/path/to/file.md';
       const sourceId = 'test-source';
-      const namespace = 'my-namespace';
-      const rawChunks = [aChunk({ text: 'raw chunk 1', importance: 0.5, tags: [], namespace: 'default' })];
+      const memoryBank = 'my-memoryBank';
+      const rawChunks = [
+        aContentChunk({ text: 'raw chunk 1', importance: 0.5, tags: [], memoryBank: 'default' }),
+      ];
       const enhancedChunks = [
-        aChunk({ text: 'raw chunk 1', importance: 0.8, tags: ['tag1'], namespace: 'my-namespace' }),
+        aContentChunk({ text: 'raw chunk 1', importance: 0.8, tags: ['tag1'], memoryBank: 'my-memoryBank' }),
       ];
 
       mockMastraChunkingService.chunkFile.mockResolvedValue(Result.ok(rawChunks));
@@ -337,7 +339,7 @@ describe('ChunkContentUseCase', () => {
         content,
         filePath,
         sourceId,
-        namespace,
+        memoryBank,
       });
 
       expect(result.isOk()).toBe(true);
@@ -345,15 +347,15 @@ describe('ChunkContentUseCase', () => {
       expect(mockEnhancementPipelineService.enhance).toHaveBeenCalledWith(
         rawChunks,
         sourceId,
-        namespace,
+        memoryBank,
         defaultEnhancementConfig,
       );
     });
 
     it('should return enhanced chunks not raw Mastra chunks', async () => {
-      const rawChunks = [aChunk({ text: 'raw', importance: 0.5, tags: [], namespace: 'default' })];
+      const rawChunks = [aContentChunk({ text: 'raw', importance: 0.5, tags: [], memoryBank: 'default' })];
       const enhancedChunks = [
-        aChunk({ text: 'raw', importance: 0.9, tags: ['important'], namespace: 'test-ns' }),
+        aContentChunk({ text: 'raw', importance: 0.9, tags: ['important'], memoryBank: 'test-ns' }),
       ];
 
       mockMastraChunkingService.chunkFile.mockResolvedValue(Result.ok(rawChunks));
@@ -363,26 +365,26 @@ describe('ChunkContentUseCase', () => {
         content: 'test',
         filePath: '/path/to/file.md',
         sourceId: 'src',
-        namespace: 'test-ns',
+        memoryBank: 'test-ns',
       });
 
       const returnedChunks = result.getValue();
       expect(returnedChunks[0].importance).toBe(0.9);
       expect(returnedChunks[0].tags).toEqual(['important']);
-      expect(returnedChunks[0].namespace).toBe('test-ns');
+      expect(returnedChunks[0].memoryBank).toBe('test-ns');
     });
 
-    it('should include namespace in params and pass to EnhancementPipelineService', async () => {
-      mockMastraChunkingService.chunkFile.mockResolvedValue(Result.ok([aChunk()]));
+    it('should include memoryBank in params and pass to EnhancementPipelineService', async () => {
+      mockMastraChunkingService.chunkFile.mockResolvedValue(Result.ok([aContentChunk()]));
       mockEnhancementPipelineService.enhance.mockResolvedValue(
-        Result.ok([aChunk({ namespace: 'custom-ns' })]),
+        Result.ok([aContentChunk({ memoryBank: 'custom-ns' })]),
       );
 
       await useCase.execute({
         content: 'test',
         filePath: '/path/to/file.md',
         sourceId: 'src',
-        namespace: 'custom-ns',
+        memoryBank: 'custom-ns',
       });
 
       expect(mockEnhancementPipelineService.enhance).toHaveBeenCalledWith(
@@ -394,7 +396,7 @@ describe('ChunkContentUseCase', () => {
     });
 
     it('should fallback to raw chunks when enhancement fails', async () => {
-      const rawChunks = [aChunk({ text: 'raw chunk' })];
+      const rawChunks = [aContentChunk({ text: 'raw chunk' })];
 
       mockMastraChunkingService.chunkFile.mockResolvedValue(Result.ok(rawChunks));
       mockEnhancementPipelineService.enhance.mockResolvedValue(
@@ -405,7 +407,7 @@ describe('ChunkContentUseCase', () => {
         content: 'test',
         filePath: '/path/to/file.md',
         sourceId: 'src',
-        namespace: 'ns',
+        memoryBank: 'ns',
       });
 
       expect(result.isOk()).toBe(true);
@@ -419,14 +421,14 @@ describe('ChunkContentUseCase', () => {
       };
       mockConfigurationService.getEnhancementConfig.mockReturnValue(customConfig);
 
-      mockMastraChunkingService.chunkFile.mockResolvedValue(Result.ok([aChunk()]));
-      mockEnhancementPipelineService.enhance.mockResolvedValue(Result.ok([aChunk()]));
+      mockMastraChunkingService.chunkFile.mockResolvedValue(Result.ok([aContentChunk()]));
+      mockEnhancementPipelineService.enhance.mockResolvedValue(Result.ok([aContentChunk()]));
 
       await useCase.execute({
         content: 'test',
         filePath: '/path/to/file.md',
         sourceId: 'src',
-        namespace: 'ns',
+        memoryBank: 'ns',
       });
 
       expect(mockConfigurationService.getEnhancementConfig).toHaveBeenCalled();
@@ -439,27 +441,27 @@ describe('ChunkContentUseCase', () => {
     });
   });
 
-  describe('namespace validation', () => {
-    it('should accept valid namespace in params', async () => {
-      mockMastraChunkingService.chunkFile.mockResolvedValue(Result.ok([aChunk()]));
-      mockEnhancementPipelineService.enhance.mockResolvedValue(Result.ok([aChunk()]));
+  describe('memoryBank validation', () => {
+    it('should accept valid memoryBank in params', async () => {
+      mockMastraChunkingService.chunkFile.mockResolvedValue(Result.ok([aContentChunk()]));
+      mockEnhancementPipelineService.enhance.mockResolvedValue(Result.ok([aContentChunk()]));
 
       const result = await useCase.execute({
         content: 'test',
         filePath: '/path/to/file.md',
         sourceId: 'src',
-        namespace: 'valid-namespace',
+        memoryBank: 'valid-memoryBank',
       });
 
       expect(result.isOk()).toBe(true);
     });
 
-    it('should return error when namespace is empty', async () => {
+    it('should return error when memoryBank is empty', async () => {
       const result = await useCase.execute({
         content: 'test',
         filePath: '/path/to/file.md',
         sourceId: 'src',
-        namespace: '',
+        memoryBank: '',
       });
 
       expect(result.isKo()).toBe(true);

@@ -181,7 +181,7 @@ describe('ForceReprocessService', () => {
         filePath: '/tmp/test/file1.md',
         eventType: 'add',
         sourceId: 'my-source',
-        namespace: 'my-source',
+        memoryBank: 'my-source',
       });
     });
 

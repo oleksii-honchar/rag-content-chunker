@@ -7,7 +7,7 @@ const fileMemoryTrackerSchema = z.object({
   filePath: z.string().min(1),
   memoryIds: z.array(z.string().min(1)),
   sourceId: z.string().min(1),
-  namespace: z.string().min(1),
+  memoryBank: z.string().min(1),
 });
 
 export type FileMemoryTrackerProps = z.infer<typeof fileMemoryTrackerSchema>;
@@ -68,8 +68,8 @@ export class FileMemoryTracker {
     return this.props.sourceId;
   }
 
-  get namespace(): string {
-    return this.props.namespace;
+  get memoryBank(): string {
+    return this.props.memoryBank;
   }
 
   toJson(): FileMemoryTrackerProps {
@@ -78,7 +78,7 @@ export class FileMemoryTracker {
       filePath: this.props.filePath,
       memoryIds: [...this.props.memoryIds],
       sourceId: this.props.sourceId,
-      namespace: this.props.namespace,
+      memoryBank: this.props.memoryBank,
     };
   }
 }

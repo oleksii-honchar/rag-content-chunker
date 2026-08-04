@@ -23,7 +23,7 @@ jest.mock('@mastra/rag', () => ({
   },
 }));
 
-import { aChunk } from '../domain/content-chunk.entity.test-utils';
+import { aContentChunk } from '../domain/content-chunk.entity.test-utils';
 import { FileAddedEvent, FileChangedEvent, FileDeletedEvent } from '../domain/events/file-events';
 import { FileMemoryTrackerService } from '../infrastructure/file-memory-tracker.service';
 import { aFileMemoryTrackerService } from '../infrastructure/file-memory-tracker.service.test-utils';
@@ -73,9 +73,9 @@ describe('ProcessFileUseCase', () => {
     it('should queue processing and chunk + ingest on success', async () => {
       const filePath = '/path/to/file.md';
       const sourceId = 'test-source';
-      const namespace = 'test-namespace';
+      const memoryBank = 'test-memoryBank';
       const fileContent = 'Test file content';
-      const chunks = [aChunk({ text: 'chunk 1' }), aChunk({ text: 'chunk 2' })];
+      const chunks = [aContentChunk({ text: 'chunk 1' }), aContentChunk({ text: 'chunk 2' })];
 
       (fs.readFile as jest.Mock).mockResolvedValue(fileContent);
 
@@ -88,7 +88,7 @@ describe('ProcessFileUseCase', () => {
         filePath,
         eventType: 'add',
         sourceId,
-        namespace,
+        memoryBank,
       });
 
       expect(result.isOk()).toBe(true);
@@ -97,7 +97,7 @@ describe('ProcessFileUseCase', () => {
         content: fileContent,
         filePath,
         sourceId,
-        namespace,
+        memoryBank,
       });
       expect(mockIngestChunkUseCase.execute).toHaveBeenCalledWith({
         chunks,
@@ -109,12 +109,12 @@ describe('ProcessFileUseCase', () => {
       });
     });
 
-    it('should pass source namespace from params to ChunkContentUseCase', async () => {
+    it('should pass source memoryBank from params to ChunkContentUseCase', async () => {
       const filePath = '/path/to/file.md';
       const sourceId = 'agent-sessions';
-      const namespace = 'agent-sessions';
+      const memoryBank = 'agent-sessions';
       const fileContent = 'Test';
-      const chunks = [aChunk({ namespace })];
+      const chunks = [aContentChunk({ memoryBank })];
 
       (fs.readFile as jest.Mock).mockResolvedValue(fileContent);
       mockChunkContentUseCase.execute.mockResolvedValue(Result.ok(chunks));
@@ -125,10 +125,10 @@ describe('ProcessFileUseCase', () => {
         filePath,
         eventType: 'add',
         sourceId,
-        namespace,
+        memoryBank,
       });
 
-      expect(mockChunkContentUseCase.execute).toHaveBeenCalledWith(expect.objectContaining({ namespace }));
+      expect(mockChunkContentUseCase.execute).toHaveBeenCalledWith(expect.objectContaining({ memoryBank }));
     });
 
     it('should return error when file read fails', async () => {
@@ -145,7 +145,7 @@ describe('ProcessFileUseCase', () => {
         filePath,
         eventType: 'add',
         sourceId,
-        namespace: 'test-namespace',
+        memoryBank: 'test-memoryBank',
       });
 
       expect(result.isOk()).toBe(true);
@@ -167,7 +167,7 @@ describe('ProcessFileUseCase', () => {
         filePath,
         eventType: 'add',
         sourceId,
-        namespace: 'test-namespace',
+        memoryBank: 'test-memoryBank',
       });
 
       expect(result.isOk()).toBe(true);
@@ -177,7 +177,7 @@ describe('ProcessFileUseCase', () => {
       const filePath = '/path/to/file.md';
       const sourceId = 'test-source';
       const fileContent = 'Test content';
-      const chunks = [aChunk()];
+      const chunks = [aContentChunk()];
 
       (fs.readFile as jest.Mock).mockResolvedValue(fileContent);
       mockChunkContentUseCase.execute.mockResolvedValue(Result.ok(chunks));
@@ -191,7 +191,7 @@ describe('ProcessFileUseCase', () => {
         filePath,
         eventType: 'add',
         sourceId,
-        namespace: 'test-namespace',
+        memoryBank: 'test-memoryBank',
       });
 
       expect(result.isOk()).toBe(true);
@@ -213,7 +213,7 @@ describe('ProcessFileUseCase', () => {
         filePath,
         eventType: 'add',
         sourceId,
-        namespace: 'test-namespace',
+        memoryBank: 'test-memoryBank',
       });
 
       expect(mockIngestChunkUseCase.execute).not.toHaveBeenCalled();
@@ -224,9 +224,9 @@ describe('ProcessFileUseCase', () => {
     it('should re-chunk and re-ingest on change', async () => {
       const filePath = '/path/to/file.md';
       const sourceId = 'test-source';
-      const namespace = 'test-namespace';
+      const memoryBank = 'test-memoryBank';
       const fileContent = 'Updated content';
-      const chunks = [aChunk({ text: 'updated chunk' })];
+      const chunks = [aContentChunk({ text: 'updated chunk' })];
 
       (fs.readFile as jest.Mock).mockResolvedValue(fileContent);
       mockChunkContentUseCase.execute.mockResolvedValue(Result.ok(chunks));
@@ -238,14 +238,14 @@ describe('ProcessFileUseCase', () => {
         filePath,
         eventType: 'change',
         sourceId,
-        namespace,
+        memoryBank,
       });
 
       expect(mockChunkContentUseCase.execute).toHaveBeenCalledWith({
         content: fileContent,
         filePath,
         sourceId,
-        namespace,
+        memoryBank,
       });
       expect(mockIngestChunkUseCase.execute).toHaveBeenCalledWith({
         chunks,
@@ -262,7 +262,7 @@ describe('ProcessFileUseCase', () => {
     it('should get memoryIds, forget each, then deleteByFilePath on delete', async () => {
       const filePath = '/path/to/file.md';
       const sourceId = 'test-source';
-      const namespace = 'test-namespace';
+      const memoryBank = 'test-memoryBank';
       const memoryIds = ['mem-1', 'mem-2', 'mem-3'];
 
       mockFileMemoryTrackerService.getMemoryIds.mockResolvedValue(memoryIds);
@@ -274,15 +274,15 @@ describe('ProcessFileUseCase', () => {
         filePath,
         eventType: 'delete',
         sourceId,
-        namespace,
+        memoryBank,
       });
 
       expect(result.isOk()).toBe(true);
       expect(mockFileMemoryTrackerService.getMemoryIds).toHaveBeenCalledWith(filePath);
       expect(mockMnemosyneClient.forget).toHaveBeenCalledTimes(3);
-      expect(mockMnemosyneClient.forget).toHaveBeenCalledWith('mem-1', namespace);
-      expect(mockMnemosyneClient.forget).toHaveBeenCalledWith('mem-2', namespace);
-      expect(mockMnemosyneClient.forget).toHaveBeenCalledWith('mem-3', namespace);
+      expect(mockMnemosyneClient.forget).toHaveBeenCalledWith('mem-1', memoryBank);
+      expect(mockMnemosyneClient.forget).toHaveBeenCalledWith('mem-2', memoryBank);
+      expect(mockMnemosyneClient.forget).toHaveBeenCalledWith('mem-3', memoryBank);
       expect(mockFileMemoryTrackerService.deleteByFilePath).toHaveBeenCalledWith(filePath);
       expect(mockChunkContentUseCase.execute).not.toHaveBeenCalled();
       expect(mockIngestChunkUseCase.execute).not.toHaveBeenCalled();
@@ -291,7 +291,7 @@ describe('ProcessFileUseCase', () => {
     it('should log debug and skip forgets when no mappings found', async () => {
       const filePath = '/path/to/file.md';
       const sourceId = 'test-source';
-      const namespace = 'test-namespace';
+      const memoryBank = 'test-memoryBank';
 
       mockFileMemoryTrackerService.getMemoryIds.mockResolvedValue([]);
       mockProcessingQueue.addToQueue.mockImplementation(task => task());
@@ -300,7 +300,7 @@ describe('ProcessFileUseCase', () => {
         filePath,
         eventType: 'delete',
         sourceId,
-        namespace,
+        memoryBank,
       });
 
       expect(result.isOk()).toBe(true);
@@ -312,7 +312,7 @@ describe('ProcessFileUseCase', () => {
     it('should continue with remaining memories when forget fails for one', async () => {
       const filePath = '/path/to/file.md';
       const sourceId = 'test-source';
-      const namespace = 'test-namespace';
+      const memoryBank = 'test-memoryBank';
       const memoryIds = ['mem-1', 'mem-2', 'mem-3'];
 
       mockFileMemoryTrackerService.getMemoryIds.mockResolvedValue(memoryIds);
@@ -327,7 +327,7 @@ describe('ProcessFileUseCase', () => {
         filePath,
         eventType: 'delete',
         sourceId,
-        namespace,
+        memoryBank,
       });
 
       expect(result.isOk()).toBe(true);
@@ -338,7 +338,7 @@ describe('ProcessFileUseCase', () => {
     it('should continue with remaining memories when forget throws', async () => {
       const filePath = '/path/to/file.md';
       const sourceId = 'test-source';
-      const namespace = 'test-namespace';
+      const memoryBank = 'test-memoryBank';
       const memoryIds = ['mem-1', 'mem-2'];
 
       mockFileMemoryTrackerService.getMemoryIds.mockResolvedValue(memoryIds);
@@ -352,7 +352,7 @@ describe('ProcessFileUseCase', () => {
         filePath,
         eventType: 'delete',
         sourceId,
-        namespace,
+        memoryBank,
       });
 
       expect(result.isOk()).toBe(true);
@@ -363,7 +363,7 @@ describe('ProcessFileUseCase', () => {
     it('should return ok even when deleteByFilePath fails', async () => {
       const filePath = '/path/to/file.md';
       const sourceId = 'test-source';
-      const namespace = 'test-namespace';
+      const memoryBank = 'test-memoryBank';
       const memoryIds = ['mem-1'];
 
       mockFileMemoryTrackerService.getMemoryIds.mockResolvedValue(memoryIds);
@@ -375,7 +375,7 @@ describe('ProcessFileUseCase', () => {
         filePath,
         eventType: 'delete',
         sourceId,
-        namespace,
+        memoryBank,
       });
 
       expect(result.isOk()).toBe(true);
@@ -386,7 +386,7 @@ describe('ProcessFileUseCase', () => {
     it('should complete delete flow for all memory IDs', async () => {
       const filePath = '/path/to/file.md';
       const sourceId = 'test-source';
-      const namespace = 'test-namespace';
+      const memoryBank = 'test-memoryBank';
       const memoryIds = ['mem-1', 'mem-2'];
 
       mockFileMemoryTrackerService.getMemoryIds.mockResolvedValue(memoryIds);
@@ -398,7 +398,7 @@ describe('ProcessFileUseCase', () => {
         filePath,
         eventType: 'delete',
         sourceId,
-        namespace,
+        memoryBank,
       });
 
       expect(result.isOk()).toBe(true);
@@ -418,7 +418,7 @@ describe('ProcessFileUseCase', () => {
         filePath,
         eventType: 'add',
         sourceId,
-        namespace: 'test-namespace',
+        memoryBank: 'test-memoryBank',
       });
 
       expect(mockProcessingQueue.addToQueue).toHaveBeenCalledTimes(1);
@@ -432,7 +432,7 @@ describe('ProcessFileUseCase', () => {
         filePath: '',
         eventType: 'add',
         sourceId: 'test-source',
-        namespace: 'test-namespace',
+        memoryBank: 'test-memoryBank',
       } as unknown as Parameters<typeof useCase.execute>[0]);
 
       expect(result.isKo()).toBe(true);
@@ -443,7 +443,7 @@ describe('ProcessFileUseCase', () => {
         filePath: '/path/to/file.md',
         eventType: 'add',
         sourceId: '',
-        namespace: 'test-namespace',
+        memoryBank: 'test-memoryBank',
       } as unknown as Parameters<typeof useCase.execute>[0]);
 
       expect(result.isKo()).toBe(true);
@@ -464,18 +464,18 @@ describe('ProcessFileUseCase', () => {
         filePath: '/path/to/file.md',
         eventType: 'invalid' as 'add',
         sourceId: 'test-source',
-        namespace: 'test-namespace',
+        memoryBank: 'test-memoryBank',
       } as unknown as Parameters<typeof useCase.execute>[0]);
 
       expect(result.isKo()).toBe(true);
     });
 
-    it('should return error when namespace is missing', async () => {
+    it('should return error when memoryBank is missing', async () => {
       const result = await useCase.execute({
         filePath: '/path/to/file.md',
         eventType: 'add',
         sourceId: 'test-source',
-        namespace: '',
+        memoryBank: '',
       } as unknown as Parameters<typeof useCase.execute>[0]);
 
       expect(result.isKo()).toBe(true);

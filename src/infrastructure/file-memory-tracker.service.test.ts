@@ -30,7 +30,7 @@ describe('FileMemoryTrackerService', () => {
         filePath: '/new/file.md',
         memoryIds: [],
         sourceId: 'source-001',
-        namespace: 'vault-knowledge',
+        memoryBank: 'vault-knowledge',
         remember: jest.fn().mockReturnValue(Result.ok(null as unknown as FileMemoryTracker)),
       } as unknown as FileMemoryTracker;
 
@@ -51,7 +51,7 @@ describe('FileMemoryTrackerService', () => {
         filePath: '/existing/file.md',
         memoryIds: ['mem-001'],
         sourceId: 'source-001',
-        namespace: 'vault-knowledge',
+        memoryBank: 'vault-knowledge',
         remember: jest.fn().mockReturnValue(Result.ok(null as unknown as FileMemoryTracker)),
       } as unknown as FileMemoryTracker;
 
@@ -77,7 +77,7 @@ describe('FileMemoryTrackerService', () => {
         filePath: '/test/file.md',
         memoryIds: ['mem-001', 'mem-002'],
         sourceId: 'source-001',
-        namespace: 'vault-knowledge',
+        memoryBank: 'vault-knowledge',
         remember: jest.fn().mockReturnValue(Result.ok(null as unknown as FileMemoryTracker)),
       } as unknown as FileMemoryTracker;
 
@@ -98,7 +98,7 @@ describe('FileMemoryTrackerService', () => {
         filePath: '/test/file.txt',
         memoryIds: ['mem-001', 'mem-002'],
         sourceId: 'source-001',
-        namespace: 'vault-knowledge',
+        memoryBank: 'vault-knowledge',
         forget: jest.fn().mockReturnValue(Result.ok(null as unknown as FileMemoryTracker)),
       } as unknown as FileMemoryTracker;
 
@@ -129,7 +129,7 @@ describe('FileMemoryTrackerService', () => {
         filePath: '/test/file.txt',
         memoryIds: ['mem-002'],
         sourceId: 'source-001',
-        namespace: 'vault-knowledge',
+        memoryBank: 'vault-knowledge',
         forget: jest.fn().mockReturnValue(Result.ok(null as unknown as FileMemoryTracker)),
       } as unknown as FileMemoryTracker;
 

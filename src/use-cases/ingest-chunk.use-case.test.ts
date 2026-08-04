@@ -1,5 +1,5 @@
 import { ContentChunk } from '../domain/content-chunk.entity';
-import { aChunk } from '../domain/content-chunk.entity.test-utils';
+import { aContentChunk } from '../domain/content-chunk.entity.test-utils';
 import { aFileMemoryTrackerService } from '../infrastructure/file-memory-tracker.service.test-utils';
 import { aLogger } from '../infrastructure/logging/logger.test-utils';
 import { aMnemosyneClientService } from '../infrastructure/mnemosyne-client.test-utils';
@@ -37,7 +37,7 @@ describe('IngestChunkUseCase', () => {
 
   describe('execute', () => {
     it('should ingest all valid chunks via MnemosyneClient.remember()', async () => {
-      const chunks: ContentChunk[] = [aChunk({ chunkIndex: 0 }), aChunk({ chunkIndex: 1 })];
+      const chunks: ContentChunk[] = [aContentChunk({ chunkIndex: 0 }), aContentChunk({ chunkIndex: 1 })];
       mockMnemosyneClientService.remember.mockResolvedValue(
         Result.ok({ memory_id: 'mem-1', status: 'stored' }),
       );
@@ -58,9 +58,9 @@ describe('IngestChunkUseCase', () => {
     });
 
     it('should handle partial failures without stopping all chunks', async () => {
-      const chunk1 = aChunk({ chunkIndex: 0 });
-      const chunk2 = aChunk({ chunkIndex: 1 });
-      const chunk3 = aChunk({ chunkIndex: 2 });
+      const chunk1 = aContentChunk({ chunkIndex: 0 });
+      const chunk2 = aContentChunk({ chunkIndex: 1 });
+      const chunk3 = aContentChunk({ chunkIndex: 2 });
 
       mockMnemosyneClientService.remember
         .mockResolvedValueOnce(Result.ok({ memory_id: 'mem-1', status: 'stored' }))
@@ -77,7 +77,7 @@ describe('IngestChunkUseCase', () => {
     });
 
     it('should return error when all chunks fail', async () => {
-      const chunks: ContentChunk[] = [aChunk({ chunkIndex: 0 }), aChunk({ chunkIndex: 1 })];
+      const chunks: ContentChunk[] = [aContentChunk({ chunkIndex: 0 }), aContentChunk({ chunkIndex: 1 })];
       mockMnemosyneClientService.remember.mockResolvedValue(Result.ko(new Error('Connection refused')));
 
       const result = await useCase.execute({ chunks, sourceId: 'test-source' });
@@ -88,7 +88,7 @@ describe('IngestChunkUseCase', () => {
     });
 
     it('should handle MnemosyneClient.remember throwing an exception', async () => {
-      const chunk = aChunk({ chunkIndex: 0 });
+      const chunk = aContentChunk({ chunkIndex: 0 });
       mockMnemosyneClientService.remember.mockRejectedValue(new Error('Network timeout'));
 
       const result = await useCase.execute({ chunks: [chunk], sourceId: 'test-source' });
@@ -104,9 +104,9 @@ describe('IngestChunkUseCase', () => {
   });
 
   describe('enhanced chunk fields', () => {
-    it('should pass enhanced chunk with namespace to MnemosyneClient.remember()', async () => {
-      const enhancedChunk = aChunk({
-        namespace: 'agent-sessions',
+    it('should pass enhanced chunk with memoryBank to MnemosyneClient.remember()', async () => {
+      const enhancedChunk = aContentChunk({
+        memoryBank: 'agent-sessions',
         importance: 0.85,
         tags: ['meeting-notes', 'architecture'],
       });
@@ -117,13 +117,13 @@ describe('IngestChunkUseCase', () => {
       await useCase.execute({ chunks: [enhancedChunk], sourceId: 'test-source' });
 
       const passedChunk = mockMnemosyneClientService.remember.mock.calls[0][0];
-      expect(passedChunk.namespace).toBe('agent-sessions');
+      expect(passedChunk.memoryBank).toBe('agent-sessions');
       expect(passedChunk.importance).toBe(0.85);
       expect(passedChunk.tags).toEqual(['meeting-notes', 'architecture']);
     });
 
     it('should pass enhanced chunk with importance to MnemosyneClient.remember()', async () => {
-      const enhancedChunk = aChunk({ importance: 0.95 });
+      const enhancedChunk = aContentChunk({ importance: 0.95 });
       mockMnemosyneClientService.remember.mockResolvedValue(
         Result.ok({ memory_id: 'mem-1', status: 'stored' }),
       );
@@ -135,7 +135,7 @@ describe('IngestChunkUseCase', () => {
     });
 
     it('should pass enhanced chunk with tags to MnemosyneClient.remember()', async () => {
-      const enhancedChunk = aChunk({ tags: ['typescript', 'api', 'critical'] });
+      const enhancedChunk = aContentChunk({ tags: ['typescript', 'api', 'critical'] });
       mockMnemosyneClientService.remember.mockResolvedValue(
         Result.ok({ memory_id: 'mem-1', status: 'stored' }),
       );
@@ -147,8 +147,8 @@ describe('IngestChunkUseCase', () => {
     });
 
     it('should ingest multiple enhanced chunks preserving their fields', async () => {
-      const chunk1 = aChunk({ namespace: 'ns1', importance: 0.7, tags: ['a'] });
-      const chunk2 = aChunk({ namespace: 'ns2', importance: 0.9, tags: ['b', 'c'] });
+      const chunk1 = aContentChunk({ memoryBank: 'ns1', importance: 0.7, tags: ['a'] });
+      const chunk2 = aContentChunk({ memoryBank: 'ns2', importance: 0.9, tags: ['b', 'c'] });
       mockMnemosyneClientService.remember.mockResolvedValue(
         Result.ok({ memory_id: 'mem-1', status: 'stored' }),
       );
@@ -156,14 +156,14 @@ describe('IngestChunkUseCase', () => {
       await useCase.execute({ chunks: [chunk1, chunk2], sourceId: 'test-source' });
 
       expect(mockMnemosyneClientService.remember).toHaveBeenCalledTimes(2);
-      expect(mockMnemosyneClientService.remember.mock.calls[0][0].namespace).toBe('ns1');
-      expect(mockMnemosyneClientService.remember.mock.calls[1][0].namespace).toBe('ns2');
+      expect(mockMnemosyneClientService.remember.mock.calls[0][0].memoryBank).toBe('ns1');
+      expect(mockMnemosyneClientService.remember.mock.calls[1][0].memoryBank).toBe('ns2');
     });
   });
 
   describe('FileMemoryTracker integration', () => {
     it('should call trackMemory after successful MnemosyneClient.remember with correct args', async () => {
-      const chunk = aChunk({ chunkIndex: 0, namespace: 'agent-sessions' });
+      const chunk = aContentChunk({ chunkIndex: 0, memoryBank: 'agent-sessions' });
       mockMnemosyneClientService.remember.mockResolvedValue(
         Result.ok({ memory_id: 'mem-abc', status: 'stored' }),
       );
@@ -186,8 +186,8 @@ describe('IngestChunkUseCase', () => {
     });
 
     it('should call trackMemory for each successfully ingested chunk', async () => {
-      const chunk1 = aChunk({ chunkIndex: 0, namespace: 'vault' });
-      const chunk2 = aChunk({ chunkIndex: 1, namespace: 'vault' });
+      const chunk1 = aContentChunk({ chunkIndex: 0, memoryBank: 'vault' });
+      const chunk2 = aContentChunk({ chunkIndex: 1, memoryBank: 'vault' });
       mockMnemosyneClientService.remember
         .mockResolvedValueOnce(Result.ok({ memory_id: 'mem-1', status: 'stored' }))
         .mockResolvedValueOnce(Result.ok({ memory_id: 'mem-2', status: 'stored' }));
@@ -217,7 +217,7 @@ describe('IngestChunkUseCase', () => {
     });
 
     it('should NOT call trackMemory when MnemosyneClient.remember fails', async () => {
-      const chunk = aChunk({ chunkIndex: 0, namespace: 'vault' });
+      const chunk = aContentChunk({ chunkIndex: 0, memoryBank: 'vault' });
       mockMnemosyneClientService.remember.mockResolvedValue(Result.ko(new Error('MCP error')));
 
       await useCase.execute({
@@ -230,7 +230,7 @@ describe('IngestChunkUseCase', () => {
     });
 
     it('should NOT call trackMemory when MnemosyneClient.remember throws', async () => {
-      const chunk = aChunk({ chunkIndex: 0, namespace: 'vault' });
+      const chunk = aContentChunk({ chunkIndex: 0, memoryBank: 'vault' });
       mockMnemosyneClientService.remember.mockRejectedValue(new Error('Network timeout'));
 
       await useCase.execute({
@@ -243,9 +243,9 @@ describe('IngestChunkUseCase', () => {
     });
 
     it('should track only successful chunks when some fail', async () => {
-      const chunk1 = aChunk({ chunkIndex: 0, namespace: 'vault' });
-      const chunk2 = aChunk({ chunkIndex: 1, namespace: 'vault' });
-      const chunk3 = aChunk({ chunkIndex: 2, namespace: 'vault' });
+      const chunk1 = aContentChunk({ chunkIndex: 0, memoryBank: 'vault' });
+      const chunk2 = aContentChunk({ chunkIndex: 1, memoryBank: 'vault' });
+      const chunk3 = aContentChunk({ chunkIndex: 2, memoryBank: 'vault' });
 
       mockMnemosyneClientService.remember
         .mockResolvedValueOnce(Result.ok({ memory_id: 'mem-1', status: 'stored' }))
@@ -277,7 +277,7 @@ describe('IngestChunkUseCase', () => {
     });
 
     it('should not fail ingestion when trackMemory fails', async () => {
-      const chunk = aChunk({ chunkIndex: 0, namespace: 'vault' });
+      const chunk = aContentChunk({ chunkIndex: 0, memoryBank: 'vault' });
       mockMnemosyneClientService.remember.mockResolvedValue(
         Result.ok({ memory_id: 'mem-abc', status: 'stored' }),
       );
@@ -293,7 +293,7 @@ describe('IngestChunkUseCase', () => {
     });
 
     it('should not fail ingestion when trackMemory throws', async () => {
-      const chunk = aChunk({ chunkIndex: 0, namespace: 'vault' });
+      const chunk = aContentChunk({ chunkIndex: 0, memoryBank: 'vault' });
       mockMnemosyneClientService.remember.mockResolvedValue(
         Result.ok({ memory_id: 'mem-abc', status: 'stored' }),
       );
@@ -309,7 +309,7 @@ describe('IngestChunkUseCase', () => {
     });
 
     it('should skip tracking when filePath is not present in metadata', async () => {
-      const chunk = aChunk({ chunkIndex: 0, namespace: 'vault' });
+      const chunk = aContentChunk({ chunkIndex: 0, memoryBank: 'vault' });
       mockMnemosyneClientService.remember.mockResolvedValue(
         Result.ok({ memory_id: 'mem-abc', status: 'stored' }),
       );
@@ -324,7 +324,7 @@ describe('IngestChunkUseCase', () => {
     });
 
     it('should skip tracking when metadata is undefined', async () => {
-      const chunk = aChunk({ chunkIndex: 0, namespace: 'vault' });
+      const chunk = aContentChunk({ chunkIndex: 0, memoryBank: 'vault' });
       mockMnemosyneClientService.remember.mockResolvedValue(
         Result.ok({ memory_id: 'mem-abc', status: 'stored' }),
       );

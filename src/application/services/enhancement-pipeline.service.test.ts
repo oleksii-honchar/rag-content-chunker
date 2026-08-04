@@ -1,7 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ContentChunk, FILE_ROLES, FileRole } from '../../domain/content-chunk.entity';
-import { EnhancementConfig } from '../../infrastructure/config/config-schemas';
+import { FILE_ROLES } from '../../domain/content-chunk.entity';
+import { aContentChunk } from '../../domain/content-chunk.entity.test-utils';
+import { DEFAULT_CONFIG } from '../../infrastructure/config/configuration.service';
 import { BasePinoLogger } from '../../infrastructure/logging/base-pino-logger';
+import { aLogger } from '../../infrastructure/logging/logger.test-utils';
 import { EnhancementPipelineService } from './enhancement-pipeline.service';
 import { ImportanceScoringService } from './importance-scoring.service';
 import { TagExtractionService } from './tag-extraction.service';
@@ -12,62 +14,6 @@ describe('EnhancementPipelineService', () => {
   let tagExtractionService: jest.Mocked<TagExtractionService>;
   let logger: jest.Mocked<BasePinoLogger>;
 
-  const defaultConfig: EnhancementConfig = {
-    maxCharacters: { prose: 200, code: 400, configuration: 300, documentation: 300 },
-    importance: {
-      enabled: true,
-      defaultScore: 0.5,
-      factors: [
-        { name: 'fileRole', weight: 0.4 },
-        { name: 'length', weight: 0.2 },
-        { name: 'keywords', weight: 0.3 },
-        { name: 'header', weight: 0.1 },
-      ],
-    },
-    tags: { enabled: true, maxTags: 10 },
-    source: { includePath: true, includeSection: true, includeMetadata: false },
-  };
-
-  const createChunk = (
-    overrides?: Partial<{
-      id: string;
-      text: string;
-      fileRole: FileRole;
-      sectionHeader: string;
-      namespace: string;
-      importance: number;
-      tags: string[];
-      language?: string;
-    }>,
-  ) => {
-    const props = {
-      id: crypto.randomUUID(),
-      text: 'Test chunk content',
-      chunkIndex: 0,
-      totalChunks: 1,
-      sectionHeader: 'Test Section',
-      breadcrumb: 'root > test',
-      fileRole: FILE_ROLES.DOCS,
-      oversized: false,
-      metadata: {},
-      importance: 0.5,
-      tags: [],
-      namespace: 'default',
-      ...overrides,
-    };
-    return ContentChunk.of(props).getValue();
-  };
-
-  const mockLogger: jest.Mocked<BasePinoLogger> = {
-    setContext: jest.fn(),
-    log: jest.fn(),
-    info: jest.fn(),
-    error: jest.fn(),
-    warn: jest.fn(),
-    debug: jest.fn(),
-    child: jest.fn().mockReturnThis(),
-  };
-
   beforeEach(async () => {
     importanceScoringService = {
       score: jest.fn().mockReturnValue(0.75),
@@ -77,7 +23,7 @@ describe('EnhancementPipelineService', () => {
       extract: jest.fn().mockReturnValue(['tag1', 'tag2']),
     } as unknown as jest.Mocked<TagExtractionService>;
 
-    logger = mockLogger as jest.Mocked<BasePinoLogger>;
+    logger = aLogger();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -98,8 +44,13 @@ describe('EnhancementPipelineService', () => {
   describe('enhance', () => {
     describe('happy path', () => {
       it('should return Result.ok with enhanced chunks', async () => {
-        const chunks = [createChunk(), createChunk()];
-        const result = await service.enhance(chunks, 'test-source', 'my-namespace', defaultConfig);
+        const chunks = [aContentChunk(), aContentChunk()];
+        const result = await service.enhance(
+          chunks,
+          'test-source',
+          'my-memoryBank',
+          DEFAULT_CONFIG.enhancement,
+        );
 
         expect(result.isOk()).toBe(true);
         const enhancedChunks = result.getValue();
@@ -107,10 +58,15 @@ describe('EnhancementPipelineService', () => {
       });
 
       it('should apply importance scoring to each chunk', async () => {
-        const chunks = [createChunk()];
-        const result = await service.enhance(chunks, 'test-source', 'my-namespace', defaultConfig);
+        const chunks = [aContentChunk()];
+        const result = await service.enhance(
+          chunks,
+          'test-source',
+          'my-memoryBank',
+          DEFAULT_CONFIG.enhancement,
+        );
 
-        expect(importanceScoringService.score).toHaveBeenCalledWith(chunks[0], defaultConfig);
+        expect(importanceScoringService.score).toHaveBeenCalledWith(chunks[0], DEFAULT_CONFIG.enhancement);
         expect(importanceScoringService.score).toHaveBeenCalledTimes(1);
 
         const enhancedChunks = result.getValue();
@@ -118,33 +74,48 @@ describe('EnhancementPipelineService', () => {
       });
 
       it('should apply tag extraction to each chunk', async () => {
-        const chunks = [createChunk()];
-        const result = await service.enhance(chunks, 'test-source', 'my-namespace', defaultConfig);
+        const chunks = [aContentChunk()];
+        const result = await service.enhance(
+          chunks,
+          'test-source',
+          'my-memoryBank',
+          DEFAULT_CONFIG.enhancement,
+        );
 
-        expect(tagExtractionService.extract).toHaveBeenCalledWith(chunks[0], defaultConfig);
+        expect(tagExtractionService.extract).toHaveBeenCalledWith(chunks[0], DEFAULT_CONFIG.enhancement);
         expect(tagExtractionService.extract).toHaveBeenCalledTimes(1);
 
         const enhancedChunks = result.getValue();
         expect(enhancedChunks[0].tags).toEqual(['tag1', 'tag2']);
       });
 
-      it('should set namespace from provided parameter', async () => {
-        const chunks = [createChunk({ namespace: 'original' })];
-        const result = await service.enhance(chunks, 'test-source', 'my-namespace', defaultConfig);
+      it('should set memoryBank from provided parameter', async () => {
+        const chunks = [aContentChunk({ memoryBank: 'original' })];
+        const result = await service.enhance(
+          chunks,
+          'test-source',
+          'my-memoryBank',
+          DEFAULT_CONFIG.enhancement,
+        );
 
         const enhancedChunks = result.getValue();
-        expect(enhancedChunks[0].namespace).toBe('my-namespace');
+        expect(enhancedChunks[0].memoryBank).toBe('my-memoryBank');
       });
 
       it('should preserve original chunk properties', async () => {
-        const original = createChunk({
+        const original = aContentChunk({
           text: 'Original text',
           fileRole: FILE_ROLES.CODE,
           sectionHeader: '## Code Section',
           language: 'typescript',
         });
         const chunks = [original];
-        const result = await service.enhance(chunks, 'test-source', 'my-namespace', defaultConfig);
+        const result = await service.enhance(
+          chunks,
+          'test-source',
+          'my-memoryBank',
+          DEFAULT_CONFIG.enhancement,
+        );
 
         const enhancedChunks = result.getValue();
         const enhanced = enhancedChunks[0];
@@ -163,20 +134,25 @@ describe('EnhancementPipelineService', () => {
       });
 
       it('should create new Chunk entities with enhanced properties', async () => {
-        const chunks = [createChunk()];
-        const result = await service.enhance(chunks, 'test-source', 'my-namespace', defaultConfig);
+        const chunks = [aContentChunk()];
+        const result = await service.enhance(
+          chunks,
+          'test-source',
+          'my-memoryBank',
+          DEFAULT_CONFIG.enhancement,
+        );
 
         const enhancedChunks = result.getValue();
         // Verify enhanced properties are applied
         expect(enhancedChunks[0].importance).toBe(0.75);
         expect(enhancedChunks[0].tags).toEqual(['tag1', 'tag2']);
-        expect(enhancedChunks[0].namespace).toBe('my-namespace');
+        expect(enhancedChunks[0].memoryBank).toBe('my-memoryBank');
       });
 
       it('should process multiple chunks independently', async () => {
-        const chunk1 = createChunk({ text: 'First chunk' });
-        const chunk2 = createChunk({ text: 'Second chunk' });
-        const chunk3 = createChunk({ text: 'Third chunk' });
+        const chunk1 = aContentChunk({ text: 'First chunk' });
+        const chunk2 = aContentChunk({ text: 'Second chunk' });
+        const chunk3 = aContentChunk({ text: 'Third chunk' });
 
         importanceScoringService.score
           .mockReturnValueOnce(0.6)
@@ -188,7 +164,7 @@ describe('EnhancementPipelineService', () => {
           .mockReturnValueOnce(['c']);
 
         const chunks = [chunk1, chunk2, chunk3];
-        const result = await service.enhance(chunks, 'test-source', 'ns', defaultConfig);
+        const result = await service.enhance(chunks, 'test-source', 'ns', DEFAULT_CONFIG.enhancement);
 
         const enhancedChunks = result.getValue();
         expect(enhancedChunks[0].importance).toBe(0.6);
@@ -202,7 +178,7 @@ describe('EnhancementPipelineService', () => {
 
     describe('empty input', () => {
       it('should return Result.ok with empty array when input is empty', async () => {
-        const result = await service.enhance([], 'test-source', 'my-namespace', defaultConfig);
+        const result = await service.enhance([], 'test-source', 'my-memoryBank', DEFAULT_CONFIG.enhancement);
 
         expect(result.isOk()).toBe(true);
         expect(result.getValue()).toEqual([]);
@@ -217,8 +193,13 @@ describe('EnhancementPipelineService', () => {
           throw new Error('Scoring service error');
         });
 
-        const chunks = [createChunk()];
-        const result = await service.enhance(chunks, 'test-source', 'my-namespace', defaultConfig);
+        const chunks = [aContentChunk()];
+        const result = await service.enhance(
+          chunks,
+          'test-source',
+          'my-memoryBank',
+          DEFAULT_CONFIG.enhancement,
+        );
 
         expect(result.isOk()).toBe(true);
         const enhancedChunks = result.getValue();
@@ -232,8 +213,13 @@ describe('EnhancementPipelineService', () => {
           throw new Error('Tag extraction service error');
         });
 
-        const chunks = [createChunk()];
-        const result = await service.enhance(chunks, 'test-source', 'my-namespace', defaultConfig);
+        const chunks = [aContentChunk()];
+        const result = await service.enhance(
+          chunks,
+          'test-source',
+          'my-memoryBank',
+          DEFAULT_CONFIG.enhancement,
+        );
 
         expect(result.isOk()).toBe(true);
         const enhancedChunks = result.getValue();
@@ -249,8 +235,13 @@ describe('EnhancementPipelineService', () => {
           })
           .mockReturnValueOnce(0.8);
 
-        const chunks = [createChunk(), createChunk()];
-        const result = await service.enhance(chunks, 'test-source', 'my-namespace', defaultConfig);
+        const chunks = [aContentChunk(), aContentChunk()];
+        const result = await service.enhance(
+          chunks,
+          'test-source',
+          'my-memoryBank',
+          DEFAULT_CONFIG.enhancement,
+        );
 
         expect(result.isOk()).toBe(true);
         const enhancedChunks = result.getValue();
@@ -267,8 +258,13 @@ describe('EnhancementPipelineService', () => {
           })
           .mockReturnValueOnce(['tag3']);
 
-        const chunks = [createChunk(), createChunk(), createChunk()];
-        const result = await service.enhance(chunks, 'test-source', 'my-namespace', defaultConfig);
+        const chunks = [aContentChunk(), aContentChunk(), aContentChunk()];
+        const result = await service.enhance(
+          chunks,
+          'test-source',
+          'my-memoryBank',
+          DEFAULT_CONFIG.enhancement,
+        );
 
         expect(result.isOk()).toBe(true);
         const enhancedChunks = result.getValue();
@@ -283,8 +279,13 @@ describe('EnhancementPipelineService', () => {
           throw new Error('Specific scoring error');
         });
 
-        const chunks = [createChunk()];
-        const result = await service.enhance(chunks, 'test-source', 'my-namespace', defaultConfig);
+        const chunks = [aContentChunk()];
+        const result = await service.enhance(
+          chunks,
+          'test-source',
+          'my-memoryBank',
+          DEFAULT_CONFIG.enhancement,
+        );
 
         expect(result.isOk()).toBe(true);
         const enhancedChunks = result.getValue();
@@ -299,22 +300,32 @@ describe('EnhancementPipelineService', () => {
           throw new Error('Tagging failed');
         });
 
-        const chunks = [createChunk()];
-        const result = await service.enhance(chunks, 'test-source', 'my-namespace', defaultConfig);
+        const chunks = [aContentChunk()];
+        const result = await service.enhance(
+          chunks,
+          'test-source',
+          'my-memoryBank',
+          DEFAULT_CONFIG.enhancement,
+        );
 
         expect(result.isOk()).toBe(true);
         const enhancedChunks = result.getValue();
         expect(enhancedChunks[0].importance).toBe(0.5);
         expect(enhancedChunks[0].tags).toEqual([]);
-        expect(enhancedChunks[0].namespace).toBe('my-namespace');
+        expect(enhancedChunks[0].memoryBank).toBe('my-memoryBank');
       });
     });
 
     describe('no character limit logic', () => {
       it('should not truncate or modify chunk text based on character limits', async () => {
         const longText = 'a'.repeat(1000);
-        const chunk = createChunk({ text: longText });
-        const result = await service.enhance([chunk], 'test-source', 'my-namespace', defaultConfig);
+        const chunk = aContentChunk({ text: longText });
+        const result = await service.enhance(
+          [chunk],
+          'test-source',
+          'my-memoryBank',
+          DEFAULT_CONFIG.enhancement,
+        );
 
         const enhancedChunks = result.getValue();
         expect(enhancedChunks[0].text).toBe(longText);
@@ -323,17 +334,22 @@ describe('EnhancementPipelineService', () => {
     });
 
     describe('sourceId usage', () => {
-      it('should apply namespace from sourceId context even when scoring fails', async () => {
+      it('should apply memoryBank from sourceId context even when scoring fails', async () => {
         importanceScoringService.score.mockImplementation(() => {
           throw new Error('Scoring error');
         });
 
-        const chunks = [createChunk()];
-        const result = await service.enhance(chunks, 'my-watch-source', 'my-namespace', defaultConfig);
+        const chunks = [aContentChunk()];
+        const result = await service.enhance(
+          chunks,
+          'my-watch-source',
+          'my-memoryBank',
+          DEFAULT_CONFIG.enhancement,
+        );
 
         expect(result.isOk()).toBe(true);
         const enhancedChunks = result.getValue();
-        expect(enhancedChunks[0].namespace).toBe('my-namespace');
+        expect(enhancedChunks[0].memoryBank).toBe('my-memoryBank');
       });
     });
   });

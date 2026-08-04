@@ -21,4 +21,5 @@ module.exports = async (): Promise<void> => {
   }
   delete process.env.E2E_TEMP_ROOT;
   delete process.env.E2E_WATCH_DIR;
+  delete process.env.E2E_DATA_DIR;
 };

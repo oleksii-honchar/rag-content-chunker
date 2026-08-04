@@ -1,13 +1,15 @@
+import { generateId } from '../utils/big-endian-id';
+import { faker } from '../utils/test-faker';
 import { ContentChunk, ContentChunkProps, FILE_ROLES } from './content-chunk.entity';
 
-export function aChunk(overrides?: Partial<ContentChunkProps>): ContentChunk {
+export function aContentChunk(overrides?: Partial<ContentChunkProps>): ContentChunk {
   const props: ContentChunkProps = {
-    id: crypto.randomUUID(),
-    text: 'Test chunk content',
+    id: generateId(),
+    text: faker.lorem.paragraph(),
     chunkIndex: 0,
     totalChunks: 1,
-    sectionHeader: 'Test Section',
-    breadcrumb: 'root > test',
+    sectionHeader: faker.lorem.sentence(),
+    breadcrumb: faker.lorem.words(3).split(' ').join(' > '),
     language: undefined,
     fileRole: FILE_ROLES.DOCS,
     oversized: false,
@@ -15,8 +17,8 @@ export function aChunk(overrides?: Partial<ContentChunkProps>): ContentChunk {
     endLine: 10,
     metadata: {},
     importance: 0.5,
-    tags: [],
-    namespace: 'default',
+    tags: faker.lorem.words(2).split(' ') as string[],
+    memoryBank: faker.lorem.word(),
     ...overrides,
   };
   return ContentChunk.of(props).getValue();

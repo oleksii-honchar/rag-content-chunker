@@ -135,16 +135,16 @@ export async function initializeMcpSession(config: McpClientConfig = defaultConf
 }
 
 /**
- * Call mnemosyne_list_namespaces via MCP and return parsed namespaces.
+ * Call memory_list_banks via MCP and return parsed memory banks.
  */
-export async function listNamespaces(
+export async function listBanks(
   sessionId: string | null,
   config: McpClientConfig = defaultConfig,
 ): Promise<{ name: string; description?: string }[]> {
   const { response } = await callMcpTool(
     'tools/call',
     {
-      name: 'mnemosyne_list_namespaces',
+      name: 'memory_list_banks',
       arguments: {},
     },
     sessionId,
@@ -159,10 +159,10 @@ export async function listNamespaces(
     );
     if (textContent && typeof (textContent as { text?: string }).text === 'string') {
       const parsed = JSON.parse((textContent as { text: string }).text);
-      return Array.isArray(parsed.namespaces) ? parsed.namespaces : [];
+      return Array.isArray(parsed.banks) ? parsed.banks : [];
     }
   }
 
   // Fallback: direct result
-  return Array.isArray(response.namespaces) ? response.namespaces : [];
+  return Array.isArray(response.banks) ? response.banks : [];
 }

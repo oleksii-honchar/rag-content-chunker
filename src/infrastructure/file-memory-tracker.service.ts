@@ -16,7 +16,7 @@ export class FileMemoryTrackerService {
     filePath: string,
     memoryId: string,
     sourceId: string,
-    namespace: string,
+    memoryBank: string,
   ): Promise<FileMemoryTracker> {
     // Create aggregate with pre-generated ID
     const newTracker = FileMemoryTracker.of({
@@ -24,7 +24,7 @@ export class FileMemoryTrackerService {
       filePath,
       memoryIds: [],
       sourceId,
-      namespace,
+      memoryBank,
     });
 
     if (newTracker.isKo()) {

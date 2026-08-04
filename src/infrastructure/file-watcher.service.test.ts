@@ -61,7 +61,7 @@ describe('FileWatcherService', () => {
     } as unknown as jest.Mocked<BasePinoLogger>;
 
     mockMnemosyneClient = {
-      registerNamespace: jest.fn(),
+      registerBank: jest.fn(),
       remember: jest.fn(),
       recall: jest.fn(),
       healthCheck: jest.fn(),
@@ -281,54 +281,54 @@ describe('FileWatcherService', () => {
     });
   });
 
-  describe('namespace registration', () => {
-    it('calls registerNamespace for sources with description', async () => {
+  describe('memory bank registration', () => {
+    it('calls registerBank for sources with description', async () => {
       const sources = [
-        aWatchSource({ id: 'vault', namespace: 'vault', description: 'Personal vault notes' }),
-        aWatchSource({ id: 'sessions', namespace: 'sessions', description: 'Agent sessions' }),
+        aWatchSource({ id: 'vault', memoryBank: 'vault', description: 'Personal vault notes' }),
+        aWatchSource({ id: 'sessions', memoryBank: 'sessions', description: 'Agent sessions' }),
       ];
       configService.getWatchSources.mockReturnValue(sources);
-      mockMnemosyneClient.registerNamespace.mockResolvedValue(Result.ok(undefined as unknown as void));
+      mockMnemosyneClient.registerBank.mockResolvedValue(Result.ok(undefined as unknown as void));
 
       await service.onApplicationBootstrap();
 
-      expect(mockMnemosyneClient.registerNamespace).toHaveBeenCalledTimes(2);
-      expect(mockMnemosyneClient.registerNamespace).toHaveBeenCalledWith('vault', 'Personal vault notes');
-      expect(mockMnemosyneClient.registerNamespace).toHaveBeenCalledWith('sessions', 'Agent sessions');
+      expect(mockMnemosyneClient.registerBank).toHaveBeenCalledTimes(2);
+      expect(mockMnemosyneClient.registerBank).toHaveBeenCalledWith('vault', 'Personal vault notes');
+      expect(mockMnemosyneClient.registerBank).toHaveBeenCalledWith('sessions', 'Agent sessions');
     });
 
     it('skips sources without description', async () => {
       const sources = [
-        aWatchSource({ id: 'vault', namespace: 'vault', description: 'Personal vault notes' }),
-        aWatchSource({ id: 'no-desc', namespace: 'no-desc' }),
+        aWatchSource({ id: 'vault', memoryBank: 'vault', description: 'Personal vault notes' }),
+        aWatchSource({ id: 'no-desc', memoryBank: 'no-desc' }),
       ];
       configService.getWatchSources.mockReturnValue(sources);
-      mockMnemosyneClient.registerNamespace.mockResolvedValue(Result.ok(undefined as unknown as void));
+      mockMnemosyneClient.registerBank.mockResolvedValue(Result.ok(undefined as unknown as void));
 
       await service.onApplicationBootstrap();
 
-      expect(mockMnemosyneClient.registerNamespace).toHaveBeenCalledTimes(1);
-      expect(mockMnemosyneClient.registerNamespace).toHaveBeenCalledWith('vault', 'Personal vault notes');
+      expect(mockMnemosyneClient.registerBank).toHaveBeenCalledTimes(1);
+      expect(mockMnemosyneClient.registerBank).toHaveBeenCalledWith('vault', 'Personal vault notes');
     });
 
-    it('logs warning on registration failure and continues with other namespaces', async () => {
+    it('logs warning on registration failure and continues with other memory banks', async () => {
       const sources = [
-        aWatchSource({ id: 'vault', namespace: 'vault', description: 'Vault' }),
-        aWatchSource({ id: 'sessions', namespace: 'sessions', description: 'Sessions' }),
+        aWatchSource({ id: 'vault', memoryBank: 'vault', description: 'Vault' }),
+        aWatchSource({ id: 'sessions', memoryBank: 'sessions', description: 'Sessions' }),
       ];
       configService.getWatchSources.mockReturnValue(sources);
 
       // First call succeeds, second fails
-      mockMnemosyneClient.registerNamespace
+      mockMnemosyneClient.registerBank
         .mockResolvedValueOnce(Result.ok(undefined as unknown as void))
         .mockResolvedValueOnce(Result.ko(new Error('connection refused')));
 
       await service.onApplicationBootstrap();
 
-      expect(mockMnemosyneClient.registerNamespace).toHaveBeenCalledTimes(2);
+      expect(mockMnemosyneClient.registerBank).toHaveBeenCalledTimes(2);
     });
 
-    it('registers namespaces before starting watchers', async () => {
+    it('registers memory banks before starting watchers', async () => {
       const callOrder: string[] = [];
 
       mockWatchFn.mockImplementation(() => {
@@ -336,18 +336,18 @@ describe('FileWatcherService', () => {
         return mockWatcher;
       });
 
-      mockMnemosyneClient.registerNamespace.mockImplementation(async () => {
-        callOrder.push('registerNamespace');
+      mockMnemosyneClient.registerBank.mockImplementation(async () => {
+        callOrder.push('registerBank');
         return Result.ok(undefined as unknown as void);
       });
 
-      const sources = [aWatchSource({ id: 'vault', namespace: 'vault', description: 'Vault' })];
+      const sources = [aWatchSource({ id: 'vault', memoryBank: 'vault', description: 'Vault' })];
       configService.getWatchSources.mockReturnValue(sources);
 
       await service.onApplicationBootstrap();
 
-      // registerNamespace must be called before chokidar.watch
-      const registerIndex = callOrder.indexOf('registerNamespace');
+      // registerBank must be called before chokidar.watch
+      const registerIndex = callOrder.indexOf('registerBank');
       const watchIndex = callOrder.indexOf('watch');
       expect(registerIndex).toBeGreaterThanOrEqual(0);
       expect(watchIndex).toBeGreaterThanOrEqual(0);
@@ -355,9 +355,9 @@ describe('FileWatcherService', () => {
     });
 
     it('does not block startup when all registrations fail', async () => {
-      const sources = [aWatchSource({ id: 'vault', namespace: 'vault', description: 'Vault' })];
+      const sources = [aWatchSource({ id: 'vault', memoryBank: 'vault', description: 'Vault' })];
       configService.getWatchSources.mockReturnValue(sources);
-      mockMnemosyneClient.registerNamespace.mockResolvedValue(Result.ko(new Error('MCP error')));
+      mockMnemosyneClient.registerBank.mockResolvedValue(Result.ko(new Error('MCP error')));
 
       await service.onApplicationBootstrap();
 
@@ -366,12 +366,12 @@ describe('FileWatcherService', () => {
     });
 
     it('does not register when no sources have descriptions', async () => {
-      const sources = [aWatchSource({ id: 'no-desc', namespace: 'no-desc' })];
+      const sources = [aWatchSource({ id: 'no-desc', memoryBank: 'no-desc' })];
       configService.getWatchSources.mockReturnValue(sources);
 
       await service.onApplicationBootstrap();
 
-      expect(mockMnemosyneClient.registerNamespace).not.toHaveBeenCalled();
+      expect(mockMnemosyneClient.registerBank).not.toHaveBeenCalled();
     });
   });
 });

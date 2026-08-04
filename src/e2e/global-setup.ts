@@ -17,6 +17,15 @@ module.exports = async (): Promise<void> => {
   await fs.mkdir(watchDir, { recursive: true });
   console.log(`[E2E-GlobalSetup] Watch directory created: ${watchDir}`);
 
+  // Create a fresh Mnemosyne data dir per run inside the temp root.
+  // The docker-compose volume binds to this dir (${E2E_DATA_DIR}), so every e2e
+  // run starts with a clean mnemosyne.db + banks/ — no cross-run state pollution.
+  // A changing volume path also forces docker compose to recreate the container,
+  // resetting the server's in-memory memory-bank registry.
+  const e2eDataDir = path.join(e2eRoot, 'mnemosyne-data');
+  await fs.mkdir(e2eDataDir, { recursive: true });
+  console.log(`[E2E-GlobalSetup] Mnemosyne data directory created: ${e2eDataDir}`);
+
   // Write dynamic test config that watches the temp directory.
   // This must happen here because Jest caches required modules, and
   // ConfigurationModule reads APP_CONFIG_PATH at bootstrap time.
@@ -36,8 +45,8 @@ module.exports = async (): Promise<void> => {
         include: ['*.md', '*.ts', '*.json'],
         exclude: [],
         debounceMs: 500,
-        namespace: 'e2e-test-ns',
-        description: 'E2E test namespace for namespace registration verification',
+        memoryBank: 'e2e-test-ns',
+        description: 'E2E test memory bank for memory bank registration verification',
       },
     ],
     chunking: {
@@ -72,6 +81,7 @@ module.exports = async (): Promise<void> => {
   process.env.APP_CONFIG_PATH = dynamicConfigPath;
   process.env.E2E_TEMP_ROOT = e2eRoot;
   process.env.E2E_WATCH_DIR = watchDir;
+  process.env.E2E_DATA_DIR = e2eDataDir;
   process.env.NODE_ENV = 'test';
 
   stopMnemosyne = await startMnemosyneDocker();

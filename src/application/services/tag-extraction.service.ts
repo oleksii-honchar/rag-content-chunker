@@ -125,15 +125,15 @@ export class TagExtractionService {
   }
 
   /**
-   * Extract location tag from chunk namespace.
-   * Format: "location:{namespace}"
+   * Extract location tag from chunk memory bank.
+   * Format: "location:{memoryBank}"
    */
   private extractLocationTag(chunk: ContentChunk): string | null {
-    const namespace = chunk.namespace;
-    if (!namespace || namespace.trim() === '') {
+    const memoryBank = chunk.memoryBank;
+    if (!memoryBank || memoryBank.trim() === '') {
       return null;
     }
-    return `location:${namespace}`;
+    return `location:${memoryBank}`;
   }
 
   /**

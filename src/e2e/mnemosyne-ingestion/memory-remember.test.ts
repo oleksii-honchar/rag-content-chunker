@@ -43,7 +43,7 @@ describe('[E2E] Chunking and Mnemosyne Ingestion Flow', () => {
       filePath,
       eventType: 'add',
       sourceId: TEST_SOURCE_ID,
-      namespace: TEST_SOURCE_ID,
+      memoryBank: TEST_SOURCE_ID,
     });
 
     // Verify ingestion succeeded (Mnemosyne returns 202 Accepted for async processing)
@@ -63,7 +63,7 @@ describe('[E2E] Chunking and Mnemosyne Ingestion Flow', () => {
       filePath,
       eventType: 'add',
       sourceId: TEST_SOURCE_ID,
-      namespace: TEST_SOURCE_ID,
+      memoryBank: TEST_SOURCE_ID,
     });
 
     // Verify ingestion succeeded (Mnemosyne returns 202 Accepted for async processing)
@@ -81,7 +81,7 @@ describe('[E2E] Chunking and Mnemosyne Ingestion Flow', () => {
       filePath,
       eventType: 'add',
       sourceId: TEST_SOURCE_ID,
-      namespace: TEST_SOURCE_ID,
+      memoryBank: TEST_SOURCE_ID,
     });
 
     // Verify ingestion succeeded (Mnemosyne returns 202 Accepted for async processing)

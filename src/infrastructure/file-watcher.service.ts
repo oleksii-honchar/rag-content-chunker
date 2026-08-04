@@ -29,35 +29,37 @@ export class FileWatcherService implements OnApplicationBootstrap, OnApplication
   async onApplicationBootstrap(): Promise<void> {
     this.logger.info(`Starting file watcher service: sources=${this.configService.getWatchSources().length}`);
 
-    // Ensure MCP client is initialized before registering namespaces
+    // Ensure MCP client is initialized before registering memory banks
     const initResult = await this.mnemosyneClient.initialize();
     if (!initResult.isOk()) {
-      this.logger.warn(`MCP init failed, namespace registration may fail: ${initResult.getError().message}`);
+      this.logger.warn(
+        `MCP init failed, memory bank registration may fail: ${initResult.getError().message}`,
+      );
     }
 
-    await this.registerNamespaces();
+    await this.registerBanks();
     const result = await this.start();
     if (result.isKo()) {
       this.logger.error(`Failed to start file watcher: ${result.getError().message}`);
     }
   }
 
-  private async registerNamespaces(): Promise<void> {
+  private async registerBanks(): Promise<void> {
     const sources = this.configService.getWatchSources();
     const withDescription = sources.filter(s => s.description != null && s.description.length > 0);
     this.logger.info(
-      `Registering namespaces: totalSources=${sources.length}, withDescription=${withDescription.length}`,
+      `Registering memory banks: totalSources=${sources.length}, withDescription=${withDescription.length}`,
     );
 
     for (const source of withDescription) {
-      const result = await this.mnemosyneClient.registerNamespace(source.namespace, source.description!);
+      const result = await this.mnemosyneClient.registerBank(source.memoryBank, source.description!);
       if (result.isOk()) {
         this.logger.info(
-          `Namespace registered: id="${source.id}", namespace="${source.namespace}", description="${source.description}"`,
+          `Memory bank registered: id="${source.id}", memoryBank="${source.memoryBank}", description="${source.description}"`,
         );
       } else {
         this.logger.warn(
-          `Failed to register namespace: id="${source.id}", namespace="${source.namespace}", error="${result.getError().message}"`,
+          `Failed to register memory bank: id="${source.id}", memoryBank="${source.memoryBank}", error="${result.getError().message}"`,
         );
       }
     }
@@ -136,7 +138,8 @@ export class FileWatcherService implements OnApplicationBootstrap, OnApplication
 
   private handleFileAdded(filePath: string, sourceId: string): void {
     this.logger.debug(`File added; path="${filePath}", source="${sourceId}"`);
-    const result = FileChange.add(filePath);
+    const fileChange = FileChange.empty();
+    const result = fileChange.add(filePath);
     if (result.isOk()) {
       this.eventEmitter.publishMany(result.getValue().events);
     }
@@ -144,7 +147,8 @@ export class FileWatcherService implements OnApplicationBootstrap, OnApplication
 
   private handleFileChanged(filePath: string, sourceId: string): void {
     this.logger.debug(`File changed; path="${filePath}", source="${sourceId}"`);
-    const result = FileChange.change(filePath);
+    const fileChange = FileChange.empty();
+    const result = fileChange.change(filePath);
     if (result.isOk()) {
       this.eventEmitter.publishMany(result.getValue().events);
     }
@@ -152,7 +156,8 @@ export class FileWatcherService implements OnApplicationBootstrap, OnApplication
 
   private handleFileDeleted(filePath: string, sourceId: string): void {
     this.logger.debug(`File deleted; path="${filePath}", source="${sourceId}"`);
-    const result = FileChange.delete(filePath);
+    const fileChange = FileChange.empty();
+    const result = fileChange.delete(filePath);
     if (result.isOk()) {
       this.eventEmitter.publishMany(result.getValue().events);
     }

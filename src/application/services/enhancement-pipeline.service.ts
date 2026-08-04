@@ -12,7 +12,7 @@ import { TagExtractionService } from './tag-extraction.service';
  * For each Chunk, applies:
  * 1. Importance scoring (ImportanceScoringService)
  * 2. Tag extraction (TagExtractionService)
- * 3. Namespace assignment (from source config)
+ * 3. Memory bank assignment (from source config)
  *
  * Each stage is resilient: on error, logs and uses safe defaults, continues processing.
  * No character limit logic — that's handled upstream by Mastra config.
@@ -30,14 +30,14 @@ export class EnhancementPipelineService {
    *
    * @param chunks - Raw chunks from Mastra chunking
    * @param sourceId - Watch source identifier for logging context
-   * @param namespace - Namespace to assign to all enhanced chunks
+   * @param memoryBank - Memory bank to assign to all enhanced chunks
    * @param config - Enhancement configuration from ConfigurationService
    * @returns Result.ok(enhancedChunks) or Result.ko if all chunks fail validation
    */
   async enhance(
     chunks: ContentChunk[],
     sourceId: string,
-    namespace: string,
+    memoryBank: string,
     config: EnhancementConfig,
   ): Promise<Result<ContentChunk[]>> {
     if (chunks.length === 0) {
@@ -48,7 +48,7 @@ export class EnhancementPipelineService {
     let allFailed = true;
 
     for (const chunk of chunks) {
-      const enhancedResult = await this.enhanceChunk(chunk, sourceId, namespace, config);
+      const enhancedResult = await this.enhanceChunk(chunk, sourceId, memoryBank, config);
 
       if (enhancedResult.isOk()) {
         enhancedChunks.push(enhancedResult.getValue());
@@ -75,7 +75,7 @@ export class EnhancementPipelineService {
   private async enhanceChunk(
     chunk: ContentChunk,
     sourceId: string,
-    namespace: string,
+    memoryBank: string,
     config: EnhancementConfig,
   ): Promise<Result<ContentChunk>> {
     // Stage 1: Importance scoring
@@ -110,7 +110,7 @@ export class EnhancementPipelineService {
       tags = [];
     }
 
-    // Stage 3: Create enhanced chunk with namespace
+    // Stage 3: Create enhanced chunk with memory bank
     const enhancedChunkResult = ContentChunk.of({
       id: chunk.id,
       text: chunk.text,
@@ -126,7 +126,7 @@ export class EnhancementPipelineService {
       metadata: chunk.metadata,
       importance,
       tags,
-      namespace,
+      memoryBank,
     });
 
     return enhancedChunkResult;

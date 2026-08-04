@@ -55,7 +55,7 @@ describe('[E2E] File Deletion Cleanup — create → ingest → track → delete
     // Step 2: Wait for ingestion (debounce + chunking + MCP + indexing)
     await new Promise(resolve => setTimeout(resolve, PROCESSING_WAIT_MS));
 
-    // Step 3: Verify memory exists via mnemosyne_recall
+    // Step 3: Verify memory exists via memory_recall
     const recallResult = await mnemosyneClient!.recall(`FILEDELETION-${uniqueId}`);
     expect(recallResult.isOk()).toBe(true);
     const recallResults = recallResult.getValue();

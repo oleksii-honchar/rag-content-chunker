@@ -53,7 +53,7 @@ export class ForceReprocessService {
             filePath: file,
             eventType: 'add',
             sourceId: source.id,
-            namespace: source.namespace,
+            memoryBank: source.memoryBank,
           });
 
           if (result.isKo()) {

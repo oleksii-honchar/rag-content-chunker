@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { ContentChunk, FILE_ROLES, FileRole } from '../../domain/content-chunk.entity';
 import { ConfigurationService } from '../../infrastructure/config/configuration.service';
 import { BasePinoLogger } from '../../infrastructure/logging/base-pino-logger';
+import { generateId } from '../../utils/big-endian-id';
 import { ErrorWithDetails } from '../../utils/error-with-details';
 import { Result } from '../../utils/result';
 
@@ -292,22 +293,20 @@ export class MastraChunkingService {
         metadata.mastraDocKeywords = docKeywords;
       }
 
-      const chunkResult = ContentChunk.create(
-        mastraChunk.text,
-        i + 1,
+      const chunkResult = ContentChunk.of({
+        id: generateId(),
+        text: mastraChunk.text,
+        chunkIndex: i + 1,
         totalChunks,
-        chunkTitle || filePath,
-        filePath,
-        undefined,
+        sectionHeader: chunkTitle || filePath,
+        breadcrumb: filePath,
         fileRole,
-        false,
-        undefined,
-        undefined,
+        oversized: false,
         metadata,
-        0.5,
-        [],
-        'default',
-      );
+        importance: 0.5,
+        tags: [],
+        memoryBank: 'default',
+      });
 
       if (chunkResult.isOk()) {
         chunks.push(chunkResult.getValue());
