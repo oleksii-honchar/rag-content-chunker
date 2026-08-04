@@ -42,11 +42,15 @@ export class FileMemoryTrackerService {
     if (remembered.isKo()) {
       throw new Error('Failed to remember memory: ' + remembered.getErrors()[0].message);
     }
+    const updatedTracker = remembered.getAggregate();
 
-    // Persist the memory link via repository
-    await this.repository.upsertMemory(tracker.id, memoryId);
+    // Persist via upsert
+    const savedResult = await this.repository.upsert(updatedTracker);
+    if (savedResult.isKo()) {
+      throw new Error('Failed to persist FileMemoryTracker');
+    }
 
-    return tracker;
+    return savedResult.getAggregate();
   }
 
   /**
@@ -67,11 +71,15 @@ export class FileMemoryTrackerService {
     if (forgotten.isKo()) {
       throw new Error('Failed to forget memory: ' + forgotten.getErrors()[0].message);
     }
+    const updatedTracker = forgotten.getAggregate();
 
-    // Persist the removal via repository
-    await this.repository.deleteMemory(tracker.id, memoryId);
+    // Persist via upsert
+    const savedResult = await this.repository.upsert(updatedTracker);
+    if (savedResult.isKo()) {
+      throw new Error('Failed to persist FileMemoryTracker');
+    }
 
-    return tracker;
+    return savedResult.getAggregate();
   }
 
   async getMemoryIds(filePath: string): Promise<string[]> {

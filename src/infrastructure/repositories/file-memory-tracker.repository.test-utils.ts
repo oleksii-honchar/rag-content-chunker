@@ -91,8 +91,11 @@ export function aFileMemoryTrackerRepositoryService() {
       .mockImplementation((tracker: FileMemoryTracker) =>
         Promise.resolve({ isOk: () => true, getAggregate: () => tracker }),
       ),
-    upsertMemory: jest.fn().mockResolvedValue(undefined),
-    deleteMemory: jest.fn().mockResolvedValue(undefined),
+    upsert: jest
+      .fn()
+      .mockImplementation((tracker: FileMemoryTracker) =>
+        Promise.resolve({ isOk: () => true, getAggregate: () => tracker }),
+      ),
     getMemoryIds: jest.fn().mockResolvedValue([]),
     deleteByFilePath: jest.fn().mockResolvedValue(undefined),
   };

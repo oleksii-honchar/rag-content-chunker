@@ -1,5 +1,4 @@
 import { FileMemoryTracker } from '@/domain/file-memory-tracker.aggregate';
-import { generateId } from '@/utils/big-endian-id';
 import { ErrorWithDetails } from '@/utils/error-with-details';
 import { Result } from '@/utils/result';
 import { Injectable } from '@nestjs/common';
@@ -67,51 +66,37 @@ export class FileMemoryTrackerRepository {
       include: { memories: true },
     });
 
-    const memoryIds = saved.memories.map((m: { memoryId: string }) => m.memoryId);
+    // Sync memories: add new ones, remove deleted ones
+    const existingMemoryIds = new Set(saved.memories.map((m: { memoryId: string }) => m.memoryId));
+    const trackerMemoryIds = new Set(tracker.memoryIds);
+
+    // Remove memories that are no longer in the aggregate
+    for (const memId of existingMemoryIds) {
+      if (!trackerMemoryIds.has(memId)) {
+        await this.prisma.fileMemoryTracker.deleteMany({
+          where: { fileTrackerId: saved.id, memoryId: memId },
+        });
+      }
+    }
+
+    // Add new memories
+    for (const memId of trackerMemoryIds) {
+      if (!existingMemoryIds.has(memId)) {
+        await this.prisma.fileMemoryTracker.create({
+          data: { fileTrackerId: saved.id, memoryId: memId },
+        });
+      }
+    }
 
     const result = FileMemoryTracker.of({
       id: saved.id,
       filePath: saved.filePath,
-      memoryIds,
+      memoryIds: tracker.memoryIds,
       sourceId: saved.sourceId,
       memoryBank: saved.memoryBank,
     });
 
     return result;
-  }
-
-  /**
-   * Upsert a single memory link for a tracker.
-   * Infrastructure term — just persists the link, no domain logic.
-   */
-  async upsertMemory(fileTrackerId: bigint, memoryId: string): Promise<void> {
-    const id = generateId();
-    await this.prisma.fileMemoryTracker.upsert({
-      where: {
-        fileTrackerId_memoryId: {
-          fileTrackerId,
-          memoryId,
-        },
-      },
-      create: {
-        id,
-        fileTrackerId,
-        memoryId,
-      },
-      update: {},
-    });
-  }
-
-  /**
-   * Delete a single memory link by fileTrackerId and memoryId.
-   */
-  async deleteMemory(fileTrackerId: bigint, memoryId: string): Promise<void> {
-    await this.prisma.fileMemoryTracker.deleteMany({
-      where: {
-        fileTrackerId,
-        memoryId,
-      },
-    });
   }
 
   async getMemoryIds(filePath: string): Promise<string[]> {

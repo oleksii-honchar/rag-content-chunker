@@ -27,54 +27,54 @@ describe('FileMemoryTrackerService', () => {
   });
 
   describe('trackMemory', () => {
-    it('creates new tracker via findOrCreate then upserts memory link', async () => {
+    it('creates new tracker via findOrCreate then upserts updated tracker', async () => {
       const memId = 'mem-1';
-      const newTracker = aFileMemoryTracker();
-      const props = newTracker.toJson();
-      (newTracker as FileMemoryTracker & { remember: jest.Mock }).remember = jest
+      const baseTracker = aFileMemoryTracker();
+      const props = baseTracker.toJson();
+      const updatedTracker = aFileMemoryTracker({ ...props, memoryIds: [memId] });
+      (baseTracker as FileMemoryTracker & { remember: jest.Mock }).remember = jest
         .fn()
-        .mockReturnValue(AggregateResult.ok(null as unknown as FileMemoryTracker, []));
+        .mockReturnValue(AggregateResult.ok(updatedTracker, []));
 
-      repository.findOrCreate.mockResolvedValue(AggregateResult.ok(newTracker, []));
-      repository.upsertMemory.mockResolvedValue(undefined);
+      repository.findOrCreate.mockResolvedValue(AggregateResult.ok(baseTracker, []));
 
       const result = await service.trackMemory(props.filePath, memId, props.sourceId, props.memoryBank);
 
       expect(repository.findOrCreate).toHaveBeenCalledWith(expect.any(Object));
-      expect((newTracker as unknown as { remember: jest.Mock }).remember).toHaveBeenCalledWith(memId);
-      expect(repository.upsertMemory).toHaveBeenCalledWith(newTracker.id, memId);
+      expect((baseTracker as unknown as { remember: jest.Mock }).remember).toHaveBeenCalledWith(memId);
+      expect(repository.upsert).toHaveBeenCalledWith(updatedTracker);
       expect(result).toEqual(expect.objectContaining({ filePath: props.filePath }));
     });
 
-    it('finds existing tracker via findOrCreate then upserts memory link', async () => {
+    it('finds existing tracker via findOrCreate then upserts updated tracker', async () => {
       const existingTracker = aFileMemoryTracker();
       const props = existingTracker.toJson();
       const memId = 'mem-002';
+      const updatedTracker = aFileMemoryTracker({ ...props, memoryIds: [memId] });
       (existingTracker as FileMemoryTracker & { remember: jest.Mock }).remember = jest
         .fn()
-        .mockReturnValue(AggregateResult.ok(null as unknown as FileMemoryTracker, []));
+        .mockReturnValue(AggregateResult.ok(updatedTracker, []));
 
       repository.findOrCreate.mockResolvedValue(AggregateResult.ok(existingTracker, []));
-      repository.upsertMemory.mockResolvedValue(undefined);
 
       const result = await service.trackMemory(props.filePath, memId, props.sourceId, props.memoryBank);
 
       expect(repository.findOrCreate).toHaveBeenCalledWith(expect.any(Object));
       expect((existingTracker as unknown as { remember: jest.Mock }).remember).toHaveBeenCalledWith(memId);
-      expect(repository.upsertMemory).toHaveBeenCalledWith(existingTracker.id, memId);
+      expect(repository.upsert).toHaveBeenCalledWith(updatedTracker);
       expect(result).toEqual(expect.objectContaining({ filePath: props.filePath }));
     });
 
     it('returns aggregate with updated memoryIds after remember', async () => {
       const memId = 'mem-002';
-      const updatedTracker = aFileMemoryTracker({ memoryIds: [memId] });
-      const props = updatedTracker.toJson();
-      (updatedTracker as FileMemoryTracker & { remember: jest.Mock }).remember = jest
+      const baseTracker = aFileMemoryTracker();
+      const props = baseTracker.toJson();
+      const updatedTracker = aFileMemoryTracker({ ...props, memoryIds: [memId] });
+      (baseTracker as FileMemoryTracker & { remember: jest.Mock }).remember = jest
         .fn()
-        .mockReturnValue(AggregateResult.ok(null as unknown as FileMemoryTracker, []));
+        .mockReturnValue(AggregateResult.ok(updatedTracker, []));
 
-      repository.findOrCreate.mockResolvedValue(AggregateResult.ok(updatedTracker, []));
-      repository.upsertMemory.mockResolvedValue(undefined);
+      repository.findOrCreate.mockResolvedValue(AggregateResult.ok(baseTracker, []));
 
       const result = await service.trackMemory(props.filePath, memId, props.sourceId, props.memoryBank);
 
@@ -84,22 +84,22 @@ describe('FileMemoryTrackerService', () => {
   });
 
   describe('forgetMemory', () => {
-    it('uses aggregate forget logic then deletes memory link via repository', async () => {
-      const tracker = aFileMemoryTracker();
+    it('uses aggregate forget logic then upserts updated tracker', async () => {
+      const tracker = aFileMemoryTracker({ memoryIds: ['mem-001', 'mem-002'] });
       const props = tracker.toJson();
       const memId = 'mem-001';
+      const updatedTracker = aFileMemoryTracker({ ...props, memoryIds: ['mem-002'] });
       (tracker as FileMemoryTracker & { forget: jest.Mock }).forget = jest
         .fn()
-        .mockReturnValue(AggregateResult.ok(null as unknown as FileMemoryTracker, []));
+        .mockReturnValue(AggregateResult.ok(updatedTracker, []));
 
       repository.findByFilePath.mockResolvedValue(AggregateResult.ok(tracker, []));
-      repository.deleteMemory.mockResolvedValue(undefined);
 
       const result = await service.forgetMemory(props.filePath, memId);
 
       expect(repository.findByFilePath).toHaveBeenCalledWith(props.filePath);
       expect((tracker as unknown as { forget: jest.Mock }).forget).toHaveBeenCalledWith(memId);
-      expect(repository.deleteMemory).toHaveBeenCalledWith(tracker.id, memId);
+      expect(repository.upsert).toHaveBeenCalledWith(updatedTracker);
       expect(result).toEqual(expect.objectContaining({ filePath: props.filePath }));
     });
 
@@ -111,20 +111,20 @@ describe('FileMemoryTrackerService', () => {
       const result = await service.forgetMemory('/nonexistent/file.txt', 'mem-001');
 
       expect(repository.findByFilePath).toHaveBeenCalledWith('/nonexistent/file.txt');
-      expect(repository.deleteMemory).not.toHaveBeenCalled();
+      expect(repository.upsert).not.toHaveBeenCalled();
       expect(result).toBeNull();
     });
 
     it('returns aggregate after forget', async () => {
-      const updatedTracker = aFileMemoryTracker();
-      const props = updatedTracker.toJson();
+      const tracker = aFileMemoryTracker({ memoryIds: ['mem-001'] });
+      const props = tracker.toJson();
       const memId = 'mem-001';
-      (updatedTracker as FileMemoryTracker & { forget: jest.Mock }).forget = jest
+      const updatedTracker = aFileMemoryTracker({ ...props, memoryIds: [] });
+      (tracker as FileMemoryTracker & { forget: jest.Mock }).forget = jest
         .fn()
-        .mockReturnValue(AggregateResult.ok(null as unknown as FileMemoryTracker, []));
+        .mockReturnValue(AggregateResult.ok(updatedTracker, []));
 
-      repository.findByFilePath.mockResolvedValue(AggregateResult.ok(updatedTracker, []));
-      repository.deleteMemory.mockResolvedValue(undefined);
+      repository.findByFilePath.mockResolvedValue(AggregateResult.ok(tracker, []));
 
       const result = await service.forgetMemory(props.filePath, memId);
 
