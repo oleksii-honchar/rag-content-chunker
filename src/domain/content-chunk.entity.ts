@@ -43,6 +43,26 @@ export class ContentChunk {
     return Result.ok(new ContentChunk(parsed.data));
   }
 
+  toJson(): ContentChunkProps {
+    return {
+      id: this.props.id,
+      text: this.props.text,
+      chunkIndex: this.props.chunkIndex,
+      totalChunks: this.props.totalChunks,
+      sectionHeader: this.props.sectionHeader,
+      breadcrumb: this.props.breadcrumb,
+      language: this.props.language,
+      fileRole: this.props.fileRole,
+      oversized: this.props.oversized,
+      startLine: this.props.startLine,
+      endLine: this.props.endLine,
+      metadata: this.props.metadata,
+      importance: this.props.importance,
+      tags: [...this.props.tags],
+      memoryBank: this.props.memoryBank,
+    };
+  }
+
   get id(): bigint {
     return this.props.id;
   }

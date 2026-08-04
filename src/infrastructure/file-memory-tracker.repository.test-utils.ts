@@ -4,6 +4,7 @@
  */
 
 import { FileMemoryTracker } from '../domain/file-memory-tracker.aggregate';
+import { generateId } from '../utils/big-endian-id';
 import { faker } from '../utils/test-faker';
 
 /**
@@ -20,7 +21,7 @@ export function aFileMemoryTracker(
   }>,
 ): FileMemoryTracker {
   const result = FileMemoryTracker.of({
-    id: faker.number.bigInt({ min: 1n, max: 9223372036854775807n }),
+    id: generateId(),
     filePath: faker.system.filePath(),
     memoryIds: [],
     sourceId: faker.string.alphanumeric(12),
@@ -51,7 +52,7 @@ export function aPrismaFileMemoryTracker(
   overrides?: Partial<PrismaFileMemoryTrackerRecord>,
 ): PrismaFileMemoryTrackerRecord {
   return {
-    id: faker.number.bigInt({ min: 1n, max: 9223372036854775807n }),
+    id: generateId(),
     filePath: faker.system.filePath(),
     sourceId: faker.string.alphanumeric(12),
     memoryBank: faker.word.adjective(),
@@ -66,9 +67,9 @@ export function aPrismaFileMemoryTrackerMemory(
   overrides?: Partial<PrismaFileMemoryTrackerMemoryRecord>,
 ): PrismaFileMemoryTrackerMemoryRecord {
   return {
-    id: faker.number.bigInt({ min: 1n, max: 9223372036854775807n }),
+    id: generateId(),
     memoryId: faker.string.uuid(),
-    fileTrackerId: faker.number.bigInt({ min: 1n, max: 9223372036854775807n }),
+    fileTrackerId: generateId(),
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
     ...overrides,
   };

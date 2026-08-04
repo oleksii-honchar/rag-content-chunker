@@ -26,22 +26,15 @@ export class WatchSource {
     return Result.ok(new WatchSource(parsed.data));
   }
 
-  static create(
-    id: bigint,
-    path: string,
-    include: string[],
-    exclude: string[],
-    debounceMs: number,
-    ignorePatterns: string[],
-  ): Result<WatchSource> {
-    return WatchSource.of({
-      id,
-      path,
-      include,
-      exclude,
-      debounceMs,
-      ignorePatterns,
-    });
+  toJson(): WatchSourceProps {
+    return {
+      id: this.props.id,
+      path: this.props.path,
+      include: [...this.props.include],
+      exclude: [...this.props.exclude],
+      debounceMs: this.props.debounceMs,
+      ignorePatterns: [...this.props.ignorePatterns],
+    };
   }
 
   get id(): bigint {
