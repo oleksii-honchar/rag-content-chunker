@@ -7,7 +7,7 @@ describe('FileChange', () => {
       const result = FileChange.add('/test/file.txt');
 
       expect(result.isOk()).toBe(true);
-      const fileChange = result.getAggregate();
+      const fileChange = result.getValue();
       expect(fileChange.filePath).toBe('/test/file.txt');
       expect(fileChange.status).toBe(FILE_CHANGE_STATUS.ADDED);
       const events = result.getEvents();
@@ -29,11 +29,11 @@ describe('FileChange', () => {
       const addResult = FileChange.add('/test/file.txt');
       expect(addResult.isOk()).toBe(true);
 
-      const fileChange = addResult.getAggregate();
+      const fileChange = addResult.getValue();
       const changeResult = fileChange.change();
 
       expect(changeResult.isOk()).toBe(true);
-      const changed = changeResult.getAggregate();
+      const changed = changeResult.getValue();
       expect(changed.filePath).toBe('/test/file.txt');
       expect(changed.status).toBe(FILE_CHANGE_STATUS.CHANGED);
       const events = changeResult.getEvents();
@@ -46,7 +46,7 @@ describe('FileChange', () => {
       const addResult = FileChange.add('/test/file.txt');
       expect(addResult.isOk()).toBe(true);
 
-      const fileChange = addResult.getAggregate();
+      const fileChange = addResult.getValue();
       expect(fileChange.status).toBe(FILE_CHANGE_STATUS.ADDED);
 
       const changeResult = fileChange.change();
@@ -61,11 +61,11 @@ describe('FileChange', () => {
       const addResult = FileChange.add('/test/file.txt');
       expect(addResult.isOk()).toBe(true);
 
-      const fileChange = addResult.getAggregate();
+      const fileChange = addResult.getValue();
       const deleteResult = fileChange.delete();
 
       expect(deleteResult.isOk()).toBe(true);
-      const deleted = deleteResult.getAggregate();
+      const deleted = deleteResult.getValue();
       expect(deleted.filePath).toBe('/test/file.txt');
       expect(deleted.status).toBe(FILE_CHANGE_STATUS.DELETED);
       const events = deleteResult.getEvents();
@@ -78,7 +78,7 @@ describe('FileChange', () => {
       const addResult = FileChange.add('/test/file.txt');
       expect(addResult.isOk()).toBe(true);
 
-      const fileChange = addResult.getAggregate();
+      const fileChange = addResult.getValue();
       expect(fileChange.status).toBe(FILE_CHANGE_STATUS.ADDED);
 
       const deleteResult = fileChange.delete();
@@ -131,7 +131,7 @@ describe('FileChange', () => {
       const result = FileChange.add('/test/file.txt');
       expect(result.isOk()).toBe(true);
 
-      const fileChange = result.getAggregate();
+      const fileChange = result.getValue();
       const json = fileChange.toJson();
 
       expect(json).toEqual({

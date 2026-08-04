@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { AggregateResult } from '../utils/aggregate-result';
 import { FileMemoryTracker } from '../domain/file-memory-tracker.aggregate';
-import { Result } from '../utils/result';
 import { FileMemoryTrackerRepository } from './file-memory-tracker.repository';
 import {
   aFileMemoryTracker,
@@ -33,9 +33,9 @@ describe('FileMemoryTrackerService', () => {
       const props = newTracker.toJson();
       (newTracker as FileMemoryTracker & { remember: jest.Mock }).remember = jest
         .fn()
-        .mockReturnValue(Result.ok(null as unknown as FileMemoryTracker));
+        .mockReturnValue(AggregateResult.ok(null as unknown as FileMemoryTracker, []));
 
-      repository.findOrCreate.mockResolvedValue(newTracker);
+      repository.findOrCreate.mockResolvedValue(AggregateResult.ok(newTracker, []));
       repository.upsertMemory.mockResolvedValue(undefined);
 
       const result = await service.trackMemory(props.filePath, memId, props.sourceId, props.memoryBank);
@@ -52,9 +52,9 @@ describe('FileMemoryTrackerService', () => {
       const memId = 'mem-002';
       (existingTracker as FileMemoryTracker & { remember: jest.Mock }).remember = jest
         .fn()
-        .mockReturnValue(Result.ok(null as unknown as FileMemoryTracker));
+        .mockReturnValue(AggregateResult.ok(null as unknown as FileMemoryTracker, []));
 
-      repository.findOrCreate.mockResolvedValue(existingTracker);
+      repository.findOrCreate.mockResolvedValue(AggregateResult.ok(existingTracker, []));
       repository.upsertMemory.mockResolvedValue(undefined);
 
       const result = await service.trackMemory(props.filePath, memId, props.sourceId, props.memoryBank);
@@ -71,9 +71,9 @@ describe('FileMemoryTrackerService', () => {
       const props = updatedTracker.toJson();
       (updatedTracker as FileMemoryTracker & { remember: jest.Mock }).remember = jest
         .fn()
-        .mockReturnValue(Result.ok(null as unknown as FileMemoryTracker));
+        .mockReturnValue(AggregateResult.ok(null as unknown as FileMemoryTracker, []));
 
-      repository.findOrCreate.mockResolvedValue(updatedTracker);
+      repository.findOrCreate.mockResolvedValue(AggregateResult.ok(updatedTracker, []));
       repository.upsertMemory.mockResolvedValue(undefined);
 
       const result = await service.trackMemory(props.filePath, memId, props.sourceId, props.memoryBank);
@@ -90,9 +90,9 @@ describe('FileMemoryTrackerService', () => {
       const memId = 'mem-001';
       (tracker as FileMemoryTracker & { forget: jest.Mock }).forget = jest
         .fn()
-        .mockReturnValue(Result.ok(null as unknown as FileMemoryTracker));
+        .mockReturnValue(AggregateResult.ok(null as unknown as FileMemoryTracker, []));
 
-      repository.findByFilePath.mockResolvedValue(tracker);
+      repository.findByFilePath.mockResolvedValue(AggregateResult.ok(tracker, []));
       repository.deleteMemory.mockResolvedValue(undefined);
 
       const result = await service.forgetMemory(props.filePath, memId);
@@ -104,7 +104,7 @@ describe('FileMemoryTrackerService', () => {
     });
 
     it('returns null when tracker does not exist', async () => {
-      repository.findByFilePath.mockResolvedValue(null);
+      repository.findByFilePath.mockResolvedValue(AggregateResult.ok(null as unknown as FileMemoryTracker, []));
 
       const result = await service.forgetMemory('/nonexistent/file.txt', 'mem-001');
 
@@ -119,9 +119,9 @@ describe('FileMemoryTrackerService', () => {
       const memId = 'mem-001';
       (updatedTracker as FileMemoryTracker & { forget: jest.Mock }).forget = jest
         .fn()
-        .mockReturnValue(Result.ok(null as unknown as FileMemoryTracker));
+        .mockReturnValue(AggregateResult.ok(null as unknown as FileMemoryTracker, []));
 
-      repository.findByFilePath.mockResolvedValue(updatedTracker);
+      repository.findByFilePath.mockResolvedValue(AggregateResult.ok(updatedTracker, []));
       repository.deleteMemory.mockResolvedValue(undefined);
 
       const result = await service.forgetMemory(props.filePath, memId);

@@ -1,6 +1,5 @@
 import { ValuesType } from '@/utils/values-type';
 import { z } from 'zod';
-import { AggregateResult } from '../utils/aggregate-result';
 import { ErrorWithDetails } from '../utils/error-with-details';
 import { Result } from '../utils/result';
 import { FileAddedEvent, FileChangedEvent, FileDeletedEvent } from './events/file-events';
@@ -29,51 +28,48 @@ export class FileChange {
   /**
    * Create a new file change with ADDED status and emit FileAddedEvent.
    */
-  static add(filePath: string): AggregateResult<FileChange, FileAddedEvent> {
+  static add(filePath: string): Result<FileChange> {
     const eventResult = FileAddedEvent.of(filePath);
     if (eventResult.isKo()) {
-      return AggregateResult.ko(eventResult.getError());
+      return Result.ko(eventResult.getErrors());
     }
-    const aggregate = new FileChange({ filePath, status: FILE_CHANGE_STATUS.ADDED });
-    return AggregateResult.ok(aggregate, [eventResult.getValue()]);
+    return FileChange.of({ filePath, status: FILE_CHANGE_STATUS.ADDED });
   }
 
   /**
    * Transition to CHANGED status and emit FileChangedEvent.
    */
-  change(): AggregateResult<FileChange, FileChangedEvent> {
+  change(): Result<FileChange> {
     const eventResult = FileChangedEvent.of(this.props.filePath);
     if (eventResult.isKo()) {
-      return AggregateResult.ko(eventResult.getError());
+      return Result.ko(eventResult.getErrors());
     }
-    const newAggregate = new FileChange({
+    return FileChange.of({
       ...this.props,
       status: FILE_CHANGE_STATUS.CHANGED,
     });
-    return AggregateResult.ok(newAggregate, [eventResult.getValue()]);
   }
 
   /**
    * Transition to DELETED status and emit FileDeletedEvent.
    */
-  delete(): AggregateResult<FileChange, FileDeletedEvent> {
+  delete(): Result<FileChange> {
     const eventResult = FileDeletedEvent.of(this.props.filePath);
     if (eventResult.isKo()) {
-      return AggregateResult.ko(eventResult.getError());
+      return Result.ko(eventResult.getErrors());
     }
-    const newAggregate = new FileChange({
+    return FileChange.of({
       ...this.props,
       status: FILE_CHANGE_STATUS.DELETED,
     });
-    return AggregateResult.ok(newAggregate, [eventResult.getValue()]);
   }
 
   static of(props: FileChangeProps): Result<FileChange> {
     const parsed = fileChangeSchema.safeParse(props);
     if (!parsed.success) {
-      return Result.ko(
+      return Result.ko([
         new ErrorWithDetails('Invalid file change data: ' + parsed.error.message, 'InvalidFileChange'),
-      );
+      ]);
     }
     return Result.ok(new FileChange(parsed.data));
   }

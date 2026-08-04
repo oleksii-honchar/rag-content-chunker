@@ -1,7 +1,6 @@
-import { DomainEvent } from '@/utils/domain-event';
 import { z } from 'zod';
-import { AggregateResult } from '../utils/aggregate-result';
 import { ErrorWithDetails } from '../utils/error-with-details';
+import { Result } from '../utils/result';
 
 const fileMemoryTrackerSchema = z.object({
   id: z.bigint(),
@@ -16,37 +15,41 @@ export type FileMemoryTrackerProps = z.infer<typeof fileMemoryTrackerSchema>;
 export class FileMemoryTracker {
   private constructor(private readonly props: FileMemoryTrackerProps) {}
 
-  static of(props: FileMemoryTrackerProps): AggregateResult<FileMemoryTracker, DomainEvent> {
+  static of(props: FileMemoryTrackerProps): Result<FileMemoryTracker> {
     const parsed = fileMemoryTrackerSchema.safeParse(props);
     if (!parsed.success) {
-      return AggregateResult.ko(
+      return Result.ko([
         new ErrorWithDetails(
           'Invalid FileMemoryTracker data: ' + parsed.error.message,
           'InvalidFileMemoryTracker',
         ),
-      );
+      ]);
     }
-    return AggregateResult.ok(new FileMemoryTracker(parsed.data), []);
+    return Result.ok(new FileMemoryTracker(parsed.data), []);
   }
 
-  remember(memoryId: string): AggregateResult<FileMemoryTracker, DomainEvent> {
+  remember(memoryId: string): Result<FileMemoryTracker> {
     if (!memoryId || memoryId.trim().length === 0) {
-      return AggregateResult.ko(new ErrorWithDetails('memoryId cannot be empty', 'EmptyMemoryId'));
+      return Result.ko([new ErrorWithDetails('memoryId cannot be empty', 'EmptyMemoryId')]);
     }
+
     if (this.props.memoryIds.includes(memoryId)) {
-      return AggregateResult.ok(this, []);
+      return Result.ok(this, []);
     }
+
     return FileMemoryTracker.of({
       ...this.props,
       memoryIds: [...this.props.memoryIds, memoryId],
     });
   }
 
-  forget(memoryId: string): AggregateResult<FileMemoryTracker, DomainEvent> {
+  forget(memoryId: string): Result<FileMemoryTracker> {
     const filtered = this.props.memoryIds.filter(id => id !== memoryId);
+
     if (filtered.length === this.props.memoryIds.length) {
-      return AggregateResult.ok(this, []);
+      return Result.ok(this, []);
     }
+
     return FileMemoryTracker.of({
       ...this.props,
       memoryIds: filtered,
@@ -83,7 +86,7 @@ export class FileMemoryTracker {
     };
   }
 
-  empty(): AggregateResult<FileMemoryTracker, DomainEvent> {
-    return AggregateResult.ok(new FileMemoryTracker({} as FileMemoryTrackerProps), []);
+  empty(): Result<FileMemoryTracker> {
+    return Result.ok(new FileMemoryTracker({} as FileMemoryTrackerProps), []);
   }
 }

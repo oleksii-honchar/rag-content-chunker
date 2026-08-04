@@ -14,7 +14,7 @@ describe('FileMemoryTracker', () => {
       const result = FileMemoryTracker.of(validProps);
 
       expect(result.isOk()).toBe(true);
-      const tracker = result.getAggregate();
+      const tracker = result.getValue();
       expect(tracker.id).toBe(validProps.id);
       expect(typeof tracker.id).toBe('bigint');
       expect(tracker.filePath).toBe(validProps.filePath);
@@ -48,7 +48,7 @@ describe('FileMemoryTracker', () => {
       });
 
       expect(result.isOk()).toBe(true);
-      expect(result.getAggregate().memoryIds).toEqual([]);
+      expect(result.getValue().memoryIds).toEqual([]);
     });
 
     it('with empty sourceId returns ko', () => {
@@ -100,7 +100,7 @@ describe('FileMemoryTracker', () => {
       });
 
       expect(result.isOk()).toBe(true);
-      const tracker = result.getAggregate();
+      const tracker = result.getValue();
       expect(tracker.id).toBe(1n);
       expect(tracker.filePath).toBe('/test/file.txt');
       expect(tracker.memoryIds).toEqual(['mem-001', 'mem-002']);
@@ -130,7 +130,7 @@ describe('FileMemoryTracker', () => {
       });
 
       expect(result.isOk()).toBe(true);
-      expect(result.getAggregate().memoryIds).toEqual([]);
+      expect(result.getValue().memoryIds).toEqual([]);
     });
 
     it('with missing required fields returns ko', () => {
@@ -146,17 +146,17 @@ describe('FileMemoryTracker', () => {
 
   describe('remember', () => {
     it('appends new memoryId to list', () => {
-      const tracker = FileMemoryTracker.of(validProps).getAggregate();
+      const tracker = FileMemoryTracker.of(validProps).getValue();
 
       const result = tracker.remember('mem-002');
 
       expect(result.isOk()).toBe(true);
-      const updated = result.getAggregate();
+      const updated = result.getValue();
       expect(updated.memoryIds).toEqual(['mem-001', 'mem-002']);
     });
 
     it('returns new instance without mutating original', () => {
-      const tracker = FileMemoryTracker.of(validProps).getAggregate();
+      const tracker = FileMemoryTracker.of(validProps).getValue();
 
       tracker.remember('mem-002');
 
@@ -164,17 +164,17 @@ describe('FileMemoryTracker', () => {
     });
 
     it('does not add duplicate memoryId', () => {
-      const tracker = FileMemoryTracker.of(validProps).getAggregate();
+      const tracker = FileMemoryTracker.of(validProps).getValue();
 
       const result = tracker.remember('mem-001');
 
       expect(result.isOk()).toBe(true);
-      const updated = result.getAggregate();
+      const updated = result.getValue();
       expect(updated.memoryIds).toEqual(['mem-001']);
     });
 
     it('with empty memoryId returns ko', () => {
-      const tracker = FileMemoryTracker.of(validProps).getAggregate();
+      const tracker = FileMemoryTracker.of(validProps).getValue();
 
       const result = tracker.remember('');
 
@@ -190,12 +190,12 @@ describe('FileMemoryTracker', () => {
         memoryIds: ['mem-001', 'mem-002', 'mem-003'],
         sourceId: 'source-001',
         memoryBank: 'vault-knowledge',
-      }).getAggregate();
+      }).getValue();
 
       const result = tracker.forget('mem-002');
 
       expect(result.isOk()).toBe(true);
-      const updated = result.getAggregate();
+      const updated = result.getValue();
       expect(updated.memoryIds).toEqual(['mem-001', 'mem-003']);
     });
 
@@ -206,7 +206,7 @@ describe('FileMemoryTracker', () => {
         memoryIds: ['mem-001', 'mem-002'],
         sourceId: 'source-001',
         memoryBank: 'vault-knowledge',
-      }).getAggregate();
+      }).getValue();
 
       tracker.forget('mem-001');
 
@@ -220,12 +220,12 @@ describe('FileMemoryTracker', () => {
         memoryIds: ['mem-001'],
         sourceId: 'source-001',
         memoryBank: 'vault-knowledge',
-      }).getAggregate();
+      }).getValue();
 
       const result = tracker.forget('mem-999');
 
       expect(result.isOk()).toBe(true);
-      const updated = result.getAggregate();
+      const updated = result.getValue();
       expect(updated.memoryIds).toEqual(['mem-001']);
     });
   });
@@ -241,7 +241,7 @@ describe('FileMemoryTracker', () => {
         sourceId: 'source-001',
         memoryBank: 'vault-knowledge',
       });
-      tracker = result.getAggregate();
+      tracker = result.getValue();
     });
 
     it('all getters return correct values', () => {
@@ -261,7 +261,7 @@ describe('FileMemoryTracker', () => {
         memoryIds: ['mem-001', 'mem-002'],
         sourceId: 'source-001',
         memoryBank: 'vault-knowledge',
-      }).getAggregate();
+      }).getValue();
 
       const json = tracker.toJson();
 
@@ -275,7 +275,7 @@ describe('FileMemoryTracker', () => {
     });
 
     it('returns new object each call (not cached reference)', () => {
-      const tracker = FileMemoryTracker.of(validProps).getAggregate();
+      const tracker = FileMemoryTracker.of(validProps).getValue();
 
       const json1 = tracker.toJson();
       const json2 = tracker.toJson();

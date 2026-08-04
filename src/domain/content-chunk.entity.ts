@@ -62,7 +62,7 @@ export class ContentChunk {
   static of(props: ContentChunkProps): Result<ContentChunk> {
     const parsed = contentChunkSchema.safeParse(props);
     if (!parsed.success) {
-      return Result.ko(new ErrorWithDetails('Invalid chunk data: ' + parsed.error.message, 'InvalidChunk'));
+      return Result.ko([new ErrorWithDetails('Invalid chunk data: ' + parsed.error.message, 'InvalidChunk')]);
     }
     return Result.ok(new ContentChunk(parsed.data));
   }

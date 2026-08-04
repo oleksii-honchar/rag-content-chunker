@@ -29,7 +29,7 @@ describe('WatchSource', () => {
 
       // Assert
       expect(result.isKo()).toBe(true);
-      expect(result.getError().message).toContain('Invalid watch source data');
+      expect(result.getErrors()[0].message).toContain('Invalid watch source data');
     });
 
     it('with invalid id (string instead of bigint) returns ko', () => {

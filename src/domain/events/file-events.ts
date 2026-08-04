@@ -62,7 +62,7 @@ export class FileDeletedEvent implements DomainEvent {
 
   static of(path: string): Result<FileDeletedEvent> {
     if (!path || typeof path !== 'string') {
-      return Result.ko(new ErrorWithDetails('File path must be a non-empty string', 'InvalidFilePath'));
+      return Result.ko([new ErrorWithDetails('File path must be a non-empty string', 'InvalidFilePath')]);
     }
     return Result.ok(new FileDeletedEvent(path));
   }

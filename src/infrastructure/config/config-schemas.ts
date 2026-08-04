@@ -119,7 +119,7 @@ export const chunkingConfigSchema = z
 export const enrichmentConfigSchema = z
   .object({
     enabled: z.boolean().optional(),
-    llmUrl: z.string().url().optional(),
+    llmUrl: z.url().optional(),
     llmModel: z.string().optional(),
     apiKey: z.string().optional(),
     maxConcurrency: z.number().positive().optional(),
@@ -138,7 +138,7 @@ export const enrichmentConfigSchema = z
 
 export const mcpConfigSchema = z
   .object({
-    url: z.string().url().optional(),
+    url: z.url().optional(),
     apiKey: z.string().optional(),
     timeoutMs: z.number().positive().optional(),
     maxRetries: z.number().positive().optional(),

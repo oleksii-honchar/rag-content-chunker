@@ -1,36 +1,10 @@
 import { ContentChunk, ContentChunkProps, FILE_ROLES } from './content-chunk.entity';
 import { aContentChunk } from './content-chunk.entity.test-utils';
 
-const baseProps = (): ContentChunkProps => {
-  const c = aContentChunk();
-  return {
-    id: c.id,
-    text: c.text,
-    chunkIndex: c.chunkIndex,
-    totalChunks: c.totalChunks,
-    sectionHeader: c.sectionHeader,
-    breadcrumb: c.breadcrumb,
-    fileRole: c.fileRole,
-    oversized: c.oversized,
-    importance: c.importance,
-    tags: c.tags,
-    memoryBank: c.memoryBank,
-  };
-};
-
 describe('Chunk', () => {
   describe('Chunk.of', () => {
     it('with valid props returns ok', () => {
-      const chunk = aContentChunk({
-        totalChunks: 5,
-        sectionHeader: 'Introduction',
-        breadcrumb: 'root > section > intro',
-        language: 'typescript',
-        fileRole: FILE_ROLES.CODE,
-        startLine: 1,
-        endLine: 50,
-        metadata: { key: 'value' },
-      });
+      const chunk = aContentChunk();
 
       expect(chunk.id).toBeGreaterThan(0n);
       expect(typeof chunk.id).toBe('bigint');
@@ -39,7 +13,7 @@ describe('Chunk', () => {
 
     it('with invalid id (string instead of bigint) returns ko', () => {
       const result = ContentChunk.of({
-        ...baseProps(),
+        ...aContentChunk().toJson(),
         id: 'not-a-bigint' as never,
       });
 
@@ -48,7 +22,7 @@ describe('Chunk', () => {
 
     it('with invalid id (negative bigint) returns ko', () => {
       const result = ContentChunk.of({
-        ...baseProps(),
+        ...aContentChunk().toJson(),
         id: -1n,
       });
 
@@ -57,7 +31,7 @@ describe('Chunk', () => {
 
     it('with negative chunkIndex returns ko', () => {
       const result = ContentChunk.of({
-        ...baseProps(),
+        ...aContentChunk().toJson(),
         chunkIndex: -1,
       });
 
@@ -66,7 +40,7 @@ describe('Chunk', () => {
 
     it('with zero totalChunks returns ko', () => {
       const result = ContentChunk.of({
-        ...baseProps(),
+        ...aContentChunk().toJson(),
         totalChunks: 0,
       });
 
@@ -87,7 +61,7 @@ describe('Chunk', () => {
 
     it('with importance > 1 returns ko', () => {
       const result = ContentChunk.of({
-        ...baseProps(),
+        ...aContentChunk().toJson(),
         importance: 1.5,
       } as never);
 
@@ -96,7 +70,7 @@ describe('Chunk', () => {
 
     it('with importance < 0 returns ko', () => {
       const result = ContentChunk.of({
-        ...baseProps(),
+        ...aContentChunk().toJson(),
         importance: -0.1,
       } as never);
 
@@ -105,7 +79,7 @@ describe('Chunk', () => {
 
     it('with empty string tag returns ko', () => {
       const result = ContentChunk.of({
-        ...baseProps(),
+        ...aContentChunk().toJson(),
         tags: ['valid-tag', ''],
       } as never);
 
@@ -114,7 +88,7 @@ describe('Chunk', () => {
 
     it('with too many tags returns ko', () => {
       const result = ContentChunk.of({
-        ...baseProps(),
+        ...aContentChunk().toJson(),
         tags: Array.from({ length: 21 }, (_, i) => `tag-${i}`),
       } as never);
 
@@ -123,7 +97,7 @@ describe('Chunk', () => {
 
     it('with empty memoryBank returns ko', () => {
       const result = ContentChunk.of({
-        ...baseProps(),
+        ...aContentChunk().toJson(),
         memoryBank: '',
       } as never);
 
@@ -151,9 +125,10 @@ describe('Chunk', () => {
     });
 
     it('defaults importance to 0.5 when omitted', () => {
-      const p = baseProps();
+      const p = aContentChunk().toJson();
+
       const { importance: _imp, ...propsWithoutImportance } = p;
-      const result = ContentChunk.of(propsWithoutImportance as ContentChunkProps);
+      const result = ContentChunk.of(propsWithoutImportance as never);
 
       expect(result.isOk()).toBe(true);
       expect(result.getValue().importance).toBe(0.5);

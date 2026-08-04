@@ -1,84 +1,173 @@
+import { DomainEvent as ResultEvent } from './domain-event';
 import { ErrorWithDetails } from './error-with-details';
 
-/**
- * Result pattern for handling success/failure without exceptions.
- * Follows DDD rules for domain/application error handling.
- */
+interface Ok<T> {
+  value: T;
+  errors: never[];
+  events: ResultEvent[];
+}
 
-export class Result<T> {
-  constructor(
-    private readonly _isOk: boolean,
-    private readonly _value: T | undefined,
-    private readonly _error: ErrorWithDetails | undefined,
-  ) {}
+interface Ko {
+  value: never;
+  errors: ErrorWithDetails[];
+  events: ResultEvent[];
+}
 
-  /**
-   * Check if result is successful.
-   */
-  isOk(): boolean {
-    return this._isOk;
+type ResultOf<T> = Ok<T> | Ko;
+
+const ok = <T>(value: T, events: ResultEvent[]): Ok<T> => ({
+  value,
+  errors: [],
+  events,
+});
+
+const ko = (errors: ErrorWithDetails[], events: ResultEvent[]): Ko =>
+  ({ value: undefined, errors, events }) as Ko;
+
+export class Result<A> {
+  private constructor(private readonly result: ResultOf<A>) {}
+
+  static ok<T>(value: T, events: ResultEvent[] = []): Result<T> {
+    return new Result(ok(value, events));
   }
 
-  /**
-   * Check if result is failed.
-   */
-  isKo(): boolean {
-    return !this._isOk;
+  static ko(errors: ErrorWithDetails[], events: ResultEvent[] = []): Result<never> {
+    return new Result(ko(errors, events));
   }
 
-  /**
-   * Get the value (throws if failed).
-   */
-  getValue(): T {
-    if (!this._isOk) {
-      throw new ErrorWithDetails('Cannot get value from failed Result');
+  isOk(): this is Ok<A> {
+    return this.result.errors.length === 0;
+  }
+
+  isKo(): this is Ko {
+    return this.result.errors.length > 0;
+  }
+
+  hasEvents(): boolean {
+    return this.result.events.length > 0;
+  }
+
+  getEvents(): ResultEvent[] {
+    return this.result.events || [];
+  }
+
+  getErrors(): ErrorWithDetails[] {
+    return this.result.errors;
+  }
+
+  getFormattedErrors(): string {
+    return this.result.errors
+      .map((e: ErrorWithDetails) => {
+        if (typeof e === 'string') return e;
+        if (e instanceof Error) return e.message;
+        return JSON.stringify(e);
+      })
+      .join(', ');
+  }
+
+  getValue(): A {
+    if (this.isKo()) {
+      const errorMessages = this.result.errors
+        .map(e => {
+          if (typeof e === 'string') {
+            return e;
+          }
+          if (e instanceof Error) {
+            return e.message;
+          }
+          return JSON.stringify(e);
+        })
+        .join(', ');
+      throw new Error('Cannot get value from a Ko result: ' + errorMessages);
     }
-    return this._value!;
+    return this.result.value;
   }
 
   /**
-   * Get the error (throws if successful).
+   * Function to help mapping the value of the result.
+   *
+   * @example
+   * ```ts
+   * const result = Result.ok(1)
+   * const result2 = result.map(value => value + 1)
+   * console.log(result2.getValue()) // 2
+   * ```
+   *
+   * @example
+   * ```ts
+   * const result = Result.ko(['error'])
+   * const result2 = result.map(value => value + 1)
+   * console.log(result2.getErrors()) // ['error']
+   * ```
+   *
+   * @param fn the function to map the value with
+   * @returns The function executed inside the result
    */
-  getError(): ErrorWithDetails {
-    if (this._isOk) {
-      throw new ErrorWithDetails('Cannot get error from successful Result');
+  map<B>(fn: (value: A) => B): Result<B> {
+    if (this.isOk()) {
+      return Result.ok(fn(this.result.value));
     }
-    return this._error!;
+    return Result.ko(this.result.errors);
   }
 
   /**
-   * Get errors (method-style for compatibility).
-   * Returns error message string.
+   * Function to help chaining results one after the other.
+   *
+   * @example
+   * ```ts
+   * const result = Result.ok(1)
+   * const result2 = result.chain(value => Result.ok(value + 1))
+   * console.log(result2.getValue()) // 2
+   * ```
+   *
+   * @example
+   * ```ts
+   * const result = Result.ko(['error'])
+   * const result2 = result.chain(value => Result.ok(value + 1))
+   * console.log(result2.getErrors()) // ['error']
+   * ```
+   *
+   * @param fn the function to chain the result with
+   * @returns The result of the function
    */
-  getErrors(): string {
-    return this.getError().message;
-  }
-
-  static ok<T>(value: T): Result<T> {
-    return new Result(true, value, undefined);
-  }
-
-  static ko<T>(error: ErrorWithDetails | Error): Result<T> {
-    const details = error instanceof ErrorWithDetails ? error : ErrorWithDetails.of(error);
-    return new Result<T>(false, undefined as unknown as T, details);
-  }
-
-  map<U>(fn: (value: T) => U): Result<U> {
-    if (!this._isOk) return this as unknown as Result<U>;
-    try {
-      return Result.ok(fn(this._value!));
-    } catch (error) {
-      return Result.ko(error as Error);
+  chain<B>(fn: (value: A) => Result<B>): Result<B> {
+    if (this.isOk()) {
+      return fn(this.result.value);
     }
+    return Result.ko(this.result.errors);
   }
 
-  mapErr(fn: (error: ErrorWithDetails) => ErrorWithDetails): Result<T> {
-    if (this._isOk) return this;
-    return Result.ko(fn(this._error!));
-  }
+  /**
+   * Function to help manipulating multiple results into one of arrays. Helpful for parsing multiple objects for instance.
+   *
+   * @example
+   * ```ts
+   * const results = [Result.ok(1), Result.ok(2), Result.ok(3)]
+   * const result = Result.sequence(results)
+   * console.log(result.getValue()) // [1, 2, 3]
+   * ```
+   *
+   * @example
+   * ```ts
+   * const results = [Result.ok(1), Result.ko('error'), Result.ok(3)]
+   * const result = Result.sequence(results)
+   * console.log(result.getErrors()) // ['error']
+   * ```
+   *
+   * @param results All results to sequence between them
+   * @returns A single result with all the values or the first error
+   */
+  static sequence<A>(results: Result<A>[]): Result<A[]> {
+    const fn = (loopResult: Result<A>[], values: A[]): Result<A[]> => {
+      const [head, ...tail] = loopResult;
 
-  flatMap<U>(fn: (value: T) => Result<U>): Result<U> {
-    if (!this._isOk) return this as unknown as Result<U>;
-    return fn(this._value!);
+      if (!head) return Result.ok(values);
+
+      if (head.isKo()) return Result.ko(head.getErrors());
+
+      return fn(tail, [...values, head.getValue()]);
+    };
+
+    return fn(results, []);
   }
 }

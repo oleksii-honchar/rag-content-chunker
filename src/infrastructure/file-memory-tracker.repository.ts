@@ -30,7 +30,9 @@ export class FileMemoryTrackerRepository {
       memoryBank: tracker.memoryBank,
     });
 
-    return result.isOk() ? result : AggregateResult.ko(new ErrorWithDetails('Invalid FileMemoryTracker', 'InvalidFileMemoryTracker'));
+    return result.isOk()
+      ? result
+      : AggregateResult.ko(new ErrorWithDetails('Invalid FileMemoryTracker', 'InvalidFileMemoryTracker'));
   }
 
   /**
@@ -39,22 +41,16 @@ export class FileMemoryTrackerRepository {
    */
   async findOrCreate(tracker: FileMemoryTracker): Promise<AggregateResult<FileMemoryTracker, DomainEvent>> {
     const existing = await this.findByFilePath(tracker.filePath);
-    if (existing) {
-      return existing;
+    if (existing && existing.isOk() && existing.getAggregate()) {
+      return AggregateResult.ok(existing.getAggregate() as FileMemoryTracker, []);
     }
 
     const result = await this.save(tracker);
     if (result.isOk()) {
-      return result.getValue();
+      return AggregateResult.ok(result.getAggregate(), []);
     }
 
-    throw new Error(
-      'Failed to create FileMemoryTracker: ' +
-        result
-          .getErrors()
-          .map(e => e.message)
-          .join('; '),
-    );
+    throw new Error('Failed to create FileMemoryTracker: ' + result.getErrors().map(e => e.message).join('; '));
   }
 
   /**
@@ -91,9 +87,9 @@ export class FileMemoryTrackerRepository {
       });
 
       if (result.isKo()) {
-        errors.push(result.getError());
+        errors.push(...result.getErrors());
       } else {
-        return AggregateResult.ok(result.getValue(), []);
+        return AggregateResult.ok(result.getAggregate(), []);
       }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);

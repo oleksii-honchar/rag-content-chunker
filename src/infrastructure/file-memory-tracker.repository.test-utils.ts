@@ -28,7 +28,7 @@ export function aFileMemoryTracker(
     memoryBank: faker.word.adjective(),
     ...overrides,
   });
-  return result.getValue();
+  return result.getAggregate();
 }
 
 export interface PrismaFileMemoryTrackerRecord {
@@ -81,11 +81,15 @@ export function aPrismaFileMemoryTrackerMemory(
 export function aFileMemoryTrackerRepositoryService() {
   return {
     findByFilePath: jest.fn().mockResolvedValue(null),
-    findOrCreate: jest.fn().mockImplementation((tracker: FileMemoryTracker) => Promise.resolve(tracker)),
+    findOrCreate: jest
+      .fn()
+      .mockImplementation((tracker: FileMemoryTracker) =>
+        Promise.resolve({ isOk: () => true, getAggregate: () => tracker }),
+      ),
     save: jest
       .fn()
       .mockImplementation((tracker: FileMemoryTracker) =>
-        Promise.resolve({ isOk: () => true, getValue: () => tracker }),
+        Promise.resolve({ isOk: () => true, getAggregate: () => tracker }),
       ),
     upsertMemory: jest.fn().mockResolvedValue(undefined),
     deleteMemory: jest.fn().mockResolvedValue(undefined),
