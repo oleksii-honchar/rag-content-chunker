@@ -12,26 +12,29 @@ module.exports = tseslint.config(
   },
   {
     files: ['src/**/*.ts'],
-  plugins: {
-    'typescript-eslint': tseslint.plugin,
-    prettier: eslintPrettier,
-  },
-  languageOptions: {
-    ecmaVersion: 'latest',
-    parser: tseslint.parser,
-    parserOptions: {
-      project: true,
-      tsconfigRootDir: __dirname,
+    plugins: {
+      'typescript-eslint': tseslint.plugin,
+      prettier: eslintPrettier,
     },
-    sourceType: 'module',
-    globals: {
-      ...globals.node,
-      ...globals.jest,
+    languageOptions: {
+      ecmaVersion: 'latest',
+      parser: tseslint.parser,
+      parserOptions: {
+        project: true,
+        tsconfigRootDir: __dirname,
+      },
+      sourceType: 'module',
+      globals: {
+        ...globals.node,
+        ...globals.jest,
+      },
+    },
+    rules: {
+      'prettier/prettier': 'error',
+      // Prefer Prettier's `{}` for empty blocks over ESLint's `{ }`
+      'brace-style': 'off',
+      // Warn on unused vars, but allow _-prefixed (intentionally unused)
+      'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
     },
   },
-  rules: {
-    'prettier/prettier': 'error',
-    // Prefer Prettier's `{}` for empty blocks over ESLint's `{ }`
-    'brace-style': 'off',
-  },
-});
+);
