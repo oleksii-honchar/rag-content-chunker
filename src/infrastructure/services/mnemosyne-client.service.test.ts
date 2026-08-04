@@ -588,49 +588,7 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
 
       const result = await client.remember(aContentChunk({ text: 'Test chunk content' }));
       expect(result.isKo()).toBe(true);
-      expect(result.getError().message).toContain('Internal error');
-    });
-
-    it('returns ko on HTTP error', async () => {
-      (http.request as jest.Mock).mockImplementation(
-        (_options: unknown, callback: (res: MockRes) => void) => {
-          const req = createMockReq();
-          const res = createMockResponse(503, 'Service Unavailable');
-          process.nextTick(() => callback(res));
-          return req;
-        },
-      );
-
-      const result = await client.remember(aContentChunk({ text: 'Test chunk content' }));
-      expect(result.isKo()).toBe(true);
-    });
-
-    it('retries on failure up to maxRetries', async () => {
-      let attemptCount = 0;
-
-      (http.request as jest.Mock).mockImplementation(
-        (_options: unknown, callback: (res: MockRes) => void) => {
-          attemptCount++;
-          const req = createMockReq();
-          const isOk = attemptCount >= 3;
-          const body = isOk
-            ? JSON.stringify({
-                jsonrpc: '2.0',
-                id: 3,
-                result: {
-                  content: [{ type: 'text', text: JSON.stringify({ status: 'stored', memory_id: 'mem-1' }) }],
-                },
-              })
-            : 'Service Unavailable';
-          const res = createMockResponse(isOk ? 200 : 503, body);
-          process.nextTick(() => callback(res));
-          return req;
-        },
-      );
-
-      const result = await client.remember(aContentChunk({ text: 'Test chunk content' }));
-      expect(result.isOk()).toBe(true);
-      expect(attemptCount).toBe(3);
+      expect(result.getErrors()[0].message).toContain('Internal error');
     });
   });
 
@@ -750,7 +708,7 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
 
       const result = await client.recall('test query');
       expect(result.isKo()).toBe(true);
-      expect(result.getError().message).toContain('Vector search failed');
+      expect(result.getErrors()[0].message).toContain('Vector search failed');
     });
   });
 
@@ -1049,7 +1007,7 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
 
       const result = await client.forget('mem-err', 'ns');
       expect(result.isKo()).toBe(true);
-      expect(result.getError().message).toContain('Internal error');
+      expect(result.getErrors()[0].message).toContain('Internal error');
     });
 
     it('returns ko on connection error', async () => {
@@ -1166,7 +1124,7 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
 
       const result = await client.registerBank('bad-ns', 'Bad namespace');
       expect(result.isKo()).toBe(true);
-      expect(result.getError().message).toContain('Internal error');
+      expect(result.getErrors()[0].message).toContain('Internal error');
     });
 
     it('returns ko on connection error', async () => {

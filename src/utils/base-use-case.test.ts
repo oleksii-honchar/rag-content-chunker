@@ -113,10 +113,15 @@ describe('BaseUseCase', () => {
       const errorLogs = logger.logs.filter(l => l.level === 'error');
       expect(errorLogs.length).toBeGreaterThan(0);
       expect(errorLogs[0].message).toContain('[use-case] Validation failed: FailingValidationUseCase');
-      expect(errorLogs[0].metadata).toEqual({
-        action: 'FailingValidationUseCase',
-        error: 'id is required',
-      });
+      expect(errorLogs[0].metadata).toEqual(
+        expect.objectContaining({
+          action: 'FailingValidationUseCase',
+        }),
+      );
+      const errorMetadata = errorLogs[0].metadata as Record<string, unknown>;
+      expect(Array.isArray(errorMetadata.error)).toBe(true);
+      const errors = errorMetadata.error as { message: string }[];
+      expect(errors[0].message).toBe('id is required');
     });
 
     it('should not call executeInternal when validation fails', async () => {
