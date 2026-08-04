@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { FileMemoryTracker } from '../../domain/file-memory-tracker.aggregate';
 import { AggregateResult } from '../utils/aggregate-result';
-import { FileMemoryTracker } from '../domain/file-memory-tracker.aggregate';
 import { FileMemoryTrackerRepository } from './file-memory-tracker.repository';
 import {
   aFileMemoryTracker,
@@ -104,7 +104,9 @@ describe('FileMemoryTrackerService', () => {
     });
 
     it('returns null when tracker does not exist', async () => {
-      repository.findByFilePath.mockResolvedValue(AggregateResult.ok(null as unknown as FileMemoryTracker, []));
+      repository.findByFilePath.mockResolvedValue(
+        AggregateResult.ok(null as unknown as FileMemoryTracker, []),
+      );
 
       const result = await service.forgetMemory('/nonexistent/file.txt', 'mem-001');
 

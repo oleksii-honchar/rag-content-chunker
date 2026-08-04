@@ -1,12 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import * as http from 'http';
 import * as https from 'https';
-import { ContentChunk } from '../domain/content-chunk.entity';
-import { aContentChunk } from '../domain/content-chunk.entity.test-utils';
-import { ConfigurationService } from './config/configuration.service';
-import { aConfigService } from './config/configuration.service.test-utils';
-import { BasePinoLogger } from './logging/base-pino-logger';
-import { aLogger } from './logging/logger.test-utils';
+import { ContentChunk } from '../../domain/content-chunk.entity';
+import { aContentChunk } from '../../domain/content-chunk.entity.test-utils';
+import { ConfigurationService } from '../config/configuration.service';
+import { aConfigService } from '../config/configuration.service.test-utils';
+import { BasePinoLogger } from '../logging/base-pino-logger';
+import { aLogger } from '../logging/logger.test-utils';
 import { MnemosyneClient } from './mnemosyne-client.service';
 
 jest.mock('http', () => ({

@@ -1,4 +1,4 @@
-import { aContentChunk } from '../domain/content-chunk.entity.test-utils';
+import { aContentChunk } from '../../domain/content-chunk.entity.test-utils';
 import { MnemosyneRememberDto } from './mnemosyne-remember.dto';
 
 describe('MnemosyneRememberDto', () => {

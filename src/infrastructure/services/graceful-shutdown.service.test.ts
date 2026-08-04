@@ -1,8 +1,8 @@
-import { Result } from '../utils/result';
+import { Result } from '../../utils/result';
+import { BasePinoLogger } from '../logging/base-pino-logger';
 import { FileProcessingQueue } from './file-processing-queue.service';
 import { FileWatcherService } from './file-watcher.service';
 import { GracefulShutdownService } from './graceful-shutdown.service';
-import { BasePinoLogger } from './logging/base-pino-logger';
 import { MnemosyneClient } from './mnemosyne-client.service';
 
 class MockBasePinoLogger extends BasePinoLogger {

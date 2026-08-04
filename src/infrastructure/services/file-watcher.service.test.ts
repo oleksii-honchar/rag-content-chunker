@@ -3,12 +3,12 @@ import { Test, TestingModule } from '@nestjs/testing';
 import * as chokidar from 'chokidar';
 import * as os from 'os';
 import * as path from 'path';
-import { Result } from '../utils/result';
-import { AppEventEmitter } from './app-event-emitter';
-import { ConfigurationService } from './config/configuration.service';
+import { Result } from '../../utils/result';
+import { AppEventEmitter } from '../app-event-emitter';
+import { ConfigurationService } from '../config/configuration.service';
+import { BasePinoLogger } from '../logging/base-pino-logger';
 import { aWatchSource } from './config/watch-source-config.test-utils';
 import { FileWatcherService } from './file-watcher.service';
-import { BasePinoLogger } from './logging/base-pino-logger';
 import { MnemosyneClient } from './mnemosyne-client.service';
 
 jest.mock('chokidar', () => ({

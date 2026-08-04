@@ -1,21 +1,14 @@
-import packageJson from '../../package.json';
+import packageJson from '../../../package.json';
+import { BasePinoLogger } from '../logging/base-pino-logger';
+import { aLogger } from '../logging/logger.test-utils';
 import { CliArgsService, ParsedCliArgs } from './cli-args.service';
-import { BasePinoLogger } from './logging/base-pino-logger';
 
 describe('CliArgsService', () => {
   let service: CliArgsService;
   let mockLogger: jest.Mocked<BasePinoLogger>;
 
   beforeEach(() => {
-    mockLogger = {
-      setContext: jest.fn(),
-      log: jest.fn(),
-      info: jest.fn(),
-      error: jest.fn(),
-      warn: jest.fn(),
-      debug: jest.fn(),
-      child: jest.fn().mockReturnValue(mockLogger),
-    };
+    mockLogger = aLogger();
     service = new CliArgsService(mockLogger);
   });
 

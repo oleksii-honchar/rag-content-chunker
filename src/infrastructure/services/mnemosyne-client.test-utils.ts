@@ -3,7 +3,7 @@
  * Provides mock implementations for testing without real MCP server.
  */
 
-import { Result } from '../utils/result';
+import { Result } from '../../utils/result';
 
 /**
  * Returns a stub MnemosyneClient that resolves all calls successfully by default.

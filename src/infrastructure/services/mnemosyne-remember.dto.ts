@@ -1,4 +1,4 @@
-import { ContentChunk } from '../domain/content-chunk.entity';
+import { ContentChunk } from '../../domain/content-chunk.entity';
 
 /**
  * Payload shape for the memory_remember MCP tool call arguments.

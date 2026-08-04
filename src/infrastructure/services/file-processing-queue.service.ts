@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { BasePinoLogger } from './logging/base-pino-logger';
+import { BasePinoLogger } from '../logging/base-pino-logger';
 
 @Injectable()
 export class FileProcessingQueue {

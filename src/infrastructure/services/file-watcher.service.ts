@@ -3,13 +3,13 @@ import * as chokidar from 'chokidar';
 import { EventEmitter } from 'node:events';
 import * as os from 'os';
 import * as path from 'path';
-import { FileChange } from '../domain/file-change.aggregate';
-import { ErrorWithDetails } from '../utils/error-with-details';
-import { Result } from '../utils/result';
-import { AppEventEmitter } from './app-event-emitter';
-import { WatchSourceConfig } from './config/config-schemas';
-import { ConfigurationService } from './config/configuration.service';
-import { BasePinoLogger } from './logging/base-pino-logger';
+import { FileChange } from '../../domain/file-change.aggregate';
+import { ErrorWithDetails } from '../../utils/error-with-details';
+import { Result } from '../../utils/result';
+import { AppEventEmitter } from '../app-event-emitter';
+import { WatchSourceConfig } from '../config/config-schemas';
+import { ConfigurationService } from '../config/configuration.service';
+import { BasePinoLogger } from '../logging/base-pino-logger';
 import { MnemosyneClient } from './mnemosyne-client.service';
 
 @Injectable()

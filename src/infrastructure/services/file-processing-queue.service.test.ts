@@ -1,5 +1,5 @@
+import { BasePinoLogger } from '../logging/base-pino-logger';
 import { FileProcessingQueue } from './file-processing-queue.service';
-import { BasePinoLogger } from './logging/base-pino-logger';
 
 describe('FileProcessingQueue', () => {
   let queue: FileProcessingQueue;

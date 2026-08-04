@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import * as os from 'os';
 import * as path from 'path';
-import packageJson from '../../package.json';
-import { BasePinoLogger } from './logging/base-pino-logger';
+import packageJson from '../../../package.json';
+import { BasePinoLogger } from '../logging/base-pino-logger';
 
 export interface ParsedCliArgs {
   config: string;

@@ -1,11 +1,11 @@
 import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
 import * as http from 'http';
 import * as https from 'https';
-import { ContentChunk } from '../domain/content-chunk.entity';
-import { ErrorWithDetails } from '../utils/error-with-details';
-import { Result } from '../utils/result';
-import { ConfigurationService } from './config/configuration.service';
-import { BasePinoLogger } from './logging/base-pino-logger';
+import { ContentChunk } from '../../domain/content-chunk.entity';
+import { ErrorWithDetails } from '../../utils/error-with-details';
+import { Result } from '../../utils/result';
+import { ConfigurationService } from '../config/configuration.service';
+import { BasePinoLogger } from '../logging/base-pino-logger';
 import { MnemosyneRememberDto } from './mnemosyne-remember.dto';
 
 /**

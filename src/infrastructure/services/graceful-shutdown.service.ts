@@ -1,7 +1,7 @@
 import { Injectable, OnApplicationShutdown } from '@nestjs/common';
+import { BasePinoLogger } from '../logging/base-pino-logger';
 import { FileProcessingQueue } from './file-processing-queue.service';
 import { FileWatcherService } from './file-watcher.service';
-import { BasePinoLogger } from './logging/base-pino-logger';
 import { MnemosyneClient } from './mnemosyne-client.service';
 
 @Injectable()
