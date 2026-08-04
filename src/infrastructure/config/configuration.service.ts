@@ -114,9 +114,9 @@ export class ConfigurationService implements OnApplicationBootstrap {
       const parsed = yaml.load(content) as unknown;
 
       if (!parsed || typeof parsed !== 'object') {
-        return Result.ko(
+        return Result.ko([
           new ErrorWithDetails('YAML parsing failed: invalid configuration format', 'ConfigParseError'),
-        );
+        ]);
       }
 
       const result = configurationSchema.safeParse(parsed);
@@ -125,9 +125,9 @@ export class ConfigurationService implements OnApplicationBootstrap {
         const errors = result.error.issues
           .map(issue => `${issue.path.join('.')}: ${issue.message}`)
           .join(', ');
-        return Result.ko(
+        return Result.ko([
           new ErrorWithDetails(`Configuration validation failed: ${errors}`, 'ConfigValidationError'),
-        );
+        ]);
       }
 
       this.config = result.data;
@@ -138,17 +138,17 @@ export class ConfigurationService implements OnApplicationBootstrap {
       return Result.ok(this.config);
     } catch (error) {
       if (error instanceof Error && 'code' in error && (error as { code: string }).code === 'ENOENT') {
-        return Result.ko(
+        return Result.ko([
           new ErrorWithDetails(
             `Configuration file not found: ${this.configFilePath}. Run with --init to create default config.`,
             'ConfigFileNotFound',
             { configPath: this.configFilePath },
           ),
-        );
+        ]);
       }
-      return Result.ko(
+      return Result.ko([
         new ErrorWithDetails(`Failed to load configuration: ${(error as Error).message}`, 'ConfigLoadError'),
-      );
+      ]);
     }
   }
 
@@ -200,12 +200,12 @@ export class ConfigurationService implements OnApplicationBootstrap {
 
       return Result.ok(undefined);
     } catch (error) {
-      return Result.ko(
+      return Result.ko([
         new ErrorWithDetails(
-          `Failed to create default configuration: ${(error as Error).message}`,
-          'ConfigCreateError',
+          `Configuration validation failed: ${(error as Error).message}`,
+          'ConfigValidationError',
         ),
-      );
+      ]);
     }
   }
 
@@ -214,7 +214,7 @@ export class ConfigurationService implements OnApplicationBootstrap {
     const loadResult = await this.load();
 
     if (loadResult.isKo()) {
-      const err = loadResult.getError();
+      const err = loadResult.getErrors()[0];
       if (err.code === 'ConfigFileNotFound') {
         this.logger.info(`Creating default configuration at ${this.configFilePath}...`);
         const initResult = await this.initializeDefaultConfig();
@@ -223,7 +223,7 @@ export class ConfigurationService implements OnApplicationBootstrap {
           this.logger.info('Default configuration created and loaded.');
         } else {
           this.logger.warn(
-            `Failed to create config file: ${initResult.getError().message}. Using in-memory defaults.`,
+            `Failed to create config file: ${initResult.getFormattedErrors()}. Using in-memory defaults.`,
           );
           this.config = DEFAULT_CONFIG;
         }
@@ -260,7 +260,9 @@ export class ConfigurationService implements OnApplicationBootstrap {
           const result = await this.load();
 
           if (result.isKo()) {
-            this.logger.error(`Config reload failed: ${result.getError().message}. Keeping current config.`);
+            this.logger.error(
+              `Config reload failed: ${result.getFormattedErrors()}. Keeping current config.`,
+            );
           } else {
             this.logger.info('Configuration reloaded successfully');
           }

@@ -27,7 +27,7 @@ describe('ConfigurationService', () => {
   });
 
   afterEach(async () => {
-    await fs.rm(testDir, { recursive: true, force: true }).catch(() => {});
+    await fs.rm(testDir, { recursive: true, force: true }).catch();
   });
 
   const createModule = async (customConfigPath?: string) => {
@@ -101,7 +101,7 @@ describe('ConfigurationService', () => {
 
       expect(result.isKo()).toBe(true);
       if (result.isKo()) {
-        expect(result.getError().message).toMatch(/(YAML|indentation|parse)/i);
+        expect(result.getFormattedErrors()).toMatch(/(YAML|indentation|parse)/i);
       }
     });
 
@@ -122,7 +122,7 @@ describe('ConfigurationService', () => {
 
       expect(result.isKo()).toBe(true);
       if (result.isKo()) {
-        expect(result.getError().message).toContain('validation');
+        expect(result.getFormattedErrors()).toContain('validation');
       }
     });
 

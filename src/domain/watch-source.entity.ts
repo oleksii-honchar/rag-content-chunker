@@ -23,7 +23,7 @@ export class WatchSource {
         new ErrorWithDetails('Invalid watch source data: ' + parsed.error.message, 'InvalidWatchSource'),
       ]);
     }
-    return Result.ok(new WatchSource(parsed.data));
+    return Result.ok(new WatchSource(parsed.data), []);
   }
 
   toJson(): WatchSourceProps {
