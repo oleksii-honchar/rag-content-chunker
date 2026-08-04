@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { z } from 'zod';
 import { ContentChunk } from '../domain/content-chunk.entity';
-import { FileMemoryTrackerService } from '../infrastructure/file-memory-tracker.service';
 import { BasePinoLogger } from '../infrastructure/logging/base-pino-logger';
-import { MnemosyneClient } from '../infrastructure/mnemosyne-client.service';
+import { FileMemoryTrackerService } from '../infrastructure/services/file-memory-tracker.service';
+import { MnemosyneClient } from '../infrastructure/services/mnemosyne-client.service';
 import { BaseUseCase } from '../utils/base-use-case';
 import { ErrorWithDetails } from '../utils/error-with-details';
 import { Result } from '../utils/result';

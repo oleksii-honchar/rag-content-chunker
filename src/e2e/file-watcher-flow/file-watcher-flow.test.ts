@@ -1,7 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { MnemosyneClient } from '../../infrastructure/mnemosyne-client.service';
+import { MnemosyneClient } from '../../infrastructure/services/mnemosyne-client.service';
 import { readFixture } from '../e2e-utils';
 import { createTestApplication } from '../main.test-application';
 

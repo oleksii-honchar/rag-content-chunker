@@ -25,13 +25,13 @@ jest.mock('@mastra/rag', () => ({
 
 import { aContentChunk } from '../domain/content-chunk.entity.test-utils';
 import { FileAddedEvent, FileChangedEvent, FileDeletedEvent } from '../domain/events/file-events';
-import { FileMemoryTrackerService } from '../infrastructure/file-memory-tracker.service';
-import { aFileMemoryTrackerService } from '../infrastructure/file-memory-tracker.service.test-utils';
-import { FileProcessingQueue } from '../infrastructure/file-processing-queue.service';
-import { aFileProcessingQueueService } from '../infrastructure/file-processing-queue.test-utils';
 import { aLogger } from '../infrastructure/logging/logger.test-utils';
-import { MnemosyneClient } from '../infrastructure/mnemosyne-client.service';
-import { aMnemosyneClientService } from '../infrastructure/mnemosyne-client.test-utils';
+import { FileMemoryTrackerService } from '../infrastructure/services/file-memory-tracker.service';
+import { aFileMemoryTrackerService } from '../infrastructure/services/file-memory-tracker.service.test-utils';
+import { FileProcessingQueue } from '../infrastructure/services/file-processing-queue.service';
+import { aFileProcessingQueueService } from '../infrastructure/services/file-processing-queue.test-utils';
+import { MnemosyneClient } from '../infrastructure/services/mnemosyne-client.service';
+import { aMnemosyneClientService } from '../infrastructure/services/mnemosyne-client.test-utils';
 import { Result } from '../utils/result';
 import { ChunkContentUseCase } from './chunk-content.use-case';
 import { aChunkContentUseCase } from './chunk-content.use-case.test-utils';

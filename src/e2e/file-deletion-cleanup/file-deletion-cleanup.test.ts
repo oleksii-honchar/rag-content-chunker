@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { FileMemoryTrackerRepository } from '../../infrastructure/file-memory-tracker.repository';
-import { MnemosyneClient } from '../../infrastructure/mnemosyne-client.service';
+import { MnemosyneClient } from '../../infrastructure/services/mnemosyne-client.service';
 // readFixture available if needed for reference
 import { createTestApplication } from '../main.test-application';
 

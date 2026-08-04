@@ -3,8 +3,8 @@ import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 import { WatchSourceConfig } from '../infrastructure/config/config-schemas';
-import { FileProcessingQueue } from '../infrastructure/file-processing-queue.service';
 import { BasePinoLogger } from '../infrastructure/logging/base-pino-logger';
+import { FileProcessingQueue } from '../infrastructure/services/file-processing-queue.service';
 import { ProcessFileUseCase } from '../use-cases/process-file.use-case';
 
 @Injectable()

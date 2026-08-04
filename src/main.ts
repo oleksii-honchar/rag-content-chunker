@@ -11,12 +11,12 @@ import pino from 'pino';
 import 'reflect-metadata';
 import { AppModule } from './app.module';
 import { ForceReprocessService } from './application/force-reprocess.service';
-import { CliArgsService } from './infrastructure/cli-args.service';
 import { ConfigurationService } from './infrastructure/config/configuration.service';
-import { FileProcessingQueue } from './infrastructure/file-processing-queue.service';
-import { FileWatcherService } from './infrastructure/file-watcher.service';
 import { BasePinoLogger } from './infrastructure/logging/base-pino-logger';
 import { NestjsPinoLogger } from './infrastructure/logging/nestjs-pino-logger';
+import { CliArgsService } from './infrastructure/services/cli-args.service';
+import { FileProcessingQueue } from './infrastructure/services/file-processing-queue.service';
+import { FileWatcherService } from './infrastructure/services/file-watcher.service';
 
 async function bootstrap(): Promise<void> {
   // Parse CLI args before NestJS bootstrap (need minimal logger for help/version)
