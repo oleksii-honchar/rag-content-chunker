@@ -65,9 +65,13 @@ describe('[E2E] File Deletion Cleanup — create → ingest → track → delete
 
     // Step 4: Verify tracker.db has file→memory mapping
     const trackerBefore = await trackerRepo!.findByFilePath(filePath);
-    expect(trackerBefore).not.toBeNull();
-    expect(trackerBefore!.memoryIds.length).toBeGreaterThan(0);
-    console.log(`[E2E-FileDeletion] Tracker mapping exists: ${trackerBefore!.memoryIds.length} memory IDs`);
+    expect(trackerBefore.isOk()).toBe(true);
+    const trackerBeforeValue = trackerBefore.getValue();
+    expect(trackerBeforeValue).not.toBeNull();
+    expect(trackerBeforeValue!.memoryIds.length).toBeGreaterThan(0);
+    console.log(
+      `[E2E-FileDeletion] Tracker mapping exists: ${trackerBeforeValue!.memoryIds.length} memory IDs`,
+    );
 
     // Step 5: Delete the file
     await fs.unlink(filePath);
@@ -87,7 +91,7 @@ describe('[E2E] File Deletion Cleanup — create → ingest → track → delete
 
     // Step 8: Verify tracker.db mapping removed
     const trackerAfter = await trackerRepo!.findByFilePath(filePath);
-    expect(trackerAfter).toBeNull();
+    expect(trackerAfter.isKo()).toBe(true);
     console.log(`[E2E-FileDeletion] Tracker mapping removed successfully`);
   }, 120000);
 });
