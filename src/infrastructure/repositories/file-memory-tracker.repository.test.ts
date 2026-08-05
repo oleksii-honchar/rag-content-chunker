@@ -7,7 +7,7 @@ import {
   aPrismaFileMemoryTrackerMemory,
   PrismaFileMemoryTrackerRecord,
 } from './file-memory-tracker.repository.test-utils';
-import { PrismaService } from './prisma/prisma.service';
+import { PrismaService } from '../prisma/prisma.service';
 
 describe('FileMemoryTrackerRepository', () => {
   let repository: FileMemoryTrackerRepository;

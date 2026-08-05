@@ -7,12 +7,12 @@ import { Result } from '../utils/result';
 import { IngestChunkUseCase } from './ingest-chunk.use-case';
 
 // Mock MnemosyneClient module to avoid chokidar ESM import chain
-jest.mock('../infrastructure/mnemosyne-client.service', () => ({
+jest.mock('../infrastructure/services/mnemosyne-client.service', () => ({
   MnemosyneClient: class MnemosyneClientMock {},
 }));
 
 // Mock FileMemoryTrackerService
-jest.mock('../infrastructure/file-memory-tracker.service', () => ({
+jest.mock('../infrastructure/services/file-memory-tracker.service', () => ({
   FileMemoryTrackerService: class FileMemoryTrackerServiceMock {},
 }));
 

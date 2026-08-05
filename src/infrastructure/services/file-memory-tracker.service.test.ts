@@ -1,11 +1,11 @@
+import { FileMemoryTracker } from '@/domain/file-memory-tracker.aggregate';
+import { AggregateResult } from '@/utils/aggregate-result';
 import { Test, TestingModule } from '@nestjs/testing';
-import { FileMemoryTracker } from '../../domain/file-memory-tracker.aggregate';
-import { AggregateResult } from '../utils/aggregate-result';
-import { FileMemoryTrackerRepository } from './file-memory-tracker.repository';
+import { FileMemoryTrackerRepository } from '../repositories/file-memory-tracker.repository';
 import {
   aFileMemoryTracker,
   aFileMemoryTrackerRepositoryService,
-} from './file-memory-tracker.repository.test-utils';
+} from '../repositories/file-memory-tracker.repository.test-utils';
 import { FileMemoryTrackerService } from './file-memory-tracker.service';
 
 describe('FileMemoryTrackerService', () => {

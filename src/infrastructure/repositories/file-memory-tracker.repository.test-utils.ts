@@ -84,17 +84,17 @@ export function aFileMemoryTrackerRepositoryService() {
     findOrCreate: jest
       .fn()
       .mockImplementation((tracker: FileMemoryTracker) =>
-        Promise.resolve({ isOk: () => true, getValue: () => tracker }),
+        Promise.resolve({ isOk: () => true, isKo: () => false, getValue: () => tracker }),
       ),
     save: jest
       .fn()
       .mockImplementation((tracker: FileMemoryTracker) =>
-        Promise.resolve({ isOk: () => true, getValue: () => tracker }),
+        Promise.resolve({ isOk: () => true, isKo: () => false, getValue: () => tracker }),
       ),
     upsert: jest
       .fn()
       .mockImplementation((tracker: FileMemoryTracker) =>
-        Promise.resolve({ isOk: () => true, getValue: () => tracker }),
+        Promise.resolve({ isOk: () => true, isKo: () => false, getValue: () => tracker }),
       ),
     getMemoryIds: jest.fn().mockResolvedValue([]),
     deleteByFilePath: jest.fn().mockResolvedValue(undefined),

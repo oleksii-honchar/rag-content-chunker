@@ -1,10 +1,11 @@
+import { FileTracker } from '@/domain/file-tracker.aggregate';
+import { ErrorWithDetails } from '@/utils/error-with-details';
+import { Result } from '@/utils/result';
 import { Injectable, OnApplicationBootstrap, OnApplicationShutdown } from '@nestjs/common';
 import * as chokidar from 'chokidar';
 import { EventEmitter } from 'node:events';
 import * as os from 'os';
 import * as path from 'path';
-import { FileTracker } from '../../domain/file-tracker.aggregate';
-import { Result } from '../../utils/result';
 import { AppEventEmitter } from '../app-event-emitter';
 import { WatchSourceConfig } from '../config/config-schemas';
 import { ConfigurationService } from '../config/configuration.service';
@@ -105,15 +106,24 @@ export class FileWatcherService implements OnApplicationBootstrap, OnApplication
     const resolvedPath = this.resolvePath(source.path);
     this.logger.info(`Watching source; id="${source.id}", path="${resolvedPath}"`);
 
-    const watcher = chokidar.watch(resolvedPath, {
-      ignored: this.buildIgnorePatterns(source),
-      persistent: true,
-      ignoreInitial: true,
-      awaitWriteFinish: {
-        stabilityThreshold: source.debounceMs,
-        pollInterval: 100,
-      },
-    });
+    let watcher: chokidar.FSWatcher;
+    try {
+      watcher = chokidar.watch(resolvedPath, {
+        ignored: this.buildIgnorePatterns(source),
+        persistent: true,
+        ignoreInitial: true,
+        awaitWriteFinish: {
+          stabilityThreshold: source.debounceMs,
+          pollInterval: 100,
+        },
+      });
+    } catch (error: unknown) {
+      const err = error instanceof Error ? error.message : String(error);
+      this.logger.error(
+        `Failed to start watcher: source="${source.id}", path="${resolvedPath}", error="${err}"`,
+      );
+      return Result.ko([new (ErrorWithDetails || Error)(err)]);
+    }
 
     const emitter = watcher as unknown as EventEmitter;
     emitter.on('add', (filePath: string) => this.handleFileAdded(filePath, source.id));
