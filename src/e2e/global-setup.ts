@@ -1,8 +1,8 @@
-import { SOURCE_STRATEGIES } from '@/infrastructure/config/source-strategies';
 import * as fs from 'fs/promises';
 import * as yaml from 'js-yaml';
 import * as os from 'os';
 import * as path from 'path';
+import { SOURCE_STRATEGIES } from '../infrastructure/config/source-strategies';
 import { startMnemosyneDocker } from './env-setup/mnemosyne-docker-setup';
 
 let stopMnemosyne: () => Promise<void> | undefined;
