@@ -21,6 +21,7 @@ jest.mock('@mastra/rag', () => ({
   },
 }));
 
+import { FILE_OPERATIONS } from '@/domain/events/file-events';
 import { aWatchSourceConfig } from '@/domain/watch-source.entity.test-utils';
 import { ProcessFileUseCase } from '@/use-cases/process-file.use-case';
 import { aProcessFileUseCase } from '@/use-cases/process-file.use-case.test-utils';
@@ -30,9 +31,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import * as chokidar from 'chokidar';
 import * as os from 'os';
 import * as path from 'path';
-import { FILE_OPERATIONS } from '@/domain/events/file-events';
-import { AppEventEmitter } from '../app-event-emitter';
-import { aAppEventEmitter } from '../app-event-emitter.test-utils';
+
 import { ConfigurationService } from '../config/configuration.service';
 import { aConfigService } from '../config/configuration.service.test-utils';
 import { BasePinoLogger } from '../logging/base-pino-logger';
@@ -48,7 +47,6 @@ jest.mock('chokidar', () => ({
 describe('FileWatcherService', () => {
   let service: FileWatcherService;
   let configService: jest.Mocked<ConfigurationService>;
-  let eventEmitter: jest.Mocked<AppEventEmitter>;
   let mockLogger: jest.Mocked<BasePinoLogger>;
   let mockMnemosyneClient: jest.Mocked<MnemosyneClient>;
   let mockWatcher: jest.Mocked<chokidar.FSWatcher>;
@@ -67,8 +65,6 @@ describe('FileWatcherService', () => {
 
     configService = aConfigService();
 
-    eventEmitter = aAppEventEmitter();
-
     mockLogger = aLogger();
 
     mockMnemosyneClient = aMnemosyneClientService() as unknown as jest.Mocked<MnemosyneClient>;
@@ -79,7 +75,6 @@ describe('FileWatcherService', () => {
       providers: [
         FileWatcherService,
         { provide: ConfigurationService, useValue: configService },
-        { provide: AppEventEmitter, useValue: eventEmitter },
         { provide: BasePinoLogger, useValue: mockLogger },
         { provide: MnemosyneClient, useValue: mockMnemosyneClient },
         { provide: ProcessFileUseCase, useValue: mockProcessFileUseCase },

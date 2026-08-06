@@ -1,4 +1,4 @@
-import { FileTracker } from '@/domain/file-tracker.aggregate';
+import { CHOKIDAR_EVENTS, FILE_OPERATIONS } from '@/domain/events/file-events';
 import { ErrorWithDetails } from '@/utils/error-with-details';
 import { Result } from '@/utils/result';
 import { Injectable, OnApplicationBootstrap, OnApplicationShutdown } from '@nestjs/common';
@@ -6,11 +6,11 @@ import * as chokidar from 'chokidar';
 import { EventEmitter } from 'node:events';
 import * as os from 'os';
 import * as path from 'path';
-import { AppEventEmitter } from '../app-event-emitter';
 import { WatchSourceConfig } from '../config/config-schemas';
 import { ConfigurationService } from '../config/configuration.service';
 import { BasePinoLogger } from '../logging/base-pino-logger';
 import { MnemosyneClient } from './mnemosyne-client.service';
+import { ProcessFileUseCase } from '@/use-cases/process-file.use-case';
 
 @Injectable()
 export class FileWatcherService implements OnApplicationBootstrap, OnApplicationShutdown {
@@ -19,7 +19,7 @@ export class FileWatcherService implements OnApplicationBootstrap, OnApplication
 
   constructor(
     private readonly configService: ConfigurationService,
-    private readonly eventEmitter: AppEventEmitter,
+    private readonly processFileUseCase: ProcessFileUseCase,
     private readonly mnemosyneClient: MnemosyneClient,
     logger: BasePinoLogger,
   ) {
@@ -126,9 +126,9 @@ export class FileWatcherService implements OnApplicationBootstrap, OnApplication
     }
 
     const emitter = watcher as unknown as EventEmitter;
-    emitter.on('add', (filePath: string) => this.handleFileAdded(filePath, source.id));
-    emitter.on('change', (filePath: string) => this.handleFileChanged(filePath, source.id));
-    emitter.on('unlink', (filePath: string) => this.handleFileDeleted(filePath, source.id));
+    emitter.on(CHOKIDAR_EVENTS.ADD, (filePath: string) => this.handleFileAdded(filePath, source));
+    emitter.on(CHOKIDAR_EVENTS.CHANGE, (filePath: string) => this.handleFileChanged(filePath, source));
+    emitter.on(CHOKIDAR_EVENTS.UNLINK, (filePath: string) => this.handleFileDeleted(filePath, source));
     emitter.on('error', (error: unknown) => {
       this.logger.error(
         `Watcher error: source="${source.id}", path="${resolvedPath}", error="${error instanceof Error ? error.message : String(error)}"`,
@@ -139,51 +139,37 @@ export class FileWatcherService implements OnApplicationBootstrap, OnApplication
     return Result.ok(undefined as unknown as void);
   }
 
-  private handleFileAdded(filePath: string, sourceId: string): void {
-    this.logger.debug(`File added; path="${filePath}", source="${sourceId}"`);
-    const fileTracker = FileTracker.of({ filePath });
-    if (fileTracker.isKo()) {
-      this.logger.error(fileTracker.getFormattedErrors());
-      return;
-    }
-    const result = fileTracker.getValue().add();
-    if (result.isOk()) {
-      this.eventEmitter.publishMany(result.getEvents());
-    }
+  private handleFileAdded(filePath: string, source: WatchSourceConfig): void {
+    this.logger.debug(`File added; path="${filePath}", source="${source.id}"`);
+    void this.processFileUseCase.execute({
+      filePath,
+      eventType: FILE_OPERATIONS.ADD,
+      sourceId: source.id,
+      memoryBank: source.memoryBank,
+      sourceConfig: source,
+    });
   }
 
-  private handleFileChanged(filePath: string, sourceId: string): void {
-    this.logger.debug(`File changed; path="${filePath}", source="${sourceId}"`);
-    const fileTrackerResult = FileTracker.of({ filePath });
-    if (fileTrackerResult.isKo()) {
-      this.logger.error(fileTrackerResult.getFormattedErrors());
-      return;
-    }
-    const addedResult = fileTrackerResult.getValue().add();
-    if (addedResult.isOk()) {
-      const changedTracker = addedResult.getValue();
-      const changeResult = changedTracker.change();
-      if (changeResult.isOk()) {
-        this.eventEmitter.publishMany(changeResult.getEvents());
-      }
-    }
+  private handleFileChanged(filePath: string, source: WatchSourceConfig): void {
+    this.logger.debug(`File changed; path="${filePath}", source="${source.id}"`);
+    void this.processFileUseCase.execute({
+      filePath,
+      eventType: FILE_OPERATIONS.CHANGE,
+      sourceId: source.id,
+      memoryBank: source.memoryBank,
+      sourceConfig: source,
+    });
   }
 
-  private handleFileDeleted(filePath: string, sourceId: string): void {
-    this.logger.debug(`File deleted; path="${filePath}", source="${sourceId}"`);
-    const fileTrackerResult = FileTracker.of({ filePath });
-    if (fileTrackerResult.isKo()) {
-      this.logger.error(fileTrackerResult.getFormattedErrors());
-      return;
-    }
-    const addedResult = fileTrackerResult.getValue().add();
-    if (addedResult.isOk()) {
-      const addedTracker = addedResult.getValue();
-      const deleteResult = addedTracker.delete();
-      if (deleteResult.isOk()) {
-        this.eventEmitter.publishMany(deleteResult.getEvents());
-      }
-    }
+  private handleFileDeleted(filePath: string, source: WatchSourceConfig): void {
+    this.logger.debug(`File deleted; path="${filePath}", source="${source.id}"`);
+    void this.processFileUseCase.execute({
+      filePath,
+      eventType: FILE_OPERATIONS.DELETE,
+      sourceId: source.id,
+      memoryBank: source.memoryBank,
+      sourceConfig: source,
+    });
   }
 
   private resolvePath(filePath: string): string {
