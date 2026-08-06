@@ -215,6 +215,139 @@ describe('ProcessFileUseCase', () => {
     });
   });
 
+  describe('forgetOldMemoriesByIds', () => {
+    const filePath = '/path/to/file.md';
+    const sourceId = 'test-source';
+    const memoryBank = 'test-memoryBank';
+    const fileContent = 'Updated content';
+    const sourceConfig = aSourceConfig({ id: sourceId, memoryBank });
+    const chunks = [aContentChunk({ text: 'updated chunk' })];
+
+    beforeEach(() => {
+      (fs.readFile as jest.Mock).mockResolvedValue(fileContent);
+      mockChunkContentUseCase.execute.mockResolvedValue(Result.ok(chunks));
+      mockIngestChunkUseCase.execute.mockResolvedValue(Result.ok(undefined as unknown as void));
+      mockProcessingQueue.addToQueue.mockImplementation(task => task());
+    });
+
+    it('should return ok when memory IDs are empty', async () => {
+      mockFileMemoryTrackerService.getMemoryIds.mockResolvedValue([]);
+
+      const result = await useCase.execute({
+        filePath,
+        eventType: 'change',
+        sourceId,
+        memoryBank,
+        sourceConfig,
+      });
+
+      expect(result.isOk()).toBe(true);
+      expect(mockMnemosyneClient.forget).not.toHaveBeenCalled();
+    });
+
+    it('should return ok when all forgets succeed', async () => {
+      const oldMemoryIds = ['mem-1', 'mem-2'];
+      mockFileMemoryTrackerService.getMemoryIds.mockResolvedValue(oldMemoryIds);
+      mockMnemosyneClient.forget.mockResolvedValue(Result.ok(undefined as unknown as void));
+      mockFileMemoryTrackerService.deleteByFilePath.mockResolvedValue(undefined);
+
+      const result = await useCase.execute({
+        filePath,
+        eventType: 'change',
+        sourceId,
+        memoryBank,
+        sourceConfig,
+      });
+
+      expect(result.isOk()).toBe(true);
+      expect(mockMnemosyneClient.forget).toHaveBeenCalledTimes(2);
+      expect(mockMnemosyneClient.forget).toHaveBeenCalledWith('mem-1', memoryBank);
+      expect(mockMnemosyneClient.forget).toHaveBeenCalledWith('mem-2', memoryBank);
+    });
+
+    it('should return ok (ingest result) when some forgets fail with Result.ko', async () => {
+      const oldMemoryIds = ['mem-1', 'mem-2', 'mem-3'];
+      mockFileMemoryTrackerService.getMemoryIds.mockResolvedValue(oldMemoryIds);
+      mockMnemosyneClient.forget
+        .mockResolvedValueOnce(Result.ok(undefined as unknown as void))
+        .mockResolvedValueOnce(Result.ko([new Error('Forget failed')]))
+        .mockResolvedValueOnce(Result.ok(undefined as unknown as void));
+      mockFileMemoryTrackerService.deleteByFilePath.mockResolvedValue(undefined);
+
+      const result = await useCase.execute({
+        filePath,
+        eventType: 'change',
+        sourceId,
+        memoryBank,
+        sourceConfig,
+      });
+
+      // Forget failures are non-blocking — ingest result (ok) is returned
+      expect(result.isOk()).toBe(true);
+      expect(mockMnemosyneClient.forget).toHaveBeenCalledTimes(3);
+      expect(mockFileMemoryTrackerService.deleteByFilePath).toHaveBeenCalledWith(filePath);
+    });
+
+    it('should return ok (ingest result) when some forgets throw', async () => {
+      const oldMemoryIds = ['mem-1', 'mem-2'];
+      mockFileMemoryTrackerService.getMemoryIds.mockResolvedValue(oldMemoryIds);
+      mockMnemosyneClient.forget
+        .mockResolvedValueOnce(Result.ok(undefined as unknown as void))
+        .mockRejectedValueOnce(new Error('Connection error'));
+      mockFileMemoryTrackerService.deleteByFilePath.mockResolvedValue(undefined);
+
+      const result = await useCase.execute({
+        filePath,
+        eventType: 'change',
+        sourceId,
+        memoryBank,
+        sourceConfig,
+      });
+
+      // Forget failures are non-blocking — ingest result (ok) is returned
+      expect(result.isOk()).toBe(true);
+      expect(mockMnemosyneClient.forget).toHaveBeenCalledTimes(2);
+      expect(mockFileMemoryTrackerService.deleteByFilePath).toHaveBeenCalledWith(filePath);
+    });
+
+    it('should return ok (ingest result) when all forgets fail', async () => {
+      const oldMemoryIds = ['mem-1', 'mem-2'];
+      mockFileMemoryTrackerService.getMemoryIds.mockResolvedValue(oldMemoryIds);
+      mockMnemosyneClient.forget.mockResolvedValue(Result.ko([new Error('All failed')]));
+      mockFileMemoryTrackerService.deleteByFilePath.mockResolvedValue(undefined);
+
+      const result = await useCase.execute({
+        filePath,
+        eventType: 'change',
+        sourceId,
+        memoryBank,
+        sourceConfig,
+      });
+
+      // Forget failures are non-blocking — ingest result (ok) is returned
+      expect(result.isOk()).toBe(true);
+      expect(mockMnemosyneClient.forget).toHaveBeenCalledTimes(2);
+      expect(mockFileMemoryTrackerService.deleteByFilePath).toHaveBeenCalledWith(filePath);
+    });
+
+    it('should use params.memoryBank for forget calls', async () => {
+      const oldMemoryIds = ['mem-1'];
+      mockFileMemoryTrackerService.getMemoryIds.mockResolvedValue(oldMemoryIds);
+      mockMnemosyneClient.forget.mockResolvedValue(Result.ok(undefined as unknown as void));
+      mockFileMemoryTrackerService.deleteByFilePath.mockResolvedValue(undefined);
+
+      await useCase.execute({
+        filePath,
+        eventType: 'change',
+        sourceId,
+        memoryBank: 'custom-bank',
+        sourceConfig: aSourceConfig({ id: sourceId, memoryBank: 'custom-bank' }),
+      });
+
+      expect(mockMnemosyneClient.forget).toHaveBeenCalledWith('mem-1', 'custom-bank');
+    });
+  });
+
   describe('execute with CHANGE event', () => {
     it('should re-chunk and re-ingest on change', async () => {
       const filePath = '/path/to/file.md';
@@ -227,6 +360,7 @@ describe('ProcessFileUseCase', () => {
       (fs.readFile as jest.Mock).mockResolvedValue(fileContent);
       mockChunkContentUseCase.execute.mockResolvedValue(Result.ok(chunks));
       mockIngestChunkUseCase.execute.mockResolvedValue(Result.ok(undefined as unknown as void));
+      mockFileMemoryTrackerService.getMemoryIds.mockResolvedValue([]);
 
       mockProcessingQueue.addToQueue.mockImplementation(task => task());
 
@@ -253,6 +387,159 @@ describe('ProcessFileUseCase', () => {
           eventType: 'change',
         },
       });
+    });
+
+    it('should get old IDs, ingest, forget old memories, and clear tracker on change', async () => {
+      const filePath = '/path/to/file.md';
+      const sourceId = 'test-source';
+      const memoryBank = 'test-memoryBank';
+      const fileContent = 'Updated content';
+      const sourceConfig = aSourceConfig({ id: sourceId, memoryBank });
+      const chunks = [aContentChunk({ text: 'updated chunk' })];
+      const oldMemoryIds = ['mem-old-1', 'mem-old-2'];
+
+      (fs.readFile as jest.Mock).mockResolvedValue(fileContent);
+      mockFileMemoryTrackerService.getMemoryIds.mockResolvedValue(oldMemoryIds);
+      mockChunkContentUseCase.execute.mockResolvedValue(Result.ok(chunks));
+      mockIngestChunkUseCase.execute.mockResolvedValue(Result.ok(undefined as unknown as void));
+      mockMnemosyneClient.forget.mockResolvedValue(Result.ok(undefined as unknown as void));
+      mockFileMemoryTrackerService.deleteByFilePath.mockResolvedValue(undefined);
+      mockProcessingQueue.addToQueue.mockImplementation(task => task());
+
+      await useCase.execute({
+        filePath,
+        eventType: 'change',
+        sourceId,
+        memoryBank,
+        sourceConfig,
+      });
+
+      // Verify the 4-step flow: get old IDs → ingest → forget → clear tracker
+      expect(mockFileMemoryTrackerService.getMemoryIds).toHaveBeenCalledWith(filePath);
+      expect(mockChunkContentUseCase.execute).toHaveBeenCalled();
+      expect(mockIngestChunkUseCase.execute).toHaveBeenCalled();
+      expect(mockMnemosyneClient.forget).toHaveBeenCalledTimes(2);
+      expect(mockMnemosyneClient.forget).toHaveBeenCalledWith('mem-old-1', memoryBank);
+      expect(mockMnemosyneClient.forget).toHaveBeenCalledWith('mem-old-2', memoryBank);
+      expect(mockFileMemoryTrackerService.deleteByFilePath).toHaveBeenCalledWith(filePath);
+    });
+
+    it('should skip forget but still clear tracker when no old memories on change', async () => {
+      const filePath = '/path/to/file.md';
+      const sourceId = 'test-source';
+      const memoryBank = 'test-memoryBank';
+      const fileContent = 'Updated content';
+      const sourceConfig = aSourceConfig({ id: sourceId, memoryBank });
+      const chunks = [aContentChunk({ text: 'updated chunk' })];
+
+      (fs.readFile as jest.Mock).mockResolvedValue(fileContent);
+      mockFileMemoryTrackerService.getMemoryIds.mockResolvedValue([]);
+      mockChunkContentUseCase.execute.mockResolvedValue(Result.ok(chunks));
+      mockIngestChunkUseCase.execute.mockResolvedValue(Result.ok(undefined as unknown as void));
+      mockFileMemoryTrackerService.deleteByFilePath.mockResolvedValue(undefined);
+      mockProcessingQueue.addToQueue.mockImplementation(task => task());
+
+      await useCase.execute({
+        filePath,
+        eventType: 'change',
+        sourceId,
+        memoryBank,
+        sourceConfig,
+      });
+
+      expect(mockFileMemoryTrackerService.getMemoryIds).toHaveBeenCalledWith(filePath);
+      expect(mockIngestChunkUseCase.execute).toHaveBeenCalled();
+      expect(mockMnemosyneClient.forget).not.toHaveBeenCalled();
+      expect(mockFileMemoryTrackerService.deleteByFilePath).toHaveBeenCalledWith(filePath);
+    });
+
+    it('should short-circuit on ingest failure — no forget or clear attempted', async () => {
+      const filePath = '/path/to/file.md';
+      const sourceId = 'test-source';
+      const memoryBank = 'test-memoryBank';
+      const fileContent = 'Updated content';
+      const sourceConfig = aSourceConfig({ id: sourceId, memoryBank });
+      const oldMemoryIds = ['mem-old-1'];
+
+      (fs.readFile as jest.Mock).mockResolvedValue(fileContent);
+      mockFileMemoryTrackerService.getMemoryIds.mockResolvedValue(oldMemoryIds);
+      mockChunkContentUseCase.execute.mockResolvedValue(Result.ok([aContentChunk()]));
+      mockIngestChunkUseCase.execute.mockResolvedValue(Result.ko([new Error('Ingest failed')]));
+      mockProcessingQueue.addToQueue.mockImplementation(task => task());
+
+      await useCase.execute({
+        filePath,
+        eventType: 'change',
+        sourceId,
+        memoryBank,
+        sourceConfig,
+      });
+
+      // Ingest failed → forget and clear tracker must NOT be called
+      expect(mockMnemosyneClient.forget).not.toHaveBeenCalled();
+      expect(mockFileMemoryTrackerService.deleteByFilePath).not.toHaveBeenCalled();
+    });
+
+    it('should continue on forget failure — still clears tracker and returns ingest result', async () => {
+      const filePath = '/path/to/file.md';
+      const sourceId = 'test-source';
+      const memoryBank = 'test-memoryBank';
+      const fileContent = 'Updated content';
+      const sourceConfig = aSourceConfig({ id: sourceId, memoryBank });
+      const chunks = [aContentChunk({ text: 'updated chunk' })];
+      const oldMemoryIds = ['mem-old-1', 'mem-old-2'];
+
+      (fs.readFile as jest.Mock).mockResolvedValue(fileContent);
+      mockFileMemoryTrackerService.getMemoryIds.mockResolvedValue(oldMemoryIds);
+      mockChunkContentUseCase.execute.mockResolvedValue(Result.ok(chunks));
+      mockIngestChunkUseCase.execute.mockResolvedValue(Result.ok(undefined as unknown as void));
+      mockMnemosyneClient.forget
+        .mockResolvedValueOnce(Result.ok(undefined as unknown as void))
+        .mockResolvedValueOnce(Result.ko([new Error('Forget failed')]));
+      mockFileMemoryTrackerService.deleteByFilePath.mockResolvedValue(undefined);
+      mockProcessingQueue.addToQueue.mockImplementation(task => task());
+
+      await useCase.execute({
+        filePath,
+        eventType: 'change',
+        sourceId,
+        memoryBank,
+        sourceConfig,
+      });
+
+      // Forget failure is non-blocking: both forgets attempted, tracker still cleared
+      expect(mockMnemosyneClient.forget).toHaveBeenCalledTimes(2);
+      expect(mockFileMemoryTrackerService.deleteByFilePath).toHaveBeenCalledWith(filePath);
+    });
+
+    it('should continue on tracker clear failure — returns ingest result', async () => {
+      const filePath = '/path/to/file.md';
+      const sourceId = 'test-source';
+      const memoryBank = 'test-memoryBank';
+      const fileContent = 'Updated content';
+      const sourceConfig = aSourceConfig({ id: sourceId, memoryBank });
+      const chunks = [aContentChunk({ text: 'updated chunk' })];
+      const oldMemoryIds = ['mem-old-1'];
+
+      (fs.readFile as jest.Mock).mockResolvedValue(fileContent);
+      mockFileMemoryTrackerService.getMemoryIds.mockResolvedValue(oldMemoryIds);
+      mockChunkContentUseCase.execute.mockResolvedValue(Result.ok(chunks));
+      mockIngestChunkUseCase.execute.mockResolvedValue(Result.ok(undefined as unknown as void));
+      mockMnemosyneClient.forget.mockResolvedValue(Result.ok(undefined as unknown as void));
+      mockFileMemoryTrackerService.deleteByFilePath.mockRejectedValue(new Error('DB error'));
+      mockProcessingQueue.addToQueue.mockImplementation(task => task());
+
+      await useCase.execute({
+        filePath,
+        eventType: 'change',
+        sourceId,
+        memoryBank,
+        sourceConfig,
+      });
+
+      // Tracker clear failure is non-blocking: forget was called, delete attempted
+      expect(mockMnemosyneClient.forget).toHaveBeenCalledTimes(1);
+      expect(mockFileMemoryTrackerService.deleteByFilePath).toHaveBeenCalledWith(filePath);
     });
   });
 

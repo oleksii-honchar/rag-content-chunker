@@ -79,8 +79,10 @@ export class ProcessFileUseCase extends BaseUseCase<ProcessFileParams, void> {
 
       switch (params.eventType) {
         case 'add':
+          result = await this.handleAdd(params);
+          break;
         case 'change':
-          result = await this.handleAddOrChange(params);
+          result = await this.handleChange(params);
           break;
         case 'delete':
           result = await this.handleDelete(params);
@@ -101,15 +103,104 @@ export class ProcessFileUseCase extends BaseUseCase<ProcessFileParams, void> {
     return Result.ok(undefined as unknown as void);
   }
 
-  private async handleAddOrChange(params: ProcessFileParams): Promise<Result<void>> {
+  private async forgetOldMemoriesByIds(
+    memoryIds: string[],
+    params: ProcessFileParams,
+  ): Promise<Result<void>> {
+    if (memoryIds.length === 0) {
+      this.logger.debug(`No old memories to forget; path="${params.filePath}"`);
+      return Result.ok(undefined as unknown as void);
+    }
+
+    this.logger.info(
+      `Forgetting ${memoryIds.length} old memories after re-ingestion; path="${params.filePath}"`,
+    );
+
+    let failedCount = 0;
+    const errors: ErrorWithDetails[] = [];
+
+    for (const memoryId of memoryIds) {
+      try {
+        const result = await this.mnemosyneClient.forget(memoryId, params.memoryBank);
+        if (result.isKo()) {
+          failedCount++;
+          errors.push(
+            new ErrorWithDetails(
+              `Failed to forget memory ${memoryId}: ${result.getFormattedErrors()}`,
+              'ForgetMemoryError',
+            ),
+          );
+          this.logger.warn(
+            `Failed to forget memory; memoryId="${memoryId}", error="${result.getFormattedErrors()}"`,
+          );
+        }
+      } catch (error) {
+        failedCount++;
+        errors.push(
+          new ErrorWithDetails(error instanceof Error ? error.message : String(error), 'ForgetMemoryError'),
+        );
+        this.logger.warn(
+          `Error forgetting memory; memoryId="${memoryId}", error="${error instanceof Error ? error.message : String(error)}"`,
+        );
+      }
+    }
+
+    this.logger.info(
+      `Old memories forgotten: path="${params.filePath}", total="${memoryIds.length}", forgotten="${memoryIds.length - failedCount}", failed="${failedCount}"`,
+    );
+
+    if (failedCount > 0) {
+      return Result.ko(errors);
+    }
+
+    return Result.ok(undefined as unknown as void);
+  }
+
+  private async handleAdd(params: ProcessFileParams): Promise<Result<void>> {
+    return this.ingestFile(params);
+  }
+
+  private async handleChange(params: ProcessFileParams): Promise<Result<void>> {
+    // Step 1: Get old memory IDs
+    const oldMemoryIds = await this.fileMemoryTrackerService.getMemoryIds(params.filePath);
+
+    // Step 2: Ingest new content
+    const ingestResult = await this.ingestFile(params);
+
+    // Short-circuit on ingest failure — no forget/clear attempted
+    if (ingestResult.isKo()) {
+      return ingestResult;
+    }
+
+    // Step 3: Forget old memories (continue on failure)
+    if (oldMemoryIds.length > 0) {
+      const forgetResult = await this.forgetOldMemoriesByIds(oldMemoryIds, params);
+      if (forgetResult.isKo()) {
+        this.logger.warn(
+          `Old memory cleanup failed, new content ingested successfully: path="${params.filePath}", error="${forgetResult.getFormattedErrors()}"`,
+        );
+        // Don't block — new content was ingested
+      }
+    }
+
+    // Step 4: Clear tracker (continue on failure)
+    try {
+      await this.fileMemoryTrackerService.deleteByFilePath(params.filePath);
+    } catch (error) {
+      this.logger.warn(
+        `Failed to clear tracker on change; path="${params.filePath}", error="${error instanceof Error ? error.message : String(error)}"`,
+      );
+    }
+
+    return ingestResult;
+  }
+
+  private async ingestFile(params: ProcessFileParams): Promise<Result<void>> {
     // Read file content
     let content: string;
     try {
       content = await fs.readFile(params.filePath, 'utf-8');
     } catch (error) {
-      this.logger.error(
-        `Failed to read file: path="${params.filePath}", error="${error instanceof Error ? error.message : String(error)}"`,
-      );
       return Result.ko([
         new ErrorWithDetails(error instanceof Error ? error.message : String(error), 'FileReadError', {
           filePath: params.filePath,
@@ -127,9 +218,6 @@ export class ProcessFileUseCase extends BaseUseCase<ProcessFileParams, void> {
     });
 
     if (chunksResult.isKo()) {
-      this.logger.error(
-        `Failed to chunk content: path="${params.filePath}", error="${chunksResult.getFormattedErrors()}"`,
-      );
       return chunksResult as unknown as Result<void>;
     }
 
@@ -152,9 +240,6 @@ export class ProcessFileUseCase extends BaseUseCase<ProcessFileParams, void> {
     });
 
     if (ingestResult.isKo()) {
-      this.logger.error(
-        `Failed to ingest chunks: path="${params.filePath}", error="${ingestResult.getFormattedErrors()}"`,
-      );
       return ingestResult as unknown as Result<void>;
     }
 
