@@ -2,7 +2,7 @@
 type: index
 title: "Domain Concepts"
 createdAt: "2026-07-31T07:30:00Z"
-updatedAt: "2026-08-01T21:35:00Z"
+updatedAt: "2026-08-06T12:00:00Z"
 tags: []
 ---
 
@@ -28,3 +28,10 @@ Core domain terminology and mental models for RAG Content Chunker.
 - [[0004-namespace-routing]] — Server-side namespace → database mapping for source segregation
 - [[0007-file-memory-tracking]] — File→Memory relationship tracking via Prisma SQLite
 - [[0008-namespace-management]] — Namespace lifecycle: registration, enforcement, discovery
+
+### Strategy Framework
+
+- [[0009-chunking-strategy-pattern]] — ChunkingStrategy interface and StrategyRouter pattern
+- [[0010-agent-session-chunking]] — Session-aware chunking with frontmatter extraction and metadata enrichment
+- [[0011-obsidian-note-chunking]] — Obsidian note chunking with frontmatter extraction and tag merging
+- [[0012-session-metadata-service]] — Cached session.md metadata extraction with 5-minute TTL

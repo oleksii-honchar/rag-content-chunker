@@ -2,7 +2,7 @@
 type: index
 title: "Architecture Decision Records"
 createdAt: "2026-07-31T07:30:00Z"
-updatedAt: "2026-08-01T21:35:00Z"
+updatedAt: "2026-08-06T12:00:00Z"
 tags: []
 ---
 
@@ -38,3 +38,8 @@ Curated list of architectural decisions for RAG Content Chunker.
 - [[0011-namespace-registration-on-startup]] — Register namespaces with descriptions on application bootstrap
 - [[0012-namespace-parameter-enforcement]] — Make namespace parameter required for all memory tools
 - [[0013-in-memory-namespace-registry]] — Use in-memory registry for namespace descriptions (no persistence)
+
+### Chunking Strategies
+
+- [[0016-custom-chunking-strategies-framework]] — Source-kinded strategy selection with ChunkingStrategy interface and StrategyRouter
+- [[0017-obsidian-note-chunking-strategy]] — Obsidian note-aware chunking with frontmatter extraction and tag merging

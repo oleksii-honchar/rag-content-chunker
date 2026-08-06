@@ -2,9 +2,9 @@
 type: concept
 title: "Mastra Chunking Strategies"
 createdAt: "2026-07-31T07:30:00Z"
-updatedAt: "2026-07-31T07:30:00Z"
+updatedAt: "2026-08-06T12:00:00Z"
 tags: [chunking, mastra]
-see_also: ["adrs/0009-mastra-rag-integration.adr.md", "concepts/0002-file-role.concept.md"]
+see_also: ["adrs/0009-mastra-rag-integration.adr.md", "concepts/0002-file-role.concept.md", "concepts/0009-chunking-strategy-pattern.concept.md"]
 ---
 
 # Concept: Mastra Chunking Strategies
@@ -41,3 +41,9 @@ Different content structures require different splitting logic — using the rig
 **Metadata extraction (optional):**
 - `document.extractMetadata({ title, keywords })` — enabled when `enrichment.enabled=true` + LLM configured
 - Graceful degradation: if LLM fails, chunks still generated without enhanced metadata
+
+**Strategy Framework Integration (as of 2026-08-06):**
+- MastraChunkingService now implements `ChunkingStrategy` interface
+- Routed via `StrategyRouter.selectStrategy()` when `sourceConfig.strategy === 'content-aware'` (default)
+- Internal strategy selection (markdown/recursive/json/sentence) still uses file extension
+- New strategies (`AgentSessionChunkingStrategy`, `ObsidianChunkingStrategy`) delegate to MastraChunkingService for body chunking
