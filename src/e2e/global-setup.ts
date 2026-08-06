@@ -43,7 +43,6 @@ module.exports = async (): Promise<void> => {
       {
         id: 'e2e-test-source',
         path: watchDir,
-        include: ['*.md', '*.ts', '*.json'],
         exclude: [],
         debounceMs: 500,
         memoryBank: 'e2e-test-ns',
