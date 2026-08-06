@@ -1,8 +1,10 @@
+import { WatchSourceConfig } from '@/infrastructure/config/config-schemas';
+import { SOURCE_STRATEGIES } from '@/infrastructure/config/source-strategies';
+import { MnemosyneClient } from '@/infrastructure/services/mnemosyne-client.service';
+import { ProcessFileUseCase } from '@/use-cases/process-file.use-case';
 import { INestApplication } from '@nestjs/common';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { MnemosyneClient } from '../../infrastructure/services/mnemosyne-client.service';
-import { ProcessFileUseCase } from '../../use-cases/process-file.use-case';
 import { cleanupTempDir, createTempDir, readFixture } from '../e2e-utils';
 import { createTestApplication } from '../main.test-application';
 
@@ -14,6 +16,15 @@ describe('[E2E] Chunking and Mnemosyne Ingestion Flow', () => {
   let tempDir: string;
 
   const TEST_SOURCE_ID = 'e2e-test-source';
+  const TEST_SOURCE_CONFIG: WatchSourceConfig = {
+    id: TEST_SOURCE_ID,
+    path: '',
+    memoryBank: TEST_SOURCE_ID,
+    strategy: SOURCE_STRATEGIES.CONTENT_AWARE,
+    description: '',
+    exclude: [],
+    debounceMs: 3000,
+  };
 
   beforeAll(async () => {
     app = await createTestApplication();
@@ -44,6 +55,7 @@ describe('[E2E] Chunking and Mnemosyne Ingestion Flow', () => {
       eventType: 'add',
       sourceId: TEST_SOURCE_ID,
       memoryBank: TEST_SOURCE_ID,
+      sourceConfig: TEST_SOURCE_CONFIG,
     });
 
     // Verify ingestion succeeded (Mnemosyne returns 202 Accepted for async processing)
@@ -64,6 +76,7 @@ describe('[E2E] Chunking and Mnemosyne Ingestion Flow', () => {
       eventType: 'add',
       sourceId: TEST_SOURCE_ID,
       memoryBank: TEST_SOURCE_ID,
+      sourceConfig: TEST_SOURCE_CONFIG,
     });
 
     // Verify ingestion succeeded (Mnemosyne returns 202 Accepted for async processing)
@@ -82,6 +95,7 @@ describe('[E2E] Chunking and Mnemosyne Ingestion Flow', () => {
       eventType: 'add',
       sourceId: TEST_SOURCE_ID,
       memoryBank: TEST_SOURCE_ID,
+      sourceConfig: TEST_SOURCE_CONFIG,
     });
 
     // Verify ingestion succeeded (Mnemosyne returns 202 Accepted for async processing)

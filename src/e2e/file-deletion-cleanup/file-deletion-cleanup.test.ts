@@ -56,7 +56,7 @@ describe('[E2E] File Deletion Cleanup — create → ingest → track → delete
     await new Promise(resolve => setTimeout(resolve, PROCESSING_WAIT_MS));
 
     // Step 3: Verify memory exists via memory_recall
-    const recallResult = await mnemosyneClient!.recall(`FILEDELETION-${uniqueId}`);
+    const recallResult = await mnemosyneClient!.recall(`FILEDELETION-${uniqueId}`, 5, 1000, 'e2e-test-ns');
     expect(recallResult.isOk()).toBe(true);
     const recallResults = recallResult.getValue();
     console.log(`[E2E-FileDeletion] Recall returned ${recallResults.length} results`);
@@ -81,7 +81,7 @@ describe('[E2E] File Deletion Cleanup — create → ingest → track → delete
     await new Promise(resolve => setTimeout(resolve, PROCESSING_WAIT_MS));
 
     // Step 7: Verify memory was forgotten — recall returns no results for this file's unique marker
-    const recallAfter = await mnemosyneClient!.recall(`FILEDELETION-${uniqueId}`);
+    const recallAfter = await mnemosyneClient!.recall(`FILEDELETION-${uniqueId}`, 5, 1000, 'e2e-test-ns');
     expect(recallAfter.isOk()).toBe(true);
     const recallResultsAfter = recallAfter.getValue();
     console.log(`[E2E-FileDeletion] Recall after delete returned ${recallResultsAfter.length} results`);

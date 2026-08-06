@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { SOURCE_STRATEGIES } from '../infrastructure/config/source-strategies';
 import { ErrorWithDetails } from '../utils/error-with-details';
 import { Result } from '../utils/result';
 
@@ -9,6 +10,7 @@ export const watchSourceEntitySchema = z.object({
   exclude: z.array(z.string()),
   debounceMs: z.number().positive(),
   ignorePatterns: z.array(z.string()),
+  strategy: z.enum(Object.values(SOURCE_STRATEGIES)).default(SOURCE_STRATEGIES.CONTENT_AWARE),
 });
 
 export type WatchSourceProps = z.infer<typeof watchSourceEntitySchema>;
@@ -34,6 +36,7 @@ export class WatchSource {
       exclude: [...this.props.exclude],
       debounceMs: this.props.debounceMs,
       ignorePatterns: [...this.props.ignorePatterns],
+      strategy: this.props.strategy,
     };
   }
 
@@ -54,5 +57,8 @@ export class WatchSource {
   }
   get ignorePatterns(): string[] {
     return this.props.ignorePatterns;
+  }
+  get strategy(): string {
+    return this.props.strategy;
   }
 }

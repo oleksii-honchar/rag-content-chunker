@@ -22,16 +22,13 @@ export class MastraChunkingService {
   private getMaxCharacters(fileRole: FileRole): number {
     const maxChars = this.configService.getEnhancementConfig().maxCharacters;
 
-    switch (fileRole) {
-      case FILE_ROLES.DOCS:
-        return maxChars.prose;
-      case FILE_ROLES.CODE:
-        return maxChars.code;
-      case FILE_ROLES.CONFIG:
-        return maxChars.configuration;
-      default:
-        return maxChars.prose;
-    }
+    const map: Record<FileRole, number> = {
+      [FILE_ROLES.DOCS]: maxChars.prose,
+      [FILE_ROLES.CODE]: maxChars.code,
+      [FILE_ROLES.CONFIG]: maxChars.configuration,
+    };
+
+    return map[fileRole] ?? maxChars.prose;
   }
 
   /**

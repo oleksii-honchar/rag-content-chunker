@@ -58,7 +58,7 @@ describe('[E2E] FileWatcher Flow — file creation → watch → chunk → inges
 
     // Verify recall call succeeds (Mnemosyne session shared with MnemosyneClient)
     // Mnemosyne uses semantic search, so use a broad query that matches sample.md content
-    const recallResult = await mnemosyneClient!.recall('chunking');
+    const recallResult = await mnemosyneClient!.recall('chunking', 5, 1000, 'e2e-test-ns');
     if (!recallResult.isOk()) {
       console.log(`[E2E-FileWatcher] Recall("chunking") FAILED:`, recallResult.getFormattedErrors());
     }
@@ -85,7 +85,7 @@ describe('[E2E] FileWatcher Flow — file creation → watch → chunk → inges
     await new Promise(resolve => setTimeout(resolve, PROCESSING_WAIT_MS));
 
     // Verify recall call succeeds
-    const recallResult = await mnemosyneClient!.recall('service chunk');
+    const recallResult = await mnemosyneClient!.recall('service chunk', 5, 1000, 'e2e-test-ns');
     expect(recallResult.isOk()).toBe(true);
     const results = recallResult.getValue();
     expect(results.length).toBeGreaterThan(0);
@@ -104,7 +104,7 @@ describe('[E2E] FileWatcher Flow — file creation → watch → chunk → inges
     await new Promise(resolve => setTimeout(resolve, PROCESSING_WAIT_MS));
 
     // Verify recall call succeeds
-    const recallResult = await mnemosyneClient!.recall('config');
+    const recallResult = await mnemosyneClient!.recall('config', 5, 1000, 'e2e-test-ns');
     expect(recallResult.isOk()).toBe(true);
     const results = recallResult.getValue();
     expect(results.length).toBeGreaterThan(0);

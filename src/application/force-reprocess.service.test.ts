@@ -14,7 +14,7 @@ jest.mock('@mastra/rag', () => ({
     _chunks: { text: string; metadata?: Record<string, unknown> }[] = [];
     _metadata: Record<string, string> = {};
     _textContent = '';
-    constructor(content: string, metadata?: Record<string, unknown>) {
+    constructor(content: string, metadata?: Record<string, string>) {
       this._textContent = content;
       this._metadata = metadata ?? {};
     }
@@ -32,7 +32,7 @@ import { aFileProcessingQueueService } from '../infrastructure/services/file-pro
 import { ProcessFileUseCase } from '../use-cases/process-file.use-case';
 import { aProcessFileUseCase } from '../use-cases/process-file.use-case.test-utils';
 import { Result } from '../utils/result';
-import { mockDirent, mockDirStats, mockFileStats } from '../utils/test-utils';
+import { mockDirStats, mockDirent, mockFileStats } from '../utils/test-utils';
 import { ForceReprocessService } from './force-reprocess.service';
 
 jest.mock('fs/promises');
@@ -182,6 +182,7 @@ describe('ForceReprocessService', () => {
         eventType: 'add',
         sourceId: 'my-source',
         memoryBank: 'my-source',
+        sourceConfig: source,
       });
     });
 

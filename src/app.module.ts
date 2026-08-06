@@ -8,7 +8,10 @@ import { ForceReprocessService } from './application/force-reprocess.service';
 import { EnhancementPipelineService } from './application/services/enhancement-pipeline.service';
 import { ImportanceScoringService } from './application/services/importance-scoring.service';
 import { TagExtractionService } from './application/services/tag-extraction.service';
+import { AgentSessionChunkingStrategy } from './application/strategies/agent-session-chunking.strategy';
 import { MastraChunkingService } from './application/strategies/mastra-chunking.service';
+import { ObsidianChunkingStrategy } from './application/strategies/obsidian-chunking.strategy';
+import { StrategyRouter } from './application/strategies/strategy-router.service';
 import { AppEventEmitter } from './infrastructure/app-event-emitter';
 import { ConfigurationModule } from './infrastructure/config/configuration.module';
 import { LoggerModule } from './infrastructure/logging/logger.module';
@@ -16,6 +19,7 @@ import { PrismaModule } from './infrastructure/prisma/prisma.module';
 import { FileMemoryTrackerRepository } from './infrastructure/repositories/file-memory-tracker.repository';
 import { FileMemoryTrackerService } from './infrastructure/services/file-memory-tracker.service';
 import { FileProcessingQueue } from './infrastructure/services/file-processing-queue.service';
+import { SessionMetadataService } from './infrastructure/services/session-metadata.service';
 import { FileWatcherService } from './infrastructure/services/file-watcher.service';
 import { GracefulShutdownService } from './infrastructure/services/graceful-shutdown.service';
 import { MnemosyneClient } from './infrastructure/services/mnemosyne-client.service';
@@ -55,6 +59,9 @@ import { ProcessFileUseCase } from './use-cases/process-file.use-case';
 
     // Chunking
     MastraChunkingService,
+    AgentSessionChunkingStrategy,
+    ObsidianChunkingStrategy,
+    StrategyRouter,
 
     // Enhancement pipeline
     EnhancementPipelineService,
@@ -71,6 +78,9 @@ import { ProcessFileUseCase } from './use-cases/process-file.use-case';
     // File→Memory tracking
     FileMemoryTrackerRepository,
     FileMemoryTrackerService,
+
+    // Session metadata
+    SessionMetadataService,
   ],
 })
 export class AppModule {}

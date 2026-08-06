@@ -7,6 +7,7 @@ import {
   telemetryConfigSchema,
   watchSourceConfigSchema,
 } from './config-schemas';
+import { SOURCE_STRATEGIES } from './source-strategies';
 
 describe('config-schemas', () => {
   describe('watchSourceConfigSchema', () => {
@@ -104,6 +105,65 @@ describe('config-schemas', () => {
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.data.description).toBeUndefined();
+      }
+    });
+
+    it('accepts valid strategy values', () => {
+      const input = { id: 'test-source', path: '/path', strategy: SOURCE_STRATEGIES.AGENT_SESSIONS };
+      const result = watchSourceConfigSchema.safeParse(input);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.strategy).toBe(SOURCE_STRATEGIES.AGENT_SESSIONS);
+      }
+
+      const result2 = watchSourceConfigSchema.safeParse({
+        id: 'test-source',
+        path: '/path',
+        strategy: SOURCE_STRATEGIES.OBSIDIAN,
+      });
+      expect(result2.success).toBe(true);
+      if (result2.success) {
+        expect(result2.data.strategy).toBe(SOURCE_STRATEGIES.OBSIDIAN);
+      }
+
+      const result3 = watchSourceConfigSchema.safeParse({
+        id: 'test-source',
+        path: '/path',
+        strategy: SOURCE_STRATEGIES.CONTENT_AWARE,
+      });
+      expect(result3.success).toBe(true);
+      if (result3.success) {
+        expect(result3.data.strategy).toBe(SOURCE_STRATEGIES.CONTENT_AWARE);
+      }
+    });
+
+    it('rejects invalid strategy value', () => {
+      const input = { id: 'test-source', path: '/path', strategy: 'invalid-strategy' };
+      const result = watchSourceConfigSchema.safeParse(input);
+      expect(result.success).toBe(false);
+    });
+
+    it('defaults strategy to content-aware when omitted', () => {
+      const input = { id: 'test-source', path: '/path' };
+      const result = watchSourceConfigSchema.safeParse(input);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.strategy).toBe('content-aware');
+      }
+    });
+
+    it('backward compatible: config without strategy field parses successfully', () => {
+      const input = {
+        id: 'legacy-source',
+        path: '/legacy/path',
+        memoryBank: 'legacy-bank',
+        description: 'A legacy source',
+      };
+      const result = watchSourceConfigSchema.safeParse(input);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.strategy).toBe('content-aware');
+        expect(result.data.memoryBank).toBe('legacy-bank');
       }
     });
   });

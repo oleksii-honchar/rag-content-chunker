@@ -1,8 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { z } from 'zod';
 import { EnhancementPipelineService } from '../application/services/enhancement-pipeline.service';
-import { MastraChunkingService } from '../application/strategies/mastra-chunking.service';
+import { BaseChunkingStrategy } from '../application/strategies/base-chunking-strategy';
+import { StrategyRouter } from '../application/strategies/strategy-router.service';
 import { ContentChunk } from '../domain/content-chunk.entity';
+import { watchSourceConfigSchema } from '../infrastructure/config/config-schemas';
 import { ConfigurationService } from '../infrastructure/config/configuration.service';
 import { BasePinoLogger } from '../infrastructure/logging/base-pino-logger';
 import { BaseUseCase } from '../utils/base-use-case';
@@ -17,6 +19,7 @@ const chunkContentParamsSchema = z.object({
   maxTokens: z.number().positive().optional(),
   overlapTokens: z.number().nonnegative().optional(),
   hardCapTokens: z.number().positive().optional(),
+  sourceConfig: watchSourceConfigSchema.optional(),
 });
 
 export type ChunkContentParams = z.infer<typeof chunkContentParamsSchema>;
@@ -24,7 +27,7 @@ export type ChunkContentParams = z.infer<typeof chunkContentParamsSchema>;
 @Injectable()
 export class ChunkContentUseCase extends BaseUseCase<ChunkContentParams, ContentChunk[]> {
   constructor(
-    private readonly mastraChunkingService: MastraChunkingService,
+    private readonly strategyRouter: StrategyRouter,
     private readonly enhancementPipelineService: EnhancementPipelineService,
     private readonly configurationService: ConfigurationService,
     logger: BasePinoLogger,
@@ -51,15 +54,37 @@ export class ChunkContentUseCase extends BaseUseCase<ChunkContentParams, Content
       `Chunking content; path="${params.filePath}", length=${params.content.length}, memoryBank="${params.memoryBank}"`,
     );
 
-    const chunksResult = await this.mastraChunkingService.chunkFile(
+    // Select chunking strategy based on sourceConfig (defaults to content-aware/Mastra)
+    const strategy: BaseChunkingStrategy = params.sourceConfig
+      ? this.strategyRouter.selectStrategy(params.sourceConfig)
+      : this.strategyRouter.selectStrategy({
+          id: params.sourceId,
+          path: params.filePath,
+          memoryBank: params.memoryBank,
+          exclude: [],
+          debounceMs: 3000,
+          strategy: 'content-aware',
+        });
+
+    const effectiveSourceConfig = params.sourceConfig ?? {
+      id: params.sourceId,
+      path: params.filePath,
+      memoryBank: params.memoryBank,
+      exclude: [],
+      debounceMs: 3000,
+      strategy: 'content-aware',
+    };
+
+    const chunksResult = await strategy.chunkFile(
       params.content,
       params.filePath,
       params.sourceId,
+      effectiveSourceConfig,
     );
 
     if (chunksResult.isKo()) {
       this.logger.error(
-        `Mastra chunking failed: path="${params.filePath}", error="${chunksResult.getFormattedErrors()}"`,
+        `Chunking failed: path="${params.filePath}", error="${chunksResult.getFormattedErrors()}"`,
       );
       return chunksResult;
     }

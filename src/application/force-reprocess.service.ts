@@ -54,6 +54,7 @@ export class ForceReprocessService {
             eventType: 'add',
             sourceId: source.id,
             memoryBank: source.memoryBank,
+            sourceConfig: source,
           });
 
           if (result.isKo()) {

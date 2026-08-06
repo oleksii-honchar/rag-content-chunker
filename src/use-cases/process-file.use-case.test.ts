@@ -25,6 +25,7 @@ jest.mock('@mastra/rag', () => ({
 
 import { aContentChunk } from '../domain/content-chunk.entity.test-utils';
 import { FileAddedEvent, FileChangedEvent, FileDeletedEvent } from '../domain/events/file-events';
+import { aSourceConfig } from '../infrastructure/config/configuration.service.test-utils';
 import { aLogger } from '../infrastructure/logging/logger.test-utils';
 import { FileMemoryTrackerService } from '../infrastructure/services/file-memory-tracker.service';
 import { aFileMemoryTrackerService } from '../infrastructure/services/file-memory-tracker.service.test-utils';
@@ -75,6 +76,7 @@ describe('ProcessFileUseCase', () => {
       const sourceId = 'test-source';
       const memoryBank = 'test-memoryBank';
       const fileContent = 'Test file content';
+      const sourceConfig = aSourceConfig({ id: sourceId, memoryBank });
       const chunks = [aContentChunk({ text: 'chunk 1' }), aContentChunk({ text: 'chunk 2' })];
 
       (fs.readFile as jest.Mock).mockResolvedValue(fileContent);
@@ -89,6 +91,7 @@ describe('ProcessFileUseCase', () => {
         eventType: 'add',
         sourceId,
         memoryBank,
+        sourceConfig,
       });
 
       expect(result.isOk()).toBe(true);
@@ -98,6 +101,7 @@ describe('ProcessFileUseCase', () => {
         filePath,
         sourceId,
         memoryBank,
+        sourceConfig,
       });
       expect(mockIngestChunkUseCase.execute).toHaveBeenCalledWith({
         chunks,
@@ -109,11 +113,12 @@ describe('ProcessFileUseCase', () => {
       });
     });
 
-    it('should pass source memoryBank from params to ChunkContentUseCase', async () => {
+    it('should pass sourceConfig through to ChunkContentUseCase', async () => {
       const filePath = '/path/to/file.md';
       const sourceId = 'agent-sessions';
       const memoryBank = 'agent-sessions';
       const fileContent = 'Test';
+      const sourceConfig = aSourceConfig({ id: sourceId, memoryBank, strategy: 'agent-sessions' });
       const chunks = [aContentChunk({ memoryBank })];
 
       (fs.readFile as jest.Mock).mockResolvedValue(fileContent);
@@ -126,14 +131,18 @@ describe('ProcessFileUseCase', () => {
         eventType: 'add',
         sourceId,
         memoryBank,
+        sourceConfig,
       });
 
-      expect(mockChunkContentUseCase.execute).toHaveBeenCalledWith(expect.objectContaining({ memoryBank }));
+      expect(mockChunkContentUseCase.execute).toHaveBeenCalledWith(
+        expect.objectContaining({ memoryBank, sourceConfig }),
+      );
     });
 
     it('should return error when file read fails', async () => {
       const filePath = '/path/to/missing.md';
       const sourceId = 'test-source';
+      const sourceConfig = aSourceConfig({ id: sourceId, memoryBank: 'test-memoryBank' });
 
       (fs.readFile as jest.Mock).mockRejectedValue(new Error('ENOENT'));
 
@@ -146,6 +155,7 @@ describe('ProcessFileUseCase', () => {
         eventType: 'add',
         sourceId,
         memoryBank: 'test-memoryBank',
+        sourceConfig,
       });
 
       expect(result.isOk()).toBe(true);
@@ -155,6 +165,7 @@ describe('ProcessFileUseCase', () => {
       const filePath = '/path/to/file.md';
       const sourceId = 'test-source';
       const fileContent = 'Test content';
+      const sourceConfig = aSourceConfig({ id: sourceId, memoryBank: 'test-memoryBank' });
 
       (fs.readFile as jest.Mock).mockResolvedValue(fileContent);
       mockChunkContentUseCase.execute.mockResolvedValue(Result.ko([new Error('Chunking failed')]));
@@ -168,6 +179,7 @@ describe('ProcessFileUseCase', () => {
         eventType: 'add',
         sourceId,
         memoryBank: 'test-memoryBank',
+        sourceConfig,
       });
 
       expect(result.isOk()).toBe(true);
@@ -178,6 +190,7 @@ describe('ProcessFileUseCase', () => {
       const sourceId = 'test-source';
       const fileContent = 'Test content';
       const chunks = [aContentChunk()];
+      const sourceConfig = aSourceConfig({ id: sourceId, memoryBank: 'test-memoryBank' });
 
       (fs.readFile as jest.Mock).mockResolvedValue(fileContent);
       mockChunkContentUseCase.execute.mockResolvedValue(Result.ok(chunks));
@@ -192,6 +205,7 @@ describe('ProcessFileUseCase', () => {
         eventType: 'add',
         sourceId,
         memoryBank: 'test-memoryBank',
+        sourceConfig,
       });
 
       expect(result.isOk()).toBe(true);
@@ -201,6 +215,7 @@ describe('ProcessFileUseCase', () => {
       const filePath = '/path/to/empty.md';
       const sourceId = 'test-source';
       const fileContent = '';
+      const sourceConfig = aSourceConfig({ id: sourceId, memoryBank: 'test-memoryBank' });
 
       (fs.readFile as jest.Mock).mockResolvedValue(fileContent);
       mockChunkContentUseCase.execute.mockResolvedValue(Result.ok([]));
@@ -214,6 +229,7 @@ describe('ProcessFileUseCase', () => {
         eventType: 'add',
         sourceId,
         memoryBank: 'test-memoryBank',
+        sourceConfig,
       });
 
       expect(mockIngestChunkUseCase.execute).not.toHaveBeenCalled();
@@ -226,6 +242,7 @@ describe('ProcessFileUseCase', () => {
       const sourceId = 'test-source';
       const memoryBank = 'test-memoryBank';
       const fileContent = 'Updated content';
+      const sourceConfig = aSourceConfig({ id: sourceId, memoryBank });
       const chunks = [aContentChunk({ text: 'updated chunk' })];
 
       (fs.readFile as jest.Mock).mockResolvedValue(fileContent);
@@ -239,6 +256,7 @@ describe('ProcessFileUseCase', () => {
         eventType: 'change',
         sourceId,
         memoryBank,
+        sourceConfig,
       });
 
       expect(mockChunkContentUseCase.execute).toHaveBeenCalledWith({
@@ -246,6 +264,7 @@ describe('ProcessFileUseCase', () => {
         filePath,
         sourceId,
         memoryBank,
+        sourceConfig,
       });
       expect(mockIngestChunkUseCase.execute).toHaveBeenCalledWith({
         chunks,
@@ -263,6 +282,7 @@ describe('ProcessFileUseCase', () => {
       const filePath = '/path/to/file.md';
       const sourceId = 'test-source';
       const memoryBank = 'test-memoryBank';
+      const sourceConfig = aSourceConfig({ id: sourceId, memoryBank });
       const memoryIds = ['mem-1', 'mem-2', 'mem-3'];
 
       mockFileMemoryTrackerService.getMemoryIds.mockResolvedValue(memoryIds);
@@ -275,6 +295,7 @@ describe('ProcessFileUseCase', () => {
         eventType: 'delete',
         sourceId,
         memoryBank,
+        sourceConfig,
       });
 
       expect(result.isOk()).toBe(true);
@@ -292,6 +313,7 @@ describe('ProcessFileUseCase', () => {
       const filePath = '/path/to/file.md';
       const sourceId = 'test-source';
       const memoryBank = 'test-memoryBank';
+      const sourceConfig = aSourceConfig({ id: sourceId, memoryBank });
 
       mockFileMemoryTrackerService.getMemoryIds.mockResolvedValue([]);
       mockProcessingQueue.addToQueue.mockImplementation(task => task());
@@ -301,6 +323,7 @@ describe('ProcessFileUseCase', () => {
         eventType: 'delete',
         sourceId,
         memoryBank,
+        sourceConfig,
       });
 
       expect(result.isOk()).toBe(true);
@@ -313,6 +336,7 @@ describe('ProcessFileUseCase', () => {
       const filePath = '/path/to/file.md';
       const sourceId = 'test-source';
       const memoryBank = 'test-memoryBank';
+      const sourceConfig = aSourceConfig({ id: sourceId, memoryBank });
       const memoryIds = ['mem-1', 'mem-2', 'mem-3'];
 
       mockFileMemoryTrackerService.getMemoryIds.mockResolvedValue(memoryIds);
@@ -328,6 +352,7 @@ describe('ProcessFileUseCase', () => {
         eventType: 'delete',
         sourceId,
         memoryBank,
+        sourceConfig,
       });
 
       expect(result.isOk()).toBe(true);
@@ -339,6 +364,7 @@ describe('ProcessFileUseCase', () => {
       const filePath = '/path/to/file.md';
       const sourceId = 'test-source';
       const memoryBank = 'test-memoryBank';
+      const sourceConfig = aSourceConfig({ id: sourceId, memoryBank });
       const memoryIds = ['mem-1', 'mem-2'];
 
       mockFileMemoryTrackerService.getMemoryIds.mockResolvedValue(memoryIds);
@@ -353,6 +379,7 @@ describe('ProcessFileUseCase', () => {
         eventType: 'delete',
         sourceId,
         memoryBank,
+        sourceConfig,
       });
 
       expect(result.isOk()).toBe(true);
@@ -364,6 +391,7 @@ describe('ProcessFileUseCase', () => {
       const filePath = '/path/to/file.md';
       const sourceId = 'test-source';
       const memoryBank = 'test-memoryBank';
+      const sourceConfig = aSourceConfig({ id: sourceId, memoryBank });
       const memoryIds = ['mem-1'];
 
       mockFileMemoryTrackerService.getMemoryIds.mockResolvedValue(memoryIds);
@@ -376,6 +404,7 @@ describe('ProcessFileUseCase', () => {
         eventType: 'delete',
         sourceId,
         memoryBank,
+        sourceConfig,
       });
 
       expect(result.isOk()).toBe(true);
@@ -387,6 +416,7 @@ describe('ProcessFileUseCase', () => {
       const filePath = '/path/to/file.md';
       const sourceId = 'test-source';
       const memoryBank = 'test-memoryBank';
+      const sourceConfig = aSourceConfig({ id: sourceId, memoryBank });
       const memoryIds = ['mem-1', 'mem-2'];
 
       mockFileMemoryTrackerService.getMemoryIds.mockResolvedValue(memoryIds);
@@ -399,6 +429,7 @@ describe('ProcessFileUseCase', () => {
         eventType: 'delete',
         sourceId,
         memoryBank,
+        sourceConfig,
       });
 
       expect(result.isOk()).toBe(true);
@@ -411,6 +442,7 @@ describe('ProcessFileUseCase', () => {
     it('should queue processing via FileProcessingQueue', async () => {
       const filePath = '/path/to/file.md';
       const sourceId = 'test-source';
+      const sourceConfig = aSourceConfig({ id: sourceId, memoryBank: 'test-memoryBank' });
 
       mockProcessingQueue.addToQueue.mockResolvedValue(undefined);
 
@@ -419,6 +451,7 @@ describe('ProcessFileUseCase', () => {
         eventType: 'add',
         sourceId,
         memoryBank: 'test-memoryBank',
+        sourceConfig,
       });
 
       expect(mockProcessingQueue.addToQueue).toHaveBeenCalledTimes(1);
@@ -433,6 +466,7 @@ describe('ProcessFileUseCase', () => {
         eventType: 'add',
         sourceId: 'test-source',
         memoryBank: 'test-memoryBank',
+        sourceConfig: aSourceConfig(),
       } as unknown as Parameters<typeof useCase.execute>[0]);
 
       expect(result.isKo()).toBe(true);
@@ -444,16 +478,18 @@ describe('ProcessFileUseCase', () => {
         eventType: 'add',
         sourceId: '',
         memoryBank: 'test-memoryBank',
+        sourceConfig: aSourceConfig(),
       } as unknown as Parameters<typeof useCase.execute>[0]);
 
       expect(result.isKo()).toBe(true);
     });
 
-    it('should return error when sourceId is missing', async () => {
+    it('should return error when sourceId is empty', async () => {
       const result = await useCase.execute({
         filePath: '/path/to/file.md',
         eventType: 'add',
         sourceId: '',
+        sourceConfig: aSourceConfig(),
       } as unknown as Parameters<typeof useCase.execute>[0]);
 
       expect(result.isKo()).toBe(true);
@@ -465,6 +501,7 @@ describe('ProcessFileUseCase', () => {
         eventType: 'invalid' as 'add',
         sourceId: 'test-source',
         memoryBank: 'test-memoryBank',
+        sourceConfig: aSourceConfig(),
       } as unknown as Parameters<typeof useCase.execute>[0]);
 
       expect(result.isKo()).toBe(true);
@@ -476,6 +513,7 @@ describe('ProcessFileUseCase', () => {
         eventType: 'add',
         sourceId: 'test-source',
         memoryBank: '',
+        sourceConfig: aSourceConfig(),
       } as unknown as Parameters<typeof useCase.execute>[0]);
 
       expect(result.isKo()).toBe(true);

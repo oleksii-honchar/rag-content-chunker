@@ -11,6 +11,20 @@ export const FILE_EVENTS = {
 
 export type FileEventType = ValuesType<typeof FILE_EVENTS>;
 
+export const FILE_OPERATIONS = {
+  ADD: 'add' as const,
+  CHANGE: 'change' as const,
+  DELETE: 'delete' as const,
+} as const;
+
+export type FileOperation = ValuesType<typeof FILE_OPERATIONS>;
+
+export const CHOKIDAR_EVENTS = {
+  ADD: 'add' as const,
+  CHANGE: 'change' as const,
+  UNLINK: 'unlink' as const,
+} as const;
+
 export class FileAddedEvent implements DomainEvent {
   readonly type: string;
   readonly timestamp: Date;

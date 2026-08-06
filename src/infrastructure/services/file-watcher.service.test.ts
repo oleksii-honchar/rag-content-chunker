@@ -1,15 +1,45 @@
+// Mock @mastra/rag BEFORE importing the service
+jest.mock('@mastra/rag', () => ({
+  MDocument: class MockMDocument {
+    static fromMarkdown = jest.fn();
+    static fromJSON = jest.fn();
+    static fromText = jest.fn();
+    static fromHTML = jest.fn();
+    extractMetadata = jest.fn();
+    chunkMarkdown = jest.fn();
+    chunkRecursive = jest.fn();
+    chunkJSON = jest.fn();
+    chunkSentence = jest.fn();
+    getDocs = jest.fn();
+    _chunks: unknown[] = [];
+    _metadata: Record<string, string> = {};
+    _textContent = '';
+    constructor(content: string, metadata?: Record<string, unknown>) {
+      this._textContent = content;
+      this._metadata = (metadata as Record<string, string>) ?? {};
+    }
+  },
+}));
+
 import { aWatchSourceConfig } from '@/domain/watch-source.entity.test-utils';
+import { ProcessFileUseCase } from '@/use-cases/process-file.use-case';
+import { aProcessFileUseCase } from '@/use-cases/process-file.use-case.test-utils';
+import { Result } from '@/utils/result';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Test, TestingModule } from '@nestjs/testing';
 import * as chokidar from 'chokidar';
 import * as os from 'os';
 import * as path from 'path';
-import { Result } from '../../utils/result';
+import { FILE_OPERATIONS } from '@/domain/events/file-events';
 import { AppEventEmitter } from '../app-event-emitter';
+import { aAppEventEmitter } from '../app-event-emitter.test-utils';
 import { ConfigurationService } from '../config/configuration.service';
+import { aConfigService } from '../config/configuration.service.test-utils';
 import { BasePinoLogger } from '../logging/base-pino-logger';
+import { aLogger } from '../logging/logger.test-utils';
 import { FileWatcherService } from './file-watcher.service';
 import { MnemosyneClient } from './mnemosyne-client.service';
+import { aMnemosyneClientService } from './mnemosyne-client.test-utils';
 
 jest.mock('chokidar', () => ({
   watch: jest.fn(),
@@ -22,6 +52,7 @@ describe('FileWatcherService', () => {
   let mockLogger: jest.Mocked<BasePinoLogger>;
   let mockMnemosyneClient: jest.Mocked<MnemosyneClient>;
   let mockWatcher: jest.Mocked<chokidar.FSWatcher>;
+  let mockProcessFileUseCase: ReturnType<typeof aProcessFileUseCase>;
   const mockWatchFn = jest.mocked(chokidar.watch);
 
   beforeEach(async () => {
@@ -34,41 +65,15 @@ describe('FileWatcherService', () => {
     } as unknown as jest.Mocked<chokidar.FSWatcher>;
     mockWatchFn.mockReturnValue(mockWatcher);
 
-    configService = {
-      getWatchSources: jest.fn(),
-      getChunkingConfig: jest.fn(),
-      getEnrichmentConfig: jest.fn(),
-      getMcpConfig: jest.fn(),
-      getTelemetryConfig: jest.fn(),
-      load: jest.fn(),
-      initializeDefaultConfig: jest.fn(),
-      stop: jest.fn(),
-    } as unknown as jest.Mocked<ConfigurationService>;
+    configService = aConfigService();
 
-    eventEmitter = {
-      publish: jest.fn(),
-      publishMany: jest.fn(),
-    } as unknown as jest.Mocked<AppEventEmitter>;
+    eventEmitter = aAppEventEmitter();
 
-    mockLogger = {
-      setContext: jest.fn(),
-      log: jest.fn(),
-      info: jest.fn(),
-      error: jest.fn(),
-      warn: jest.fn(),
-      debug: jest.fn(),
-      child: jest.fn().mockReturnThis(),
-    } as unknown as jest.Mocked<BasePinoLogger>;
+    mockLogger = aLogger();
 
-    mockMnemosyneClient = {
-      registerBank: jest.fn(),
-      remember: jest.fn(),
-      recall: jest.fn(),
-      healthCheck: jest.fn(),
-      close: jest.fn(),
-      initialize: jest.fn().mockResolvedValue(Result.ok(undefined as unknown as void)),
-      onApplicationBootstrap: jest.fn(),
-    } as unknown as jest.Mocked<MnemosyneClient>;
+    mockMnemosyneClient = aMnemosyneClientService() as unknown as jest.Mocked<MnemosyneClient>;
+
+    mockProcessFileUseCase = aProcessFileUseCase();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -77,6 +82,7 @@ describe('FileWatcherService', () => {
         { provide: AppEventEmitter, useValue: eventEmitter },
         { provide: BasePinoLogger, useValue: mockLogger },
         { provide: MnemosyneClient, useValue: mockMnemosyneClient },
+        { provide: ProcessFileUseCase, useValue: mockProcessFileUseCase },
         EventEmitter2,
       ],
     }).compile();
@@ -156,7 +162,7 @@ describe('FileWatcherService', () => {
   });
 
   describe('file added event', () => {
-    it('emits FileAddedEvent when file is added', async () => {
+    it('delegates file added to ProcessFileUseCase', async () => {
       configService.getWatchSources.mockReturnValue([aWatchSourceConfig()]);
       await service.start();
 
@@ -165,19 +171,17 @@ describe('FileWatcherService', () => {
 
       addHandler?.('/test/new-file.md');
 
-      expect(eventEmitter.publishMany).toHaveBeenCalledWith(
-        expect.arrayContaining([
-          expect.objectContaining({
-            type: 'file.added',
-            path: '/test/new-file.md',
-          }),
-        ]),
+      expect(mockProcessFileUseCase.execute).toHaveBeenCalledWith(
+        expect.objectContaining({
+          filePath: '/test/new-file.md',
+          eventType: FILE_OPERATIONS.ADD,
+        }),
       );
     });
   });
 
   describe('file changed event', () => {
-    it('emits FileChangedEvent when file is changed', async () => {
+    it('delegates file changed to ProcessFileUseCase', async () => {
       configService.getWatchSources.mockReturnValue([aWatchSourceConfig()]);
       await service.start();
 
@@ -186,19 +190,17 @@ describe('FileWatcherService', () => {
 
       changeHandler?.('/test/changed-file.md');
 
-      expect(eventEmitter.publishMany).toHaveBeenCalledWith(
-        expect.arrayContaining([
-          expect.objectContaining({
-            type: 'file.changed',
-            path: '/test/changed-file.md',
-          }),
-        ]),
+      expect(mockProcessFileUseCase.execute).toHaveBeenCalledWith(
+        expect.objectContaining({
+          filePath: '/test/changed-file.md',
+          eventType: FILE_OPERATIONS.CHANGE,
+        }),
       );
     });
   });
 
   describe('file deleted event', () => {
-    it('emits FileDeletedEvent when file is deleted', async () => {
+    it('delegates file deleted to ProcessFileUseCase', async () => {
       configService.getWatchSources.mockReturnValue([aWatchSourceConfig()]);
       await service.start();
 
@@ -207,13 +209,11 @@ describe('FileWatcherService', () => {
 
       unlinkHandler?.('/test/deleted-file.md');
 
-      expect(eventEmitter.publishMany).toHaveBeenCalledWith(
-        expect.arrayContaining([
-          expect.objectContaining({
-            type: 'file.deleted',
-            path: '/test/deleted-file.md',
-          }),
-        ]),
+      expect(mockProcessFileUseCase.execute).toHaveBeenCalledWith(
+        expect.objectContaining({
+          filePath: '/test/deleted-file.md',
+          eventType: FILE_OPERATIONS.DELETE,
+        }),
       );
     });
   });

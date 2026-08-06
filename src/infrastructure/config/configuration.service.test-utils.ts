@@ -1,5 +1,19 @@
-import { McpConfig } from './config-schemas';
+import { McpConfig, WatchSourceConfig } from './config-schemas';
 import { ConfigurationService } from './configuration.service';
+import { SOURCE_STRATEGIES } from './source-strategies';
+
+export function aSourceConfig(overrides?: Partial<WatchSourceConfig>): WatchSourceConfig {
+  return {
+    id: 'test-source',
+    path: '/test/path',
+    memoryBank: 'test-memoryBank',
+    strategy: SOURCE_STRATEGIES.CONTENT_AWARE,
+    description: '',
+    exclude: [],
+    debounceMs: 3000,
+    ...overrides,
+  };
+}
 
 const DEFAULT_MCP_CONFIG: McpConfig = {
   url: 'http://mcp.test',

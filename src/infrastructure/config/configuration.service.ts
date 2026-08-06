@@ -17,6 +17,7 @@ import {
   TelemetryConfig,
   WatchSourceConfig,
 } from './config-schemas';
+import { SOURCE_STRATEGIES } from './source-strategies';
 
 export const DEFAULT_CONFIG: Configuration = {
   watchSources: [
@@ -26,6 +27,7 @@ export const DEFAULT_CONFIG: Configuration = {
       memoryBank: 'agent-sessions',
       exclude: ['archive/**', '**/archive/**', '.smart-env/**'],
       debounceMs: 5000,
+      strategy: SOURCE_STRATEGIES.CONTENT_AWARE,
     },
   ],
   chunking: {

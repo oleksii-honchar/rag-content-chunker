@@ -26,3 +26,26 @@ export function aContentChunk(overrides?: Partial<ContentChunkProps>): ContentCh
   };
   return ContentChunk.of(props).getValue();
 }
+
+/**
+ * Returns a ContentChunk with deterministic defaults suitable for integration tests
+ * where assertions rely on stable values (unlike aContentChunk which uses faker).
+ */
+export function aBodyChunk(overrides?: Partial<ContentChunkProps>): ContentChunk {
+  const props: ContentChunkProps = {
+    id: generateId(),
+    text: 'Body chunk text',
+    chunkIndex: 0,
+    totalChunks: 1,
+    sectionHeader: 'Test Section',
+    breadcrumb: '/test/path/file.md',
+    fileRole: FILE_ROLES.DOCS,
+    oversized: false,
+    metadata: { filePath: '/test/path/file.md', sourceId: 'test-source' },
+    importance: 0.5,
+    tags: [],
+    memoryBank: 'default',
+    ...overrides,
+  };
+  return ContentChunk.of(props).getValue();
+}

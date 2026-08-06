@@ -4,10 +4,12 @@ import * as fs from 'fs/promises';
 import { z } from 'zod';
 import {
   FILE_EVENTS,
+  FILE_OPERATIONS,
   FileAddedEvent,
   FileChangedEvent,
   FileDeletedEvent,
 } from '../domain/events/file-events';
+import { watchSourceConfigSchema, WatchSourceConfig } from '../infrastructure/config/config-schemas';
 import { BasePinoLogger } from '../infrastructure/logging/base-pino-logger';
 import { FileMemoryTrackerService } from '../infrastructure/services/file-memory-tracker.service';
 import { FileProcessingQueue } from '../infrastructure/services/file-processing-queue.service';
@@ -20,12 +22,23 @@ import { IngestChunkUseCase } from './ingest-chunk.use-case';
 
 const processFileParamsSchema = z.object({
   filePath: z.string().min(1),
-  eventType: z.enum(['add', 'change', 'delete']),
+  eventType: z.enum([FILE_OPERATIONS.ADD, FILE_OPERATIONS.CHANGE, FILE_OPERATIONS.DELETE]),
   sourceId: z.string().min(1),
   memoryBank: z.string().min(1),
+  sourceConfig: watchSourceConfigSchema,
 });
 
 export type ProcessFileParams = z.infer<typeof processFileParamsSchema>;
+
+const defaultSourceConfig = (): WatchSourceConfig => ({
+  id: 'default',
+  path: '',
+  strategy: 'content-aware',
+  memoryBank: 'default',
+  description: '',
+  exclude: [],
+  debounceMs: 3000,
+});
 
 @Injectable()
 export class ProcessFileUseCase extends BaseUseCase<ProcessFileParams, void> {
@@ -109,6 +122,7 @@ export class ProcessFileUseCase extends BaseUseCase<ProcessFileParams, void> {
       filePath: params.filePath,
       sourceId: params.sourceId,
       memoryBank: params.memoryBank,
+      sourceConfig: params.sourceConfig,
     });
 
     if (chunksResult.isKo()) {
@@ -199,9 +213,10 @@ export class ProcessFileUseCase extends BaseUseCase<ProcessFileParams, void> {
   async handleFileAdded(event: FileAddedEvent): Promise<void> {
     await this.execute({
       filePath: event.path,
-      eventType: 'add',
+      eventType: FILE_OPERATIONS.ADD,
       sourceId: 'default',
       memoryBank: 'default',
+      sourceConfig: defaultSourceConfig(),
     });
   }
 
@@ -212,6 +227,7 @@ export class ProcessFileUseCase extends BaseUseCase<ProcessFileParams, void> {
       eventType: 'change',
       sourceId: 'default',
       memoryBank: 'default',
+      sourceConfig: defaultSourceConfig(),
     });
   }
 
@@ -222,6 +238,7 @@ export class ProcessFileUseCase extends BaseUseCase<ProcessFileParams, void> {
       eventType: 'delete',
       sourceId: 'default',
       memoryBank: 'default',
+      sourceConfig: defaultSourceConfig(),
     });
   }
 }

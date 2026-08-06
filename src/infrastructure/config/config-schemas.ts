@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { SOURCE_STRATEGIES } from './source-strategies';
 
 export const watchSourceConfigSchema = z
   .object({
@@ -8,6 +9,10 @@ export const watchSourceConfigSchema = z
     description: z.string().optional(),
     exclude: z.array(z.string()).default(['.git/**', '**/.git/**', 'node_modules/**', '**/node_modules/**']),
     debounceMs: z.number().positive().default(3000),
+    strategy: z
+      .enum(Object.values(SOURCE_STRATEGIES) as [string, ...string[]])
+      .optional()
+      .default(SOURCE_STRATEGIES.CONTENT_AWARE),
   })
   .transform(data => ({
     ...data,
