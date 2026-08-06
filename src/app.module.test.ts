@@ -6,8 +6,8 @@ import { AppBootstrapService } from './app-bootstrap.service';
 import { AppModule } from './app.module';
 import { Configuration } from './infrastructure/config/config-schemas';
 import { ConfigurationService } from './infrastructure/config/configuration.service';
+import { aConfigServiceStub, aSourceConfig } from './infrastructure/config/configuration.service.test-utils';
 import { SOURCE_STRATEGIES } from './infrastructure/config/source-strategies';
-import { aConfigServiceStub } from './infrastructure/config/configuration.service.test-utils';
 import { BasePinoLogger } from './infrastructure/logging/base-pino-logger';
 import { aLogger } from './infrastructure/logging/logger.test-utils';
 import { FileMemoryTrackerRepository } from './infrastructure/repositories/file-memory-tracker.repository';
@@ -108,15 +108,7 @@ describe('AppModule Integration', () => {
 
   describe('AppBootstrapService.onApplicationBootstrap', () => {
     it('should bootstrap successfully with configured watch sources', async () => {
-      const mockConfig = buildMockConfig([
-        {
-          id: 'test-source',
-          path: '/test/path',
-          memoryBank: 'test-source',
-          exclude: [],
-          debounceMs: 3000,
-        },
-      ]);
+      const mockConfig = buildMockConfig([aSourceConfig({ id: 'test-source', path: '/test/path' })]);
 
       await compileWith(mockConfig);
       await expect(bootstrapService.onApplicationBootstrap()).resolves.not.toThrow();
@@ -128,20 +120,8 @@ describe('AppModule Integration', () => {
 
     it('should bootstrap successfully with multiple watch sources', async () => {
       const mockConfig = buildMockConfig([
-        {
-          id: 'source-1',
-          path: '/path/one',
-          memoryBank: 'source-1',
-          exclude: [],
-          debounceMs: 3000,
-        },
-        {
-          id: 'source-2',
-          path: '/path/two',
-          memoryBank: 'source-2',
-          exclude: [],
-          debounceMs: 2000,
-        },
+        aSourceConfig({ id: 'source-1', path: '/path/one' }),
+        aSourceConfig({ id: 'source-2', path: '/path/two', debounceMs: 2000 }),
       ]);
 
       await compileWith(mockConfig);
