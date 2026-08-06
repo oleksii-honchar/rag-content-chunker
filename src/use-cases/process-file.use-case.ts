@@ -164,10 +164,23 @@ export class ProcessFileUseCase extends BaseUseCase<ProcessFileParams, void> {
     // Step 1: Get old memory IDs
     const oldMemoryIds = await this.fileMemoryTrackerService.getMemoryIds(params.filePath);
 
+    // Step 1b: Clear tracker immediately to prevent concurrent change events
+    // from treating newly-ingested IDs as "old" and forgetting them.
+    // A second event will see empty tracker → just re-ingests (idempotent via Mnemosyne dedup).
+    for (const memoryId of oldMemoryIds) {
+      try {
+        await this.fileMemoryTrackerService.forgetMemory(params.filePath, memoryId);
+      } catch (error) {
+        this.logger.warn(
+          `Failed to remove old memory from tracker; path="${params.filePath}", memoryId="${memoryId}", error="${error instanceof Error ? error.message : String(error)}"`,
+        );
+      }
+    }
+
     // Step 2: Ingest new content
     const ingestResult = await this.ingestFile(params);
 
-    // Short-circuit on ingest failure — no forget/clear attempted
+    // Short-circuit on ingest failure — no forget attempted (old IDs already cleared from tracker)
     if (ingestResult.isKo()) {
       return ingestResult;
     }
@@ -180,17 +193,6 @@ export class ProcessFileUseCase extends BaseUseCase<ProcessFileParams, void> {
           `Old memory cleanup failed, new content ingested successfully: path="${params.filePath}", error="${forgetResult.getFormattedErrors()}"`,
         );
         // Don't block — new content was ingested
-      }
-    }
-
-    // Step 4: Remove old memory IDs from tracker (continue on failure)
-    for (const memoryId of oldMemoryIds) {
-      try {
-        await this.fileMemoryTrackerService.forgetMemory(params.filePath, memoryId);
-      } catch (error) {
-        this.logger.warn(
-          `Failed to remove old memory from tracker on change; path="${params.filePath}", memoryId="${memoryId}", error="${error instanceof Error ? error.message : String(error)}"`,
-        );
       }
     }
 

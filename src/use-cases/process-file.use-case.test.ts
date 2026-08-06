@@ -457,7 +457,7 @@ describe('ProcessFileUseCase', () => {
       expect(mockFileMemoryTrackerService.forgetMemory).not.toHaveBeenCalled();
     });
 
-    it('should short-circuit on ingest failure — no forget or tracker cleanup attempted', async () => {
+    it('should short-circuit on ingest failure — tracker cleared but Mnemosyne forget not attempted', async () => {
       const filePath = '/path/to/file.md';
       const sourceId = 'test-source';
       const memoryBank = 'test-memoryBank';
@@ -479,9 +479,10 @@ describe('ProcessFileUseCase', () => {
         sourceConfig,
       });
 
-      // Ingest failed → forget and tracker cleanup must NOT be called
+      // Ingest failed → Mnemosyne forget must NOT be called (safety: old memories still exist)
+      // Tracker IS cleared before ingest to prevent race condition with concurrent change events
       expect(mockMnemosyneClient.forget).not.toHaveBeenCalled();
-      expect(mockFileMemoryTrackerService.forgetMemory).not.toHaveBeenCalled();
+      expect(mockFileMemoryTrackerService.forgetMemory).toHaveBeenCalledWith(filePath, 'mem-old-1');
     });
 
     it('should continue on forget failure — still removes old IDs from tracker and returns ingest result', async () => {
