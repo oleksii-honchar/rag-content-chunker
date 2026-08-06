@@ -249,7 +249,7 @@ describe('ProcessFileUseCase', () => {
       const oldMemoryIds = ['mem-1', 'mem-2'];
       mockFileMemoryTrackerService.getMemoryIds.mockResolvedValue(oldMemoryIds);
       mockMnemosyneClient.forget.mockResolvedValue(Result.ok(undefined as unknown as void));
-      mockFileMemoryTrackerService.deleteByFilePath.mockResolvedValue(undefined);
+      mockFileMemoryTrackerService.forgetMemory.mockResolvedValue(null);
 
       const result = await useCase.execute({
         filePath,
@@ -263,6 +263,9 @@ describe('ProcessFileUseCase', () => {
       expect(mockMnemosyneClient.forget).toHaveBeenCalledTimes(2);
       expect(mockMnemosyneClient.forget).toHaveBeenCalledWith('mem-1', memoryBank);
       expect(mockMnemosyneClient.forget).toHaveBeenCalledWith('mem-2', memoryBank);
+      expect(mockFileMemoryTrackerService.forgetMemory).toHaveBeenCalledTimes(2);
+      expect(mockFileMemoryTrackerService.forgetMemory).toHaveBeenCalledWith(filePath, 'mem-1');
+      expect(mockFileMemoryTrackerService.forgetMemory).toHaveBeenCalledWith(filePath, 'mem-2');
     });
 
     it('should return ok (ingest result) when some forgets fail with Result.ko', async () => {
@@ -272,7 +275,7 @@ describe('ProcessFileUseCase', () => {
         .mockResolvedValueOnce(Result.ok(undefined as unknown as void))
         .mockResolvedValueOnce(Result.ko([new Error('Forget failed')]))
         .mockResolvedValueOnce(Result.ok(undefined as unknown as void));
-      mockFileMemoryTrackerService.deleteByFilePath.mockResolvedValue(undefined);
+      mockFileMemoryTrackerService.forgetMemory.mockResolvedValue(null);
 
       const result = await useCase.execute({
         filePath,
@@ -285,7 +288,7 @@ describe('ProcessFileUseCase', () => {
       // Forget failures are non-blocking — ingest result (ok) is returned
       expect(result.isOk()).toBe(true);
       expect(mockMnemosyneClient.forget).toHaveBeenCalledTimes(3);
-      expect(mockFileMemoryTrackerService.deleteByFilePath).toHaveBeenCalledWith(filePath);
+      expect(mockFileMemoryTrackerService.forgetMemory).toHaveBeenCalledTimes(3);
     });
 
     it('should return ok (ingest result) when some forgets throw', async () => {
@@ -294,7 +297,7 @@ describe('ProcessFileUseCase', () => {
       mockMnemosyneClient.forget
         .mockResolvedValueOnce(Result.ok(undefined as unknown as void))
         .mockRejectedValueOnce(new Error('Connection error'));
-      mockFileMemoryTrackerService.deleteByFilePath.mockResolvedValue(undefined);
+      mockFileMemoryTrackerService.forgetMemory.mockResolvedValue(null);
 
       const result = await useCase.execute({
         filePath,
@@ -307,14 +310,14 @@ describe('ProcessFileUseCase', () => {
       // Forget failures are non-blocking — ingest result (ok) is returned
       expect(result.isOk()).toBe(true);
       expect(mockMnemosyneClient.forget).toHaveBeenCalledTimes(2);
-      expect(mockFileMemoryTrackerService.deleteByFilePath).toHaveBeenCalledWith(filePath);
+      expect(mockFileMemoryTrackerService.forgetMemory).toHaveBeenCalledTimes(2);
     });
 
     it('should return ok (ingest result) when all forgets fail', async () => {
       const oldMemoryIds = ['mem-1', 'mem-2'];
       mockFileMemoryTrackerService.getMemoryIds.mockResolvedValue(oldMemoryIds);
       mockMnemosyneClient.forget.mockResolvedValue(Result.ko([new Error('All failed')]));
-      mockFileMemoryTrackerService.deleteByFilePath.mockResolvedValue(undefined);
+      mockFileMemoryTrackerService.forgetMemory.mockResolvedValue(null);
 
       const result = await useCase.execute({
         filePath,
@@ -327,14 +330,14 @@ describe('ProcessFileUseCase', () => {
       // Forget failures are non-blocking — ingest result (ok) is returned
       expect(result.isOk()).toBe(true);
       expect(mockMnemosyneClient.forget).toHaveBeenCalledTimes(2);
-      expect(mockFileMemoryTrackerService.deleteByFilePath).toHaveBeenCalledWith(filePath);
+      expect(mockFileMemoryTrackerService.forgetMemory).toHaveBeenCalledTimes(2);
     });
 
     it('should use params.memoryBank for forget calls', async () => {
       const oldMemoryIds = ['mem-1'];
       mockFileMemoryTrackerService.getMemoryIds.mockResolvedValue(oldMemoryIds);
       mockMnemosyneClient.forget.mockResolvedValue(Result.ok(undefined as unknown as void));
-      mockFileMemoryTrackerService.deleteByFilePath.mockResolvedValue(undefined);
+      mockFileMemoryTrackerService.forgetMemory.mockResolvedValue(null);
 
       await useCase.execute({
         filePath,
@@ -389,7 +392,7 @@ describe('ProcessFileUseCase', () => {
       });
     });
 
-    it('should get old IDs, ingest, forget old memories, and clear tracker on change', async () => {
+    it('should get old IDs, ingest, forget old memories, and remove old IDs from tracker on change', async () => {
       const filePath = '/path/to/file.md';
       const sourceId = 'test-source';
       const memoryBank = 'test-memoryBank';
@@ -403,7 +406,7 @@ describe('ProcessFileUseCase', () => {
       mockChunkContentUseCase.execute.mockResolvedValue(Result.ok(chunks));
       mockIngestChunkUseCase.execute.mockResolvedValue(Result.ok(undefined as unknown as void));
       mockMnemosyneClient.forget.mockResolvedValue(Result.ok(undefined as unknown as void));
-      mockFileMemoryTrackerService.deleteByFilePath.mockResolvedValue(undefined);
+      mockFileMemoryTrackerService.forgetMemory.mockResolvedValue(null);
       mockProcessingQueue.addToQueue.mockImplementation(task => task());
 
       await useCase.execute({
@@ -414,17 +417,19 @@ describe('ProcessFileUseCase', () => {
         sourceConfig,
       });
 
-      // Verify the 4-step flow: get old IDs → ingest → forget → clear tracker
+      // Verify the 4-step flow: get old IDs → ingest → forget → remove old IDs from tracker
       expect(mockFileMemoryTrackerService.getMemoryIds).toHaveBeenCalledWith(filePath);
       expect(mockChunkContentUseCase.execute).toHaveBeenCalled();
       expect(mockIngestChunkUseCase.execute).toHaveBeenCalled();
       expect(mockMnemosyneClient.forget).toHaveBeenCalledTimes(2);
       expect(mockMnemosyneClient.forget).toHaveBeenCalledWith('mem-old-1', memoryBank);
       expect(mockMnemosyneClient.forget).toHaveBeenCalledWith('mem-old-2', memoryBank);
-      expect(mockFileMemoryTrackerService.deleteByFilePath).toHaveBeenCalledWith(filePath);
+      expect(mockFileMemoryTrackerService.forgetMemory).toHaveBeenCalledTimes(2);
+      expect(mockFileMemoryTrackerService.forgetMemory).toHaveBeenCalledWith(filePath, 'mem-old-1');
+      expect(mockFileMemoryTrackerService.forgetMemory).toHaveBeenCalledWith(filePath, 'mem-old-2');
     });
 
-    it('should skip forget but still clear tracker when no old memories on change', async () => {
+    it('should skip forget and tracker cleanup when no old memories on change', async () => {
       const filePath = '/path/to/file.md';
       const sourceId = 'test-source';
       const memoryBank = 'test-memoryBank';
@@ -436,7 +441,6 @@ describe('ProcessFileUseCase', () => {
       mockFileMemoryTrackerService.getMemoryIds.mockResolvedValue([]);
       mockChunkContentUseCase.execute.mockResolvedValue(Result.ok(chunks));
       mockIngestChunkUseCase.execute.mockResolvedValue(Result.ok(undefined as unknown as void));
-      mockFileMemoryTrackerService.deleteByFilePath.mockResolvedValue(undefined);
       mockProcessingQueue.addToQueue.mockImplementation(task => task());
 
       await useCase.execute({
@@ -450,10 +454,10 @@ describe('ProcessFileUseCase', () => {
       expect(mockFileMemoryTrackerService.getMemoryIds).toHaveBeenCalledWith(filePath);
       expect(mockIngestChunkUseCase.execute).toHaveBeenCalled();
       expect(mockMnemosyneClient.forget).not.toHaveBeenCalled();
-      expect(mockFileMemoryTrackerService.deleteByFilePath).toHaveBeenCalledWith(filePath);
+      expect(mockFileMemoryTrackerService.forgetMemory).not.toHaveBeenCalled();
     });
 
-    it('should short-circuit on ingest failure — no forget or clear attempted', async () => {
+    it('should short-circuit on ingest failure — no forget or tracker cleanup attempted', async () => {
       const filePath = '/path/to/file.md';
       const sourceId = 'test-source';
       const memoryBank = 'test-memoryBank';
@@ -475,12 +479,12 @@ describe('ProcessFileUseCase', () => {
         sourceConfig,
       });
 
-      // Ingest failed → forget and clear tracker must NOT be called
+      // Ingest failed → forget and tracker cleanup must NOT be called
       expect(mockMnemosyneClient.forget).not.toHaveBeenCalled();
-      expect(mockFileMemoryTrackerService.deleteByFilePath).not.toHaveBeenCalled();
+      expect(mockFileMemoryTrackerService.forgetMemory).not.toHaveBeenCalled();
     });
 
-    it('should continue on forget failure — still clears tracker and returns ingest result', async () => {
+    it('should continue on forget failure — still removes old IDs from tracker and returns ingest result', async () => {
       const filePath = '/path/to/file.md';
       const sourceId = 'test-source';
       const memoryBank = 'test-memoryBank';
@@ -496,7 +500,7 @@ describe('ProcessFileUseCase', () => {
       mockMnemosyneClient.forget
         .mockResolvedValueOnce(Result.ok(undefined as unknown as void))
         .mockResolvedValueOnce(Result.ko([new Error('Forget failed')]));
-      mockFileMemoryTrackerService.deleteByFilePath.mockResolvedValue(undefined);
+      mockFileMemoryTrackerService.forgetMemory.mockResolvedValue(null);
       mockProcessingQueue.addToQueue.mockImplementation(task => task());
 
       await useCase.execute({
@@ -507,12 +511,12 @@ describe('ProcessFileUseCase', () => {
         sourceConfig,
       });
 
-      // Forget failure is non-blocking: both forgets attempted, tracker still cleared
+      // Forget failure is non-blocking: both forgets attempted, old IDs still removed from tracker
       expect(mockMnemosyneClient.forget).toHaveBeenCalledTimes(2);
-      expect(mockFileMemoryTrackerService.deleteByFilePath).toHaveBeenCalledWith(filePath);
+      expect(mockFileMemoryTrackerService.forgetMemory).toHaveBeenCalledTimes(2);
     });
 
-    it('should continue on tracker clear failure — returns ingest result', async () => {
+    it('should continue on tracker forgetMemory failure — returns ingest result', async () => {
       const filePath = '/path/to/file.md';
       const sourceId = 'test-source';
       const memoryBank = 'test-memoryBank';
@@ -526,7 +530,7 @@ describe('ProcessFileUseCase', () => {
       mockChunkContentUseCase.execute.mockResolvedValue(Result.ok(chunks));
       mockIngestChunkUseCase.execute.mockResolvedValue(Result.ok(undefined as unknown as void));
       mockMnemosyneClient.forget.mockResolvedValue(Result.ok(undefined as unknown as void));
-      mockFileMemoryTrackerService.deleteByFilePath.mockRejectedValue(new Error('DB error'));
+      mockFileMemoryTrackerService.forgetMemory.mockRejectedValue(new Error('DB error'));
       mockProcessingQueue.addToQueue.mockImplementation(task => task());
 
       await useCase.execute({
@@ -537,9 +541,9 @@ describe('ProcessFileUseCase', () => {
         sourceConfig,
       });
 
-      // Tracker clear failure is non-blocking: forget was called, delete attempted
+      // Tracker forgetMemory failure is non-blocking: forget was called, forgetMemory attempted
       expect(mockMnemosyneClient.forget).toHaveBeenCalledTimes(1);
-      expect(mockFileMemoryTrackerService.deleteByFilePath).toHaveBeenCalledWith(filePath);
+      expect(mockFileMemoryTrackerService.forgetMemory).toHaveBeenCalledWith(filePath, 'mem-old-1');
     });
   });
 

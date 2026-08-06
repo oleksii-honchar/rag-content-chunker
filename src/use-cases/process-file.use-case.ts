@@ -183,13 +183,15 @@ export class ProcessFileUseCase extends BaseUseCase<ProcessFileParams, void> {
       }
     }
 
-    // Step 4: Clear tracker (continue on failure)
-    try {
-      await this.fileMemoryTrackerService.deleteByFilePath(params.filePath);
-    } catch (error) {
-      this.logger.warn(
-        `Failed to clear tracker on change; path="${params.filePath}", error="${error instanceof Error ? error.message : String(error)}"`,
-      );
+    // Step 4: Remove old memory IDs from tracker (continue on failure)
+    for (const memoryId of oldMemoryIds) {
+      try {
+        await this.fileMemoryTrackerService.forgetMemory(params.filePath, memoryId);
+      } catch (error) {
+        this.logger.warn(
+          `Failed to remove old memory from tracker on change; path="${params.filePath}", memoryId="${memoryId}", error="${error instanceof Error ? error.message : String(error)}"`,
+        );
+      }
     }
 
     return ingestResult;
