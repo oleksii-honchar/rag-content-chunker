@@ -258,7 +258,7 @@ describe('config-schemas', () => {
   describe('chunkingConfigSchema', () => {
     it('parses valid chunking config', () => {
       const input = {
-        strategy: 'content-aware',
+        strategy: SOURCE_STRATEGIES.CONTENT_AWARE,
         maxSizes: {
           agentSessions: 400,
           obsidianNotes: 500,
@@ -418,7 +418,7 @@ describe('config-schemas', () => {
           },
         ],
         chunking: {
-          strategy: 'content-aware',
+          strategy: SOURCE_STRATEGIES.CONTENT_AWARE,
           maxSizes: {
             agentSessions: 400,
             obsidianNotes: 500,

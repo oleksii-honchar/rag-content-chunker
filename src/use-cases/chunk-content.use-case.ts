@@ -6,6 +6,7 @@ import { StrategyRouter } from '../application/strategies/strategy-router.servic
 import { ContentChunk } from '../domain/content-chunk.entity';
 import { watchSourceConfigSchema } from '../infrastructure/config/config-schemas';
 import { ConfigurationService } from '../infrastructure/config/configuration.service';
+import { SOURCE_STRATEGIES } from '../infrastructure/config/source-strategies';
 import { BasePinoLogger } from '../infrastructure/logging/base-pino-logger';
 import { BaseUseCase } from '../utils/base-use-case';
 import { ErrorWithDetails } from '../utils/error-with-details';
@@ -63,7 +64,7 @@ export class ChunkContentUseCase extends BaseUseCase<ChunkContentParams, Content
           memoryBank: params.memoryBank,
           exclude: [],
           debounceMs: 3000,
-          strategy: 'content-aware',
+          strategy: SOURCE_STRATEGIES.CONTENT_AWARE,
         });
 
     const effectiveSourceConfig = params.sourceConfig ?? {
@@ -72,7 +73,7 @@ export class ChunkContentUseCase extends BaseUseCase<ChunkContentParams, Content
       memoryBank: params.memoryBank,
       exclude: [],
       debounceMs: 3000,
-      strategy: 'content-aware',
+      strategy: SOURCE_STRATEGIES.CONTENT_AWARE,
     };
 
     const chunksResult = await strategy.chunkFile(

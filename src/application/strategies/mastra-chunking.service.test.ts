@@ -1,29 +1,8 @@
+import '@/utils/mastra-rag.test-utils';
+
 import { FILE_ROLES } from '../../domain/content-chunk.entity';
 import { ConfigurationService } from '../../infrastructure/config/configuration.service';
 import { BasePinoLogger } from '../../infrastructure/logging/base-pino-logger';
-
-// Mock @mastra/rag BEFORE importing the service
-jest.mock('@mastra/rag', () => ({
-  MDocument: class MockMDocument {
-    static fromMarkdown = jest.fn();
-    static fromJSON = jest.fn();
-    static fromText = jest.fn();
-    static fromHTML = jest.fn();
-    extractMetadata = jest.fn();
-    chunkMarkdown = jest.fn();
-    chunkRecursive = jest.fn();
-    chunkJSON = jest.fn();
-    chunkSentence = jest.fn();
-    getDocs = jest.fn();
-    _chunks: { text: string; metadata?: Record<string, unknown> }[] = [];
-    _metadata: Record<string, string> = {};
-    _textContent = '';
-    constructor(content: string, metadata?: Record<string, unknown>) {
-      this._textContent = content;
-      this._metadata = metadata ?? {};
-    }
-  },
-}));
 
 import { MDocument } from '@mastra/rag';
 import { MastraChunkingService } from './mastra-chunking.service';

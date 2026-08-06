@@ -9,7 +9,8 @@ import {
   FileChangedEvent,
   FileDeletedEvent,
 } from '../domain/events/file-events';
-import { watchSourceConfigSchema, WatchSourceConfig } from '../infrastructure/config/config-schemas';
+import { WatchSourceConfig, watchSourceConfigSchema } from '../infrastructure/config/config-schemas';
+import { SOURCE_STRATEGIES } from '../infrastructure/config/source-strategies';
 import { BasePinoLogger } from '../infrastructure/logging/base-pino-logger';
 import { FileMemoryTrackerService } from '../infrastructure/services/file-memory-tracker.service';
 import { FileProcessingQueue } from '../infrastructure/services/file-processing-queue.service';
@@ -33,7 +34,7 @@ export type ProcessFileParams = z.infer<typeof processFileParamsSchema>;
 const defaultSourceConfig = (): WatchSourceConfig => ({
   id: 'default',
   path: '',
-  strategy: 'content-aware',
+  strategy: SOURCE_STRATEGIES.CONTENT_AWARE,
   memoryBank: 'default',
   description: '',
   exclude: [],

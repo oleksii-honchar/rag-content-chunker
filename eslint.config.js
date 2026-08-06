@@ -33,8 +33,10 @@ module.exports = tseslint.config(
       'prettier/prettier': 'error',
       // Prefer Prettier's `{}` for empty blocks over ESLint's `{ }`
       'brace-style': 'off',
-      // Warn on unused vars, but allow _-prefixed (intentionally unused)
-      'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      // Disable base rule — it doesn't understand TS parameter properties (e.g. `private readonly x: X` in constructors)
+      'no-unused-vars': 'off',
+      // Use TS-aware rule that correctly handles parameter properties; allow _-prefixed (intentionally unused)
+      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
     },
   },
 );

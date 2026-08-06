@@ -1,14 +1,14 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { FileTracker } from '@/domain/file-tracker.aggregate';
 import { FileMemoryTracker } from '@/domain/file-memory-tracker.aggregate';
+import { FileTracker } from '@/domain/file-tracker.aggregate';
 import { generateId } from '@/utils/big-endian-id';
+import { Test, TestingModule } from '@nestjs/testing';
+import { PrismaService } from '../prisma/prisma.service';
 import { FileTrackerRepository } from './file-tracker.repository';
 import {
   aMockPrismaFileMemoryTracker,
   aMockPrismaFileTracker,
   aPrismaFileTracker,
 } from './file-tracker.repository.test-utils';
-import { PrismaService } from '../prisma/prisma.service';
 
 describe('FileTrackerRepository', () => {
   let repository: FileTrackerRepository;
@@ -92,9 +92,7 @@ describe('FileTrackerRepository', () => {
         filePath: '/test/with-memories.txt',
         sourceId: 'source-003',
         memoryBank: 'default',
-        memories: [
-          { id: 2001n, memoryId: 'mem-001', fileTrackerId: 1003n },
-        ],
+        memories: [{ id: 2001n, memoryId: 'mem-001', fileTrackerId: 1003n }],
       });
 
       // First call: findUnique by filePath (not found)
@@ -109,12 +107,10 @@ describe('FileTrackerRepository', () => {
       });
 
       const fileTracker = FileTracker.of({ filePath: '/test/with-memories.txt' }).getValue().add().getValue();
-      const result = await repository.findOrCreate(
-        fileTracker,
-        'source-003',
-        'default',
-        ['mem-001', 'mem-002'],
-      );
+      const result = await repository.findOrCreate(fileTracker, 'source-003', 'default', [
+        'mem-001',
+        'mem-002',
+      ]);
 
       expect(result.isOk()).toBe(true);
       // mem-001 already exists, mem-002 should be created
@@ -259,9 +255,7 @@ describe('FileTrackerRepository', () => {
         filePath: '/test/in-sync.txt',
         sourceId: 'source-003',
         memoryBank: 'default',
-        memories: [
-          { id: 2001n, memoryId: 'mem-001', fileTrackerId: 1003n },
-        ],
+        memories: [{ id: 2001n, memoryId: 'mem-001', fileTrackerId: 1003n }],
       });
       prismaFileTracker.upsert.mockResolvedValue(upsertResult);
       // syncMemories calls findUnique by id — returns same memories as aggregate

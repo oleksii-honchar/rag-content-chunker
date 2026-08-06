@@ -31,7 +31,7 @@ export const DEFAULT_CONFIG: Configuration = {
     },
   ],
   chunking: {
-    strategy: 'content-aware',
+    strategy: SOURCE_STRATEGIES.CONTENT_AWARE,
     maxSizes: {
       agentSessions: 400,
       obsidianNotes: 500,

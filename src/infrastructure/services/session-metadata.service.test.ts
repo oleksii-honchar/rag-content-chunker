@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import * as fs from 'fs/promises';
 import * as yaml from 'js-yaml';
-import { aLogger } from '../logging/logger.test-utils';
 import { BasePinoLogger } from '../logging/base-pino-logger';
+import { aLogger } from '../logging/logger.test-utils';
 import { SessionMetadataService } from './session-metadata.service';
 
 jest.mock('fs/promises');

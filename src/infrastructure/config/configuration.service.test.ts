@@ -7,6 +7,7 @@ import * as path from 'path';
 import { BasePinoLogger } from '../logging/base-pino-logger';
 import { Configuration } from './config-schemas';
 import { ConfigurationService } from './configuration.service';
+import { SOURCE_STRATEGIES } from './source-strategies';
 
 // Mock chokidar
 jest.mock('chokidar', () => ({
@@ -68,7 +69,7 @@ describe('ConfigurationService', () => {
           },
         ],
         chunking: {
-          strategy: 'content-aware',
+          strategy: SOURCE_STRATEGIES.CONTENT_AWARE,
           maxSizes: {
             agentSessions: 400,
           },

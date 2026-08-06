@@ -1,4 +1,4 @@
-import { ContentChunk, ContentChunkProps, FILE_ROLES } from './content-chunk.entity';
+import { ContentChunk, FILE_ROLES } from './content-chunk.entity';
 import { aContentChunk } from './content-chunk.entity.test-utils';
 
 describe('Chunk', () => {

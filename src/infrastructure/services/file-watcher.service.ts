@@ -1,4 +1,5 @@
 import { CHOKIDAR_EVENTS, FILE_OPERATIONS } from '@/domain/events/file-events';
+import { ProcessFileUseCase } from '@/use-cases/process-file.use-case';
 import { ErrorWithDetails } from '@/utils/error-with-details';
 import { Result } from '@/utils/result';
 import { Injectable, OnApplicationBootstrap, OnApplicationShutdown } from '@nestjs/common';
@@ -10,7 +11,6 @@ import { WatchSourceConfig } from '../config/config-schemas';
 import { ConfigurationService } from '../config/configuration.service';
 import { BasePinoLogger } from '../logging/base-pino-logger';
 import { MnemosyneClient } from './mnemosyne-client.service';
-import { ProcessFileUseCase } from '@/use-cases/process-file.use-case';
 
 @Injectable()
 export class FileWatcherService implements OnApplicationBootstrap, OnApplicationShutdown {

@@ -1,25 +1,4 @@
-// Mock @mastra/rag BEFORE importing the service
-jest.mock('@mastra/rag', () => ({
-  MDocument: class MockMDocument {
-    static fromMarkdown = jest.fn();
-    static fromJSON = jest.fn();
-    static fromText = jest.fn();
-    static fromHTML = jest.fn();
-    extractMetadata = jest.fn();
-    chunkMarkdown = jest.fn();
-    chunkRecursive = jest.fn();
-    chunkJSON = jest.fn();
-    chunkSentence = jest.fn();
-    getDocs = jest.fn();
-    _chunks: unknown[] = [];
-    _metadata: Record<string, string> = {};
-    _textContent = '';
-    constructor(content: string, metadata?: Record<string, unknown>) {
-      this._textContent = content;
-      this._metadata = (metadata as Record<string, string>) ?? {};
-    }
-  },
-}));
+import '@/utils/mastra-rag.test-utils';
 
 import { EnhancementPipelineService } from '../application/services/enhancement-pipeline.service';
 import { BaseChunkingStrategy } from '../application/strategies/base-chunking-strategy';
@@ -27,6 +6,7 @@ import { StrategyRouter } from '../application/strategies/strategy-router.servic
 import { aContentChunk } from '../domain/content-chunk.entity.test-utils';
 import { EnhancementConfig, WatchSourceConfig } from '../infrastructure/config/config-schemas';
 import { ConfigurationService } from '../infrastructure/config/configuration.service';
+import { SOURCE_STRATEGIES } from '../infrastructure/config/source-strategies';
 import { BasePinoLogger } from '../infrastructure/logging/base-pino-logger';
 import { aLogger } from '../infrastructure/logging/logger.test-utils';
 import { Result } from '../utils/result';
@@ -54,7 +34,7 @@ const defaultSourceConfig: WatchSourceConfig = {
   memoryBank: 'test-memoryBank',
   exclude: [],
   debounceMs: 3000,
-  strategy: 'content-aware',
+  strategy: SOURCE_STRATEGIES.CONTENT_AWARE,
 };
 
 describe('ChunkContentUseCase', () => {
@@ -248,7 +228,7 @@ describe('ChunkContentUseCase', () => {
 
       expect(mockStrategyRouter.selectStrategy).toHaveBeenCalledWith(
         expect.objectContaining({
-          strategy: 'content-aware',
+          strategy: SOURCE_STRATEGIES.CONTENT_AWARE,
           id: sourceId,
           path: filePath,
           memoryBank: 'test-memoryBank',

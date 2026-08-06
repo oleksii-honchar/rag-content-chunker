@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { Prisma } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
 import { FileMemoryTrackerRepository } from './file-memory-tracker.repository';
 import {
   aFileMemoryTracker,
@@ -7,7 +8,6 @@ import {
   aPrismaFileMemoryTrackerMemory,
   PrismaFileMemoryTrackerRecord,
 } from './file-memory-tracker.repository.test-utils';
-import { PrismaService } from '../prisma/prisma.service';
 
 describe('FileMemoryTrackerRepository', () => {
   let repository: FileMemoryTrackerRepository;

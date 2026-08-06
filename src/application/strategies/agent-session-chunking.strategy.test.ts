@@ -1,5 +1,5 @@
-import { aBodyChunk } from '@/domain/content-chunk.entity.test-utils';
 import { FILE_ROLES } from '@/domain/content-chunk.entity';
+import { aBodyChunk } from '@/domain/content-chunk.entity.test-utils';
 import { SessionMetadata } from '@/domain/session-metadata.type';
 import { aWatchSourceConfig } from '@/domain/watch-source.entity.test-utils';
 import { BasePinoLogger } from '@/infrastructure/logging/base-pino-logger';
@@ -28,14 +28,6 @@ const WITHOUT_FRONTMATTER = fsSync.readFileSync(
   path.resolve(__dirname, '../../e2e/fixtures/without-frontmatter.md'),
   'utf-8',
 );
-
-const TEST_SESSION_META: SessionMetadata = {
-  sessionId: 'ses_test123',
-  createdAt: '2026-07-28T09:46:23Z',
-  status: 'in-progress',
-  phase: 'implementation',
-  nextAgent: 'developer',
-};
 
 const EMPTY_SESSION_META: SessionMetadata = {
   sessionId: '',

@@ -1,25 +1,4 @@
-// Mock @mastra/rag BEFORE importing the service
-jest.mock('@mastra/rag', () => ({
-  MDocument: class MockMDocument {
-    static fromMarkdown = jest.fn();
-    static fromJSON = jest.fn();
-    static fromText = jest.fn();
-    static fromHTML = jest.fn();
-    extractMetadata = jest.fn();
-    chunkMarkdown = jest.fn();
-    chunkRecursive = jest.fn();
-    chunkJSON = jest.fn();
-    chunkSentence = jest.fn();
-    getDocs = jest.fn();
-    _chunks: unknown[] = [];
-    _metadata: Record<string, string> = {};
-    _textContent = '';
-    constructor(content: string, metadata?: Record<string, unknown>) {
-      this._textContent = content;
-      this._metadata = (metadata as Record<string, string>) ?? {};
-    }
-  },
-}));
+import '@/utils/mastra-rag.test-utils';
 
 import { FILE_OPERATIONS } from '@/domain/events/file-events';
 import { aWatchSourceConfig } from '@/domain/watch-source.entity.test-utils';

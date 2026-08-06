@@ -1,32 +1,14 @@
-// Mock @mastra/rag BEFORE importing the service
-jest.mock('@mastra/rag', () => ({
-  MDocument: class MockMDocument {
-    static fromMarkdown = jest.fn();
-    static fromJSON = jest.fn();
-    static fromText = jest.fn();
-    static fromHTML = jest.fn();
-    extractMetadata = jest.fn();
-    chunkMarkdown = jest.fn();
-    chunkRecursive = jest.fn();
-    chunkJSON = jest.fn();
-    chunkSentence = jest.fn();
-    getDocs = jest.fn();
-    _chunks: { text: string; metadata?: Record<string, unknown> }[] = [];
-    _metadata: Record<string, string> = {};
-    _textContent = '';
-    constructor(content: string, metadata?: Record<string, unknown>) {
-      this._textContent = content;
-      this._metadata = metadata ?? {};
-    }
-  },
-}));
+import '@/utils/app-module.test-utils';
+import '@/utils/mastra-rag.test-utils';
 
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppBootstrapService } from './app-bootstrap.service';
 import { AppModule } from './app.module';
-import { Configuration } from './infrastructure/config/config-schemas';
 import { ConfigurationService } from './infrastructure/config/configuration.service';
+import { aConfigurableConfigService } from './infrastructure/config/configuration.service.test-utils';
+import { SOURCE_STRATEGIES } from './infrastructure/config/source-strategies';
 import { BasePinoLogger } from './infrastructure/logging/base-pino-logger';
+import { aLogger } from './infrastructure/logging/logger.test-utils';
 import { FileMemoryTrackerRepository } from './infrastructure/repositories/file-memory-tracker.repository';
 import { aFileMemoryTrackerRepositoryService } from './infrastructure/repositories/file-memory-tracker.repository.test-utils';
 import { FileMemoryTrackerService } from './infrastructure/services/file-memory-tracker.service';
@@ -35,56 +17,6 @@ import { FileProcessingQueue } from './infrastructure/services/file-processing-q
 import { aFileProcessingQueueService } from './infrastructure/services/file-processing-queue.test-utils';
 import { MnemosyneClient } from './infrastructure/services/mnemosyne-client.service';
 import { aMnemosyneClientService } from './infrastructure/services/mnemosyne-client.test-utils';
-
-const mockWatcher = {
-  on: jest.fn(),
-  close: jest.fn().mockResolvedValue(undefined),
-};
-
-jest.mock('chokidar', () => ({
-  watch: jest.fn(() => mockWatcher),
-}));
-
-const createMockLogger = (): BasePinoLogger => ({
-  info: jest.fn(),
-  error: jest.fn(),
-  warn: jest.fn(),
-  debug: jest.fn(),
-  log: jest.fn(),
-  child: jest.fn().mockReturnThis(),
-  setContext: jest.fn(),
-});
-
-const mockLogger = createMockLogger();
-
-// Create a mock config service that reads from its own 'config' property
-// so tests can set it via defineProperty
-const createMockConfigService = (): ConfigurationService => {
-  const mock: Record<string, unknown> = {
-    config: null as Configuration | null,
-    load: jest.fn().mockResolvedValue({ isOk: () => true, getValue: () => ({}) }),
-    getWatchSources: function (this: typeof mock) {
-      return (this.config as Configuration | null)?.watchSources ?? [];
-    },
-    getMcpConfig: function (this: typeof mock) {
-      return (this.config as Configuration | null)?.mcp ?? {};
-    },
-    getTelemetryConfig: function (this: typeof mock) {
-      return (this.config as Configuration | null)?.telemetry ?? {};
-    },
-    getChunkingConfig: function (this: typeof mock) {
-      return (this.config as Configuration | null)?.chunking ?? { strategy: 'content-aware' };
-    },
-    getEnrichmentConfig: function (this: typeof mock) {
-      return (this.config as Configuration | null)?.enrichment ?? { enabled: false };
-    },
-    initializeDefaultConfig: jest.fn(),
-    getConfig: function (this: typeof mock) {
-      return this.config ?? {};
-    },
-  };
-  return mock as unknown as ConfigurationService;
-};
 
 describe('AppModule Integration', () => {
   let module: TestingModule;
@@ -97,9 +29,9 @@ describe('AppModule Integration', () => {
       imports: [AppModule],
     })
       .overrideProvider(BasePinoLogger)
-      .useValue(mockLogger)
+      .useValue(aLogger())
       .overrideProvider(ConfigurationService)
-      .useValue(createMockConfigService())
+      .useValue(aConfigurableConfigService())
       .overrideProvider(MnemosyneClient)
       .useValue(aMnemosyneClientService())
       .overrideProvider(FileProcessingQueue)
@@ -156,7 +88,7 @@ describe('AppModule Integration', () => {
           },
         ],
         chunking: {
-          strategy: 'content-aware',
+          strategy: SOURCE_STRATEGIES.CONTENT_AWARE,
           maxSizes: {
             agentSessions: 400,
             obsidianNotes: 500,

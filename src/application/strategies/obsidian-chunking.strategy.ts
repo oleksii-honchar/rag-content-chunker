@@ -102,11 +102,7 @@ export class ObsidianChunkingStrategy implements BaseChunkingStrategy {
     }
 
     // 4. Chunk body with Mastra
-    const bodyChunksResult = await this.mastraChunkingService.chunkFile(
-      body,
-      filePath,
-      sourceId,
-    );
+    const bodyChunksResult = await this.mastraChunkingService.chunkFile(body, filePath, sourceId);
     const bodyChunks = bodyChunksResult.isOk() ? bodyChunksResult.getValue() : [];
 
     // 5. Enrich all chunks with note metadata and merge tags

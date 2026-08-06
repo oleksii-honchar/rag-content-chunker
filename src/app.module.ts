@@ -19,10 +19,10 @@ import { PrismaModule } from './infrastructure/prisma/prisma.module';
 import { FileMemoryTrackerRepository } from './infrastructure/repositories/file-memory-tracker.repository';
 import { FileMemoryTrackerService } from './infrastructure/services/file-memory-tracker.service';
 import { FileProcessingQueue } from './infrastructure/services/file-processing-queue.service';
-import { SessionMetadataService } from './infrastructure/services/session-metadata.service';
 import { FileWatcherService } from './infrastructure/services/file-watcher.service';
 import { GracefulShutdownService } from './infrastructure/services/graceful-shutdown.service';
 import { MnemosyneClient } from './infrastructure/services/mnemosyne-client.service';
+import { SessionMetadataService } from './infrastructure/services/session-metadata.service';
 import { ChunkContentUseCase } from './use-cases/chunk-content.use-case';
 import { IngestChunkUseCase } from './use-cases/ingest-chunk.use-case';
 import { ProcessFileUseCase } from './use-cases/process-file.use-case';
@@ -47,7 +47,6 @@ import { ProcessFileUseCase } from './use-cases/process-file.use-case';
   ],
   controllers: [],
   providers: [
-
     AppBootstrapService,
     FileWatcherService,
     GracefulShutdownService,

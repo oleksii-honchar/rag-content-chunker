@@ -1,3 +1,4 @@
+import { SOURCE_STRATEGIES } from '@/infrastructure/config/source-strategies';
 import * as fs from 'fs/promises';
 import * as yaml from 'js-yaml';
 import * as os from 'os';
@@ -50,7 +51,7 @@ module.exports = async (): Promise<void> => {
       },
     ],
     chunking: {
-      strategy: 'content-aware',
+      strategy: SOURCE_STRATEGIES.CONTENT_AWARE,
       maxSizes: {
         agentSessions: 400,
         obsidianNotes: 500,

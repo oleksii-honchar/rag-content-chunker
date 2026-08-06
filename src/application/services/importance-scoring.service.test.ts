@@ -474,7 +474,6 @@ describe('ImportanceScoringService', () => {
         expect(score).toBeGreaterThan(0.5);
         expect(score).toBeLessThanOrEqual(1.0);
       });
-
     });
 
     describe('score clamping', () => {

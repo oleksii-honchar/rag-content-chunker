@@ -5,6 +5,8 @@
  * and process them through real strategy implementations (with MastraChunkingService mocked
  * only for the body-chunking step, since that calls external services).
  */
+import '@/utils/mastra-rag.test-utils';
+
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { ContentChunk, FILE_ROLES } from '../../domain/content-chunk.entity';
@@ -27,28 +29,6 @@ jest.mock('chokidar', () => ({
     on: jest.fn(),
     close: jest.fn().mockResolvedValue(undefined),
   })),
-}));
-
-jest.mock('@mastra/rag', () => ({
-  MDocument: class MockMDocument {
-    static fromMarkdown = jest.fn();
-    static fromJSON = jest.fn();
-    static fromText = jest.fn();
-    static fromHTML = jest.fn();
-    extractMetadata = jest.fn();
-    chunkMarkdown = jest.fn();
-    chunkRecursive = jest.fn();
-    chunkJSON = jest.fn();
-    chunkSentence = jest.fn();
-    getDocs = jest.fn();
-    _chunks: unknown[] = [];
-    _metadata: Record<string, string> = {};
-    _textContent = '';
-    constructor(content: string, metadata?: Record<string, unknown>) {
-      this._textContent = content;
-      this._metadata = (metadata as Record<string, string>) ?? {};
-    }
-  },
 }));
 
 interface MockResult<T> {
