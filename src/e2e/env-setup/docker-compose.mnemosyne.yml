@@ -7,7 +7,8 @@ services:
   mnemosyne-mcp:
     image: tuiteraz/better-mnemosyne:latest
     ports:
-      - '3000:3000'
+      # Host port 3001 avoids clashing with a dev Mnemosyne running on 3000.
+      - '3001:3000'
     environment:
       - LOG_LEVEL=DEBUG
     volumes:

@@ -7,7 +7,7 @@ import { promisify } from 'util';
 const execAsync = promisify(exec);
 const DOCKER_COMPOSE_FILE = path.resolve(__dirname, 'docker-compose.mnemosyne.yml');
 const PROJECT_NAME = 'rag-e2e-mnemosyne';
-const MNEMOSYNE_URL = 'http://localhost:3000';
+const MNEMOSYNE_URL = 'http://localhost:3001';
 const STARTUP_TIMEOUT_MS = 60000;
 
 async function dockerCompose(args: string[]): Promise<void> {

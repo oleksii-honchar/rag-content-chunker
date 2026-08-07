@@ -34,8 +34,13 @@ describe('[E2E] File Update Flow — create → ingest → track → update → 
   afterAll(async () => {
     if (app) {
       const closePromise = app.close();
-      const timeoutPromise = new Promise(resolve => setTimeout(resolve, 30000));
+      let timeoutId: ReturnType<typeof setTimeout> | undefined;
+      const timeoutPromise = new Promise(resolve => {
+        timeoutId = setTimeout(resolve, 30000);
+      });
       await Promise.race([closePromise, timeoutPromise]);
+      // Clear the fallback timer — otherwise Jest sees a pending open handle
+      if (timeoutId) clearTimeout(timeoutId);
     }
   });
 

@@ -2,7 +2,7 @@
 type: index
 title: "Architecture Decision Records"
 createdAt: "2026-07-31T07:30:00Z"
-updatedAt: "2026-08-06T12:00:00Z"
+updatedAt: "2026-08-07T18:50:00Z"
 tags: []
 ---
 
@@ -43,3 +43,9 @@ Curated list of architectural decisions for RAG Content Chunker.
 
 - [[0016-custom-chunking-strategies-framework]] — Source-kinded strategy selection with ChunkingStrategy interface and StrategyRouter
 - [[0017-obsidian-note-chunking-strategy]] — Obsidian note-aware chunking with frontmatter extraction and tag merging
+
+### File Update Flow
+
+- [[0018-forget-after-ingest-on-file-update]] — Forget-after-ingest on file change: separate handlers, forget old memories after new content is safely ingested
+- [[0019-continue-on-forget-failure]] — Forget failures are non-fatal: continue on failure, retry on next change event
+- [[0020-no-tracker-api-changes]] — Existing FileMemoryTrackerService API is sufficient for update flow (no new methods needed)

@@ -21,4 +21,12 @@ module.exports = {
   },
   testTimeout: 60000,
   verbose: true,
+  // E2E suites share one Mnemosyne Docker instance and one SQLite tracker DB.
+  // Parallel workers race on bank registration and Prisma writes (SQLite
+  // "Operation has timed out"). Run sequentially (runInBand is CLI-only;
+  // maxWorkers: 1 is the config equivalent).
+  maxWorkers: 1,
+  // E2E tests use real network connections (Mnemosyne MCP client HTTP
+  // keep-alive sockets) that the global agent may not release in time.
+  forceExit: true,
 };

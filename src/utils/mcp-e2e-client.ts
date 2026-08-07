@@ -19,7 +19,7 @@ export interface McpClientConfig {
 
 const defaultConfig: McpClientConfig = {
   hostname: 'localhost',
-  port: 3000,
+  port: 3001,
   path: '/mcp',
   token: 'e2e-test-token',
 };

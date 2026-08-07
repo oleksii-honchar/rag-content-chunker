@@ -2,7 +2,7 @@
 type: index
 title: "Atomic Memories"
 createdAt: "2026-07-31T07:30:00Z"
-updatedAt: "2026-08-01T21:35:00Z"
+updatedAt: "2026-08-07T18:50:00Z"
 tags: []
 ---
 
@@ -19,3 +19,8 @@ Durable facts, gotchas, and operational learnings for RAG Content Chunker.
 - [[0003-mnemosyne-dedup-inmemory-reset]] — In-memory dedup resets on restart
 - [[0004-mcp-proxy-transport-switch]] — Proxy solution for stdio→HTTP bridge in e2e tests
 - [[0005-mnemosyne-client-streamable-http]] — MnemosyneClient transport switch to Streamable HTTP via mcp-proxy
+
+### File Update Flow
+
+- [[0006-change-handler-per-id-forget-memory]] — handleChange uses per-ID forgetMemories (not deleteByFilePath) to preserve new tracker entries
+- [[0007-chokidar-macos-dual-events]] — macOS chokidar fires duplicate events; processing Set deduplicates

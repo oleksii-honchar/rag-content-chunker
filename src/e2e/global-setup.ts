@@ -33,7 +33,7 @@ module.exports = async (): Promise<void> => {
   const dynamicConfigPath = path.join(e2eRoot, 'test-config.yaml');
   const dynamicConfig = {
     mcp: {
-      url: 'http://localhost:3000',
+      url: 'http://localhost:3001',
       apiKey: 'e2e-test-token',
       timeoutMs: 30000,
       maxRetries: 3,

@@ -4,7 +4,7 @@ title: "RAG Content Chunker — Server Components"
 c4_level: component
 system: rag-content-chunker
 createdAt: "2026-07-31T07:30:00Z"
-updatedAt: "2026-08-06T12:00:00Z"
+updatedAt: "2026-08-07T18:50:00Z"
 tags: [architecture, component]
 see_also: ["concepts/0005-processing-model.concept.md", "concepts/0009-chunking-strategy-pattern.concept.md"]
 linked_elements: []
@@ -71,7 +71,7 @@ C4Component
 |----|------|------|-----------|-------------|
 | `fileWatcher` | FileWatcherService | Component | Chokidar | Watches multiple configured directories with debounce per source |
 | `eventBus` | AppEventEmitter | Component | @nestjs/event-emitter | Pub/sub event bus decoupling FileWatcher from ProcessFileUseCase |
-| `processFile` | ProcessFileUseCase | Component | DDD UseCase | Main orchestration: read → chunk → enhance → ingest (via event handlers @OnEvent) |
+| `processFile` | ProcessFileUseCase | Component | DDD UseCase | Separate handlers: handleAdd (ingest), handleChange (ingest + forget old), handleDelete (forget + clear). Dedup via processing Set (see memory 0007) |
 | `fileQueue` | FileProcessingQueue | Component | Native TS | Bounded async queue — sequential processing, graceful drain on shutdown |
 | `chunkContent` | ChunkContentUseCase | Component | DDD UseCase | Delegates to StrategyRouter, applies enhancement pipeline |
 | `strategyRouter` | StrategyRouter | Component | TypeScript | Routes chunking to strategy based on `sourceConfig.strategy` (agent-sessions, obsidian, content-aware) |
