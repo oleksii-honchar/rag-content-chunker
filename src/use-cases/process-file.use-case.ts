@@ -43,6 +43,13 @@ const defaultSourceConfig = (): WatchSourceConfig => ({
 
 @Injectable()
 export class ProcessFileUseCase extends BaseUseCase<ProcessFileParams, void> {
+  /**
+   * Tracks files currently being processed (queued or in-progress).
+   * Prevents duplicate processing when chokidar fires multiple events for
+   * the same file change — the second event is skipped.
+   */
+  private readonly processing = new Set<string>();
+
   constructor(
     private readonly chunkContentUseCase: ChunkContentUseCase,
     private readonly ingestChunkUseCase: IngestChunkUseCase,
@@ -73,32 +80,42 @@ export class ProcessFileUseCase extends BaseUseCase<ProcessFileParams, void> {
       `Processing file: path="${params.filePath}", event="${params.eventType}", source="${params.sourceId}"`,
     );
 
-    // Queue the processing
-    await this.processingQueue.addToQueue(async () => {
-      let result: Result<void>;
+    // Skip if already processing this file — chokidar may fire multiple events
+    if (this.processing.has(params.filePath)) {
+      this.logger.debug(`Skipping duplicate event: path="${params.filePath}", event="${params.eventType}"`);
+      return Result.ok(undefined as unknown as void);
+    }
 
-      switch (params.eventType) {
-        case 'add':
-          result = await this.handleAdd(params);
-          break;
-        case 'change':
-          result = await this.handleChange(params);
-          break;
-        case 'delete':
-          result = await this.handleDelete(params);
-          break;
-        default:
+    this.processing.add(params.filePath);
+
+    // Queue the processing
+    try {
+      await this.processingQueue.addToQueue(async () => {
+        let result: Result<void>;
+
+        const handlers: Record<string, (params: ProcessFileParams) => Promise<Result<void>>> = {
+          add: this.handleAdd.bind(this),
+          change: this.handleChange.bind(this),
+          delete: this.handleDelete.bind(this),
+        };
+        const handler = handlers[params.eventType];
+        if (!handler) {
           result = Result.ko([
             new ErrorWithDetails(`Unknown event type: ${params.eventType}`, 'UnknownEventType'),
           ]);
-      }
+        } else {
+          result = await handler(params);
+        }
 
-      if (result.isKo()) {
-        this.logger.error(
-          `File processing failed: path="${params.filePath}", event="${params.eventType}", error="${result.getFormattedErrors()}"`,
-        );
-      }
-    });
+        if (result.isKo()) {
+          this.logger.error(
+            `File processing failed: path="${params.filePath}", event="${params.eventType}", error="${result.getFormattedErrors()}"`,
+          );
+        }
+      });
+    } finally {
+      this.processing.delete(params.filePath);
+    }
 
     return Result.ok(undefined as unknown as void);
   }
@@ -161,38 +178,33 @@ export class ProcessFileUseCase extends BaseUseCase<ProcessFileParams, void> {
   }
 
   private async handleChange(params: ProcessFileParams): Promise<Result<void>> {
-    // Step 1: Get old memory IDs
+    // Step 1: Get old memory IDs (for later forget)
     const oldMemoryIds = await this.fileMemoryTrackerService.getMemoryIds(params.filePath);
 
-    // Step 1b: Clear tracker immediately to prevent concurrent change events
-    // from treating newly-ingested IDs as "old" and forgetting them.
-    // A second event will see empty tracker → just re-ingests (idempotent via Mnemosyne dedup).
-    for (const memoryId of oldMemoryIds) {
-      try {
-        await this.fileMemoryTrackerService.forgetMemory(params.filePath, memoryId);
-      } catch (error) {
-        this.logger.warn(
-          `Failed to remove old memory from tracker; path="${params.filePath}", memoryId="${memoryId}", error="${error instanceof Error ? error.message : String(error)}"`,
-        );
-      }
-    }
-
-    // Step 2: Ingest new content
+    // Step 2: Ingest new content — new memory IDs tracked alongside old ones
     const ingestResult = await this.ingestFile(params);
-
-    // Short-circuit on ingest failure — no forget attempted (old IDs already cleared from tracker)
     if (ingestResult.isKo()) {
       return ingestResult;
     }
 
-    // Step 3: Forget old memories (continue on failure)
+    // Step 3: Forget old memories from Mnemosyne (continue on failure)
     if (oldMemoryIds.length > 0) {
       const forgetResult = await this.forgetOldMemoriesByIds(oldMemoryIds, params);
       if (forgetResult.isKo()) {
         this.logger.warn(
           `Old memory cleanup failed, new content ingested successfully: path="${params.filePath}", error="${forgetResult.getFormattedErrors()}"`,
         );
-        // Don't block — new content was ingested
+      }
+    }
+
+    // Step 4: Remove old memory IDs from tracker (non-fatal)
+    if (oldMemoryIds.length > 0) {
+      try {
+        await this.fileMemoryTrackerService.forgetMemories(params.filePath, oldMemoryIds);
+      } catch (error) {
+        this.logger.warn(
+          `Failed to remove old memories from tracker; path="${params.filePath}", error="${error instanceof Error ? error.message : String(error)}"`,
+        );
       }
     }
 

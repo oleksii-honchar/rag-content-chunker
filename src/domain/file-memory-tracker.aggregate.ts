@@ -56,6 +56,23 @@ export class FileMemoryTracker {
     });
   }
 
+  /**
+   * Forget multiple memory IDs at once.
+   * Returns the same tracker if none of the IDs were present.
+   */
+  forgetMany(memoryIds: string[]): Result<FileMemoryTracker> {
+    const filtered = this.props.memoryIds.filter(id => !memoryIds.includes(id));
+
+    if (filtered.length === this.props.memoryIds.length) {
+      return Result.ok(this, []);
+    }
+
+    return FileMemoryTracker.of({
+      ...this.props,
+      memoryIds: filtered,
+    });
+  }
+
   get id(): bigint {
     return this.props.id;
   }

@@ -89,4 +89,37 @@ export class FileMemoryTrackerService {
   async deleteByFilePath(filePath: string): Promise<void> {
     await this.repository.deleteByFilePath(filePath);
   }
+
+  /**
+   * Forget multiple memory IDs from a file's tracker.
+   * Removes the given memory IDs from the tracker while keeping the rest.
+   * Returns the updated FileMemoryTracker aggregate, or null if no tracker exists.
+   */
+  async forgetMemories(filePath: string, memoryIds: string[]): Promise<FileMemoryTracker | null> {
+    if (memoryIds.length === 0) {
+      return null;
+    }
+
+    const trackerResult = await this.repository.findByFilePath(filePath);
+    if (!trackerResult.isOk() || !trackerResult.getValue()) {
+      return null;
+    }
+
+    const tracker = trackerResult.getValue()!;
+
+    // Use aggregate business logic for forgetMany
+    const forgotten = tracker.forgetMany(memoryIds);
+    if (forgotten.isKo()) {
+      throw new Error('Failed to forget memories: ' + forgotten.getErrors()[0].message);
+    }
+    const updatedTracker = forgotten.getValue();
+
+    // Persist via upsert
+    const savedResult = await this.repository.upsert(updatedTracker);
+    if (savedResult.isKo()) {
+      throw new Error('Failed to persist FileMemoryTracker');
+    }
+
+    return savedResult.getValue();
+  }
 }
