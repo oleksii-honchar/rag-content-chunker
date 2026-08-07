@@ -6,46 +6,17 @@ import {
   aFileMemoryTracker,
   aPrismaFileMemoryTracker,
   aPrismaFileMemoryTrackerMemory,
-  PrismaFileMemoryTrackerRecord,
 } from './file-memory-tracker.repository.test-utils';
+import { aMockPrismaFileMemoryTracker, aMockPrismaFileTracker } from './file-tracker.repository.test-utils';
 
 describe('FileMemoryTrackerRepository', () => {
   let repository: FileMemoryTrackerRepository;
-  let prismaFileTracker: {
-    findUnique: jest.Mock;
-    upsert: jest.Mock;
-    delete: jest.Mock;
-    updateMany: jest.Mock;
-  };
-  let prismaFileMemoryTracker: {
-    upsert: jest.Mock;
-    deleteMany: jest.Mock;
-  };
-
-  const createPrismaTrackerRecord = (
-    tracker: { id: bigint; filePath: string; sourceId: string; memoryBank: string },
-    memories: PrismaFileMemoryTrackerRecord['memories'] = [],
-  ): PrismaFileMemoryTrackerRecord =>
-    aPrismaFileMemoryTracker({
-      id: tracker.id,
-      filePath: tracker.filePath,
-      sourceId: tracker.sourceId,
-      memoryBank: tracker.memoryBank,
-      memories,
-    });
+  let prismaFileTracker: ReturnType<typeof aMockPrismaFileTracker>;
+  let prismaFileMemoryTracker: ReturnType<typeof aMockPrismaFileMemoryTracker>;
 
   beforeEach(async () => {
-    prismaFileTracker = {
-      findUnique: jest.fn(),
-      upsert: jest.fn(),
-      delete: jest.fn(),
-      updateMany: jest.fn(),
-    };
-
-    prismaFileMemoryTracker = {
-      upsert: jest.fn(),
-      deleteMany: jest.fn(),
-    };
+    prismaFileTracker = aMockPrismaFileTracker();
+    prismaFileMemoryTracker = aMockPrismaFileMemoryTracker();
 
     const mockPrisma = {
       fileTracker: prismaFileTracker,
@@ -70,10 +41,16 @@ describe('FileMemoryTrackerRepository', () => {
         memoryIds: ['mem-001'],
       });
       const trackerJson = tracker.toJson();
-      const prismaRecord = createPrismaTrackerRecord(trackerJson, [
-        aPrismaFileMemoryTrackerMemory({ id: 9001n, memoryId: 'mem-001', fileTrackerId: tracker.id }),
-        aPrismaFileMemoryTrackerMemory({ id: 9002n, memoryId: 'mem-002', fileTrackerId: tracker.id }),
-      ]);
+      const prismaRecord = aPrismaFileMemoryTracker({
+        id: trackerJson.id,
+        filePath: trackerJson.filePath,
+        sourceId: trackerJson.sourceId,
+        memoryBank: trackerJson.memoryBank,
+        memories: [
+          aPrismaFileMemoryTrackerMemory({ id: 9001n, memoryId: 'mem-001', fileTrackerId: tracker.id }),
+          aPrismaFileMemoryTrackerMemory({ id: 9002n, memoryId: 'mem-002', fileTrackerId: tracker.id }),
+        ],
+      });
 
       prismaFileTracker.findUnique.mockResolvedValue(prismaRecord);
 
@@ -92,7 +69,14 @@ describe('FileMemoryTrackerRepository', () => {
 
     it('returns empty array when tracker has no memories', async () => {
       const tracker = aFileMemoryTracker({ filePath: '/test/file.txt', memoryIds: [] });
-      const prismaRecord = createPrismaTrackerRecord(tracker.toJson(), []);
+      const trackerJson = tracker.toJson();
+      const prismaRecord = aPrismaFileMemoryTracker({
+        id: trackerJson.id,
+        filePath: trackerJson.filePath,
+        sourceId: trackerJson.sourceId,
+        memoryBank: trackerJson.memoryBank,
+        memories: [],
+      });
 
       prismaFileTracker.findUnique.mockResolvedValue(prismaRecord);
 

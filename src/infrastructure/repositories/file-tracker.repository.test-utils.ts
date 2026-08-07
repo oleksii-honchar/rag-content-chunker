@@ -62,6 +62,7 @@ export function aMockPrismaFileTracker() {
     findUnique: jest.fn(),
     upsert: jest.fn(),
     delete: jest.fn(),
+    updateMany: jest.fn(),
   };
 }
 
@@ -71,6 +72,7 @@ export function aMockPrismaFileTracker() {
 export function aMockPrismaFileMemoryTracker() {
   return {
     create: jest.fn(),
+    upsert: jest.fn(),
     deleteMany: jest.fn(),
   };
 }
