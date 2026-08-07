@@ -29,7 +29,7 @@
     "mnemosyne:logs": "docker compose -p rag-e2e-mnemosyne -f src/e2e/env-setup/docker-compose.mnemosyne.yml logs -f"
   },
   "dependencies": {
-    "@dotenvx/dotenvx": "^2.19.2",
+    "@dotenvx/dotenvx": "2.19.2",
     "@eslint/js": "^10.0.1",
     "@mastra/rag": "2.4.2",
     "@nestjs/common": "11.1.28",
@@ -43,7 +43,7 @@
     "chokidar": "5.0.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
-    "config": "^5.0.0",
+    "config": "5.0.0",
     "js-yaml": "^5.2.3",
     "native-machine-id": "^0.3.11",
     "nestjs-pino": "4.6.1",
