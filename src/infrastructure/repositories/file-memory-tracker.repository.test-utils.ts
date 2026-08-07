@@ -98,5 +98,6 @@ export function aFileMemoryTrackerRepositoryService() {
       ),
     getMemoryIds: jest.fn().mockResolvedValue([]),
     deleteByFilePath: jest.fn().mockResolvedValue(undefined),
+    updateFileTrackerHash: jest.fn().mockResolvedValue(undefined),
   };
 }

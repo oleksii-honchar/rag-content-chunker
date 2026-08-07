@@ -471,4 +471,208 @@ describe('ChunkContentUseCase', () => {
       expect(result.isKo()).toBe(true);
     });
   });
+
+  describe('fileHash and hardwareId metadata injection', () => {
+    it('should inject fileHash into each chunk metadata when provided', async () => {
+      const fileHash = 'abc123def456';
+      const rawChunks = [
+        aContentChunk({ text: 'chunk 1', metadata: { filePath: '/test.md' } }),
+        aContentChunk({ text: 'chunk 2', metadata: { filePath: '/test.md' } }),
+      ];
+
+      mockStrategy.chunkFile.mockResolvedValue(Result.ok(rawChunks));
+      mockEnhancementPipelineService.enhance.mockResolvedValue(Result.ok(rawChunks));
+
+      const result = await useCase.execute({
+        content: 'test',
+        filePath: '/path/to/file.md',
+        sourceId: 'src',
+        memoryBank: 'ns',
+        sourceConfig: defaultSourceConfig,
+        fileHash,
+      });
+
+      expect(result.isOk()).toBe(true);
+      const chunks = result.getValue();
+      expect(chunks[0].metadata?.fileHash).toBe(fileHash);
+      expect(chunks[1].metadata?.fileHash).toBe(fileHash);
+    });
+
+    it('should inject hardwareId into each chunk metadata when provided', async () => {
+      const hardwareId = 'hw-uuid-12345';
+      const rawChunks = [
+        aContentChunk({ text: 'chunk 1', metadata: { filePath: '/test.md' } }),
+        aContentChunk({ text: 'chunk 2', metadata: { filePath: '/test.md' } }),
+      ];
+
+      mockStrategy.chunkFile.mockResolvedValue(Result.ok(rawChunks));
+      mockEnhancementPipelineService.enhance.mockResolvedValue(Result.ok(rawChunks));
+
+      const result = await useCase.execute({
+        content: 'test',
+        filePath: '/path/to/file.md',
+        sourceId: 'src',
+        memoryBank: 'ns',
+        sourceConfig: defaultSourceConfig,
+        hardwareId,
+      });
+
+      expect(result.isOk()).toBe(true);
+      const chunks = result.getValue();
+      expect(chunks[0].metadata?.hardwareId).toBe(hardwareId);
+      expect(chunks[1].metadata?.hardwareId).toBe(hardwareId);
+    });
+
+    it('should inject both fileHash and hardwareId into chunk metadata', async () => {
+      const fileHash = 'sha256-hash';
+      const hardwareId = 'hw-id';
+      const rawChunks = [
+        aContentChunk({ text: 'chunk 1', metadata: { filePath: '/test.md' } }),
+        aContentChunk({ text: 'chunk 2', metadata: { filePath: '/test.md' } }),
+      ];
+
+      mockStrategy.chunkFile.mockResolvedValue(Result.ok(rawChunks));
+      mockEnhancementPipelineService.enhance.mockResolvedValue(Result.ok(rawChunks));
+
+      const result = await useCase.execute({
+        content: 'test',
+        filePath: '/path/to/file.md',
+        sourceId: 'src',
+        memoryBank: 'ns',
+        sourceConfig: defaultSourceConfig,
+        fileHash,
+        hardwareId,
+      });
+
+      expect(result.isOk()).toBe(true);
+      const chunks = result.getValue();
+      expect(chunks[0].metadata?.fileHash).toBe(fileHash);
+      expect(chunks[0].metadata?.hardwareId).toBe(hardwareId);
+      expect(chunks[1].metadata?.fileHash).toBe(fileHash);
+      expect(chunks[1].metadata?.hardwareId).toBe(hardwareId);
+    });
+
+    it('should merge fileHash and hardwareId with existing chunk metadata', async () => {
+      const fileHash = 'sha256-hash';
+      const hardwareId = 'hw-id';
+      const existingMetadata = { filePath: '/test.md', customKey: 'customValue' };
+      const rawChunks = [aContentChunk({ text: 'chunk 1', metadata: existingMetadata })];
+
+      mockStrategy.chunkFile.mockResolvedValue(Result.ok(rawChunks));
+      mockEnhancementPipelineService.enhance.mockResolvedValue(Result.ok(rawChunks));
+
+      const result = await useCase.execute({
+        content: 'test',
+        filePath: '/path/to/file.md',
+        sourceId: 'src',
+        memoryBank: 'ns',
+        sourceConfig: defaultSourceConfig,
+        fileHash,
+        hardwareId,
+      });
+
+      expect(result.isOk()).toBe(true);
+      const chunks = result.getValue();
+      expect(chunks[0].metadata?.fileHash).toBe(fileHash);
+      expect(chunks[0].metadata?.hardwareId).toBe(hardwareId);
+      expect(chunks[0].metadata?.filePath).toBe('/test.md');
+      expect(chunks[0].metadata?.customKey).toBe('customValue');
+    });
+
+    it('should initialize metadata object when chunk has no metadata', async () => {
+      const fileHash = 'sha256-hash';
+      const hardwareId = 'hw-id';
+      const rawChunks = [aContentChunk({ text: 'chunk 1', metadata: undefined })];
+
+      mockStrategy.chunkFile.mockResolvedValue(Result.ok(rawChunks));
+      mockEnhancementPipelineService.enhance.mockResolvedValue(Result.ok(rawChunks));
+
+      const result = await useCase.execute({
+        content: 'test',
+        filePath: '/path/to/file.md',
+        sourceId: 'src',
+        memoryBank: 'ns',
+        sourceConfig: defaultSourceConfig,
+        fileHash,
+        hardwareId,
+      });
+
+      expect(result.isOk()).toBe(true);
+      const chunks = result.getValue();
+      expect(chunks[0].metadata?.fileHash).toBe(fileHash);
+      expect(chunks[0].metadata?.hardwareId).toBe(hardwareId);
+    });
+
+    it('should not add fileHash or hardwareId when neither is provided', async () => {
+      const rawChunks = [aContentChunk({ text: 'chunk 1', metadata: { filePath: '/test.md' } })];
+
+      mockStrategy.chunkFile.mockResolvedValue(Result.ok(rawChunks));
+      mockEnhancementPipelineService.enhance.mockResolvedValue(Result.ok(rawChunks));
+
+      const result = await useCase.execute({
+        content: 'test',
+        filePath: '/path/to/file.md',
+        sourceId: 'src',
+        memoryBank: 'ns',
+        sourceConfig: defaultSourceConfig,
+      });
+
+      expect(result.isOk()).toBe(true);
+      const chunks = result.getValue();
+      expect(chunks[0].metadata?.fileHash).toBeUndefined();
+      expect(chunks[0].metadata?.hardwareId).toBeUndefined();
+    });
+
+    it('should inject fileHash and hardwareId after enhancement pipeline', async () => {
+      const fileHash = 'sha256-hash';
+      const hardwareId = 'hw-id';
+      const rawChunks = [aContentChunk({ text: 'raw', metadata: {} })];
+      const enhancedChunks = [aContentChunk({ text: 'enhanced', metadata: { enhanced: 'true' } })];
+
+      mockStrategy.chunkFile.mockResolvedValue(Result.ok(rawChunks));
+      mockEnhancementPipelineService.enhance.mockResolvedValue(Result.ok(enhancedChunks));
+
+      const result = await useCase.execute({
+        content: 'test',
+        filePath: '/path/to/file.md',
+        sourceId: 'src',
+        memoryBank: 'ns',
+        sourceConfig: defaultSourceConfig,
+        fileHash,
+        hardwareId,
+      });
+
+      expect(result.isOk()).toBe(true);
+      const chunks = result.getValue();
+      expect(chunks[0].metadata?.fileHash).toBe(fileHash);
+      expect(chunks[0].metadata?.hardwareId).toBe(hardwareId);
+      expect(chunks[0].metadata?.enhanced).toBe('true');
+    });
+
+    it('should share the same fileHash across all chunks from the same file', async () => {
+      const fileHash = 'shared-hash';
+      const rawChunks = [
+        aContentChunk({ text: 'chunk 1', metadata: {} }),
+        aContentChunk({ text: 'chunk 2', metadata: {} }),
+        aContentChunk({ text: 'chunk 3', metadata: {} }),
+      ];
+
+      mockStrategy.chunkFile.mockResolvedValue(Result.ok(rawChunks));
+      mockEnhancementPipelineService.enhance.mockResolvedValue(Result.ok(rawChunks));
+
+      const result = await useCase.execute({
+        content: 'test',
+        filePath: '/path/to/file.md',
+        sourceId: 'src',
+        memoryBank: 'ns',
+        sourceConfig: defaultSourceConfig,
+        fileHash,
+      });
+
+      expect(result.isOk()).toBe(true);
+      const chunks = result.getValue();
+      const allHashes = chunks.map(c => c.metadata?.fileHash);
+      expect(allHashes).toEqual([fileHash, fileHash, fileHash]);
+    });
+  });
 });

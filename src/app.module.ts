@@ -17,8 +17,10 @@ import { ConfigurationModule } from './infrastructure/config/configuration.modul
 import { LoggerModule } from './infrastructure/logging/logger.module';
 import { PrismaModule } from './infrastructure/prisma/prisma.module';
 import { FileMemoryTrackerRepository } from './infrastructure/repositories/file-memory-tracker.repository';
+import { FileHasherService } from './infrastructure/services/file-hasher.service';
 import { FileMemoryTrackerService } from './infrastructure/services/file-memory-tracker.service';
 import { FileProcessingQueue } from './infrastructure/services/file-processing-queue.service';
+import { HardwareIdDetectorService } from './infrastructure/services/hardware-id-detector.service';
 import { FileWatcherService } from './infrastructure/services/file-watcher.service';
 import { GracefulShutdownService } from './infrastructure/services/graceful-shutdown.service';
 import { MnemosyneClient } from './infrastructure/services/mnemosyne-client.service';
@@ -77,6 +79,10 @@ import { ProcessFileUseCase } from './use-cases/process-file.use-case';
     // File→Memory tracking
     FileMemoryTrackerRepository,
     FileMemoryTrackerService,
+
+    // File hash and hardware ID
+    FileHasherService,
+    HardwareIdDetectorService,
 
     // Session metadata
     SessionMetadataService,

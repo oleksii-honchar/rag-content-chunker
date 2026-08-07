@@ -45,6 +45,7 @@
     "class-validator": "^0.15.1",
     "config": "4.4.2",
     "js-yaml": "5.2.2",
+    "native-machine-id": "^0.3.11",
     "nestjs-pino": "4.6.1",
     "pino": "10.3.1",
     "pino-http": "^11.0.0",

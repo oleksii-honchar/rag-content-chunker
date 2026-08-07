@@ -114,6 +114,29 @@ export class FileMemoryTrackerRepository {
   }
 
   /**
+   * Update fileHash and/or hardwareId on the FileTracker parent record.
+   * Only sets fields that are provided (non-undefined).
+   */
+  async updateFileTrackerHash(
+    filePath: string,
+    fileHash: string | undefined,
+    hardwareId: string | undefined,
+  ): Promise<void> {
+    const updateData: { fileHash?: string | null; hardwareId?: string | null } = {};
+    if (fileHash !== undefined) {
+      updateData.fileHash = fileHash ?? null;
+    }
+    if (hardwareId !== undefined) {
+      updateData.hardwareId = hardwareId ?? null;
+    }
+
+    await this.prisma.fileTracker.updateMany({
+      where: { filePath },
+      data: updateData,
+    });
+  }
+
+  /**
    * Delete tracker by filePath (cascade deletes memories).
    */
   async deleteByFilePath(filePath: string): Promise<void> {

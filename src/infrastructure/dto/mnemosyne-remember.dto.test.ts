@@ -99,6 +99,40 @@ describe('MnemosyneRememberDto', () => {
       expect(dto.metadata.fileRole).toBe(props.fileRole);
     });
 
+    it('includes fileHash in metadata when present in chunk metadata', () => {
+      const chunk = aContentChunk({
+        metadata: { fileHash: 'abc123def456' },
+      });
+
+      const dto = MnemosyneRememberDto.fromChunk(chunk);
+
+      expect(dto.metadata.fileHash).toBe('abc123def456');
+    });
+
+    it('includes hardwareId in metadata when present in chunk metadata', () => {
+      const chunk = aContentChunk({
+        metadata: { hardwareId: 'hw-98765' },
+      });
+
+      const dto = MnemosyneRememberDto.fromChunk(chunk);
+
+      expect(dto.metadata.hardwareId).toBe('hw-98765');
+    });
+
+    it('includes both fileHash and hardwareId in metadata when both present', () => {
+      const chunk = aContentChunk({
+        metadata: { fileHash: 'sha256-abc', hardwareId: 'hw-xyz' },
+      });
+
+      const dto = MnemosyneRememberDto.fromChunk(chunk);
+
+      expect(dto.metadata.fileHash).toBe('sha256-abc');
+      expect(dto.metadata.hardwareId).toBe('hw-xyz');
+      // Standard fields still present
+      expect(dto.metadata.id).toBeDefined();
+      expect(dto.metadata.memoryBank).toBeDefined();
+    });
+
     it('sets source equal to memory bank (not literal "chunk")', () => {
       const chunk = aContentChunk({
         memoryBank: 'obsidian-notes',

@@ -15,6 +15,7 @@ describe('FileMemoryTrackerRepository', () => {
     findUnique: jest.Mock;
     upsert: jest.Mock;
     delete: jest.Mock;
+    updateMany: jest.Mock;
   };
   let prismaFileMemoryTracker: {
     upsert: jest.Mock;
@@ -38,6 +39,7 @@ describe('FileMemoryTrackerRepository', () => {
       findUnique: jest.fn(),
       upsert: jest.fn(),
       delete: jest.fn(),
+      updateMany: jest.fn(),
     };
 
     prismaFileMemoryTracker = {
@@ -129,6 +131,52 @@ describe('FileMemoryTrackerRepository', () => {
       await expect(repository.deleteByFilePath('/nonexistent/file.txt')).resolves.not.toThrow();
       expect(prismaFileTracker.delete).toHaveBeenCalledWith({
         where: { filePath: '/nonexistent/file.txt' },
+      });
+    });
+  });
+
+  describe('updateFileTrackerHash', () => {
+    it('updates both fileHash and hardwareId when both provided', async () => {
+      prismaFileTracker.updateMany.mockResolvedValue({ count: 1 });
+
+      await repository.updateFileTrackerHash('/test/file.txt', 'sha256-abc', 'hw-123');
+
+      expect(prismaFileTracker.updateMany).toHaveBeenCalledWith({
+        where: { filePath: '/test/file.txt' },
+        data: { fileHash: 'sha256-abc', hardwareId: 'hw-123' },
+      });
+    });
+
+    it('updates only fileHash when hardwareId is undefined', async () => {
+      prismaFileTracker.updateMany.mockResolvedValue({ count: 1 });
+
+      await repository.updateFileTrackerHash('/test/file.txt', 'sha256-abc', undefined);
+
+      expect(prismaFileTracker.updateMany).toHaveBeenCalledWith({
+        where: { filePath: '/test/file.txt' },
+        data: { fileHash: 'sha256-abc' },
+      });
+    });
+
+    it('updates only hardwareId when fileHash is undefined', async () => {
+      prismaFileTracker.updateMany.mockResolvedValue({ count: 1 });
+
+      await repository.updateFileTrackerHash('/test/file.txt', undefined, 'hw-123');
+
+      expect(prismaFileTracker.updateMany).toHaveBeenCalledWith({
+        where: { filePath: '/test/file.txt' },
+        data: { hardwareId: 'hw-123' },
+      });
+    });
+
+    it('passes empty string as-is when fileHash is empty string', async () => {
+      prismaFileTracker.updateMany.mockResolvedValue({ count: 1 });
+
+      await repository.updateFileTrackerHash('/test/file.txt', '', 'hw-123');
+
+      expect(prismaFileTracker.updateMany).toHaveBeenCalledWith({
+        where: { filePath: '/test/file.txt' },
+        data: { fileHash: '', hardwareId: 'hw-123' },
       });
     });
   });

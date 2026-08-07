@@ -1,10 +1,20 @@
 import { FILE_EVENTS, FileAddedEvent, FileChangedEvent, FileDeletedEvent } from './events/file-events';
 import { FILE_TRACKER_STATUS, FileTracker, FileTrackerProps } from './file-tracker.aggregate';
 
+function aFileTracker(overrides?: Partial<FileTrackerProps>): FileTrackerProps {
+  return {
+    filePath: '/test/file.txt',
+    status: undefined,
+    fileHash: undefined,
+    hardwareId: undefined,
+    ...overrides,
+  };
+}
+
 describe('FileTracker', () => {
   describe('instance add', () => {
     it('transitions to ADDED status and emits FileAddedEvent in AggregateResult', () => {
-      const props: FileTrackerProps = { filePath: '/test/file.txt' };
+      const props = aFileTracker();
       const result = FileTracker.of(props);
       expect(result.isOk()).toBe(true);
       const fileTracker = result.getValue();
@@ -24,7 +34,7 @@ describe('FileTracker', () => {
 
   describe('instance change', () => {
     it('transitions to CHANGED status and emits FileChangedEvent in AggregateResult', () => {
-      const props: FileTrackerProps = { filePath: '/test/file.txt' };
+      const props = aFileTracker();
       const result = FileTracker.of(props);
       expect(result.isOk()).toBe(true);
       const fileTracker = result.getValue();
@@ -45,7 +55,7 @@ describe('FileTracker', () => {
     });
 
     it('original aggregate remains unchanged after change', () => {
-      const props: FileTrackerProps = { filePath: '/test/file.txt' };
+      const props = aFileTracker();
       const result = FileTracker.of(props);
       expect(result.isOk()).toBe(true);
       const fileTracker = result.getValue();
@@ -64,7 +74,7 @@ describe('FileTracker', () => {
 
   describe('instance delete', () => {
     it('transitions to DELETED status and emits FileDeletedEvent in AggregateResult', () => {
-      const props: FileTrackerProps = { filePath: '/test/file.txt' };
+      const props = aFileTracker();
       const result = FileTracker.of(props);
       expect(result.isOk()).toBe(true);
       const fileTracker = result.getValue();
@@ -85,7 +95,7 @@ describe('FileTracker', () => {
     });
 
     it('original aggregate remains unchanged after delete', () => {
-      const props: FileTrackerProps = { filePath: '/test/file.txt' };
+      const props = aFileTracker();
       const result = FileTracker.of(props);
       expect(result.isOk()).toBe(true);
       const fileTracker = result.getValue();
@@ -104,7 +114,7 @@ describe('FileTracker', () => {
 
   describe('static of', () => {
     it('creates FileTracker with just filePath — status is null until add()', () => {
-      const props: FileTrackerProps = { filePath: '/test/file.txt' };
+      const props = aFileTracker();
       const result = FileTracker.of(props);
       expect(result.isOk()).toBe(true);
       const fileTracker = result.getValue();
@@ -128,7 +138,7 @@ describe('FileTracker', () => {
 
   describe('toJson', () => {
     it('serializes filePath and status without events', () => {
-      const props: FileTrackerProps = { filePath: '/test/file.txt' };
+      const props = aFileTracker();
       const result = FileTracker.of(props);
       expect(result.isOk()).toBe(true);
       const fileTracker = result.getValue();
@@ -150,6 +160,70 @@ describe('FileTracker', () => {
       expect(FILE_TRACKER_STATUS.ADDED).toBe('added');
       expect(FILE_TRACKER_STATUS.CHANGED).toBe('changed');
       expect(FILE_TRACKER_STATUS.DELETED).toBe('deleted');
+    });
+  });
+
+  describe('fileHash and hardwareId', () => {
+    it('accepts fileHash and hardwareId in of()', () => {
+      const props = aFileTracker({ fileHash: 'abc123', hardwareId: 'hw-456' });
+      const result = FileTracker.of(props);
+      expect(result.isOk()).toBe(true);
+      const fileTracker = result.getValue();
+      expect(fileTracker.fileHash).toBe('abc123');
+      expect(fileTracker.hardwareId).toBe('hw-456');
+    });
+
+    it('returns null for fileHash and hardwareId when not provided', () => {
+      const props = aFileTracker();
+      const result = FileTracker.of(props);
+      expect(result.isOk()).toBe(true);
+      const fileTracker = result.getValue();
+      expect(fileTracker.fileHash).toBeNull();
+      expect(fileTracker.hardwareId).toBeNull();
+    });
+
+    it('returns null for fileHash and hardwareId when undefined', () => {
+      const props = aFileTracker({ fileHash: undefined, hardwareId: undefined });
+      const result = FileTracker.of(props);
+      expect(result.isOk()).toBe(true);
+      const fileTracker = result.getValue();
+      expect(fileTracker.fileHash).toBeNull();
+      expect(fileTracker.hardwareId).toBeNull();
+    });
+
+    it('includes fileHash and hardwareId in toJson()', () => {
+      const props = aFileTracker({ fileHash: 'abc123', hardwareId: 'hw-456' });
+      const result = FileTracker.of(props);
+      expect(result.isOk()).toBe(true);
+      const fileTracker = result.getValue();
+      const json = fileTracker.toJson();
+      expect(json.fileHash).toBe('abc123');
+      expect(json.hardwareId).toBe('hw-456');
+    });
+
+    it('preserves fileHash and hardwareId through add/change/delete', () => {
+      const props = aFileTracker({ fileHash: 'abc123', hardwareId: 'hw-456' });
+      const result = FileTracker.of(props);
+      expect(result.isOk()).toBe(true);
+      const fileTracker = result.getValue();
+
+      const addResult = fileTracker.add();
+      expect(addResult.isOk()).toBe(true);
+      const added = addResult.getValue();
+      expect(added.fileHash).toBe('abc123');
+      expect(added.hardwareId).toBe('hw-456');
+
+      const changeResult = added.change();
+      expect(changeResult.isOk()).toBe(true);
+      const changed = changeResult.getValue();
+      expect(changed.fileHash).toBe('abc123');
+      expect(changed.hardwareId).toBe('hw-456');
+
+      const deleteResult = changed.delete();
+      expect(deleteResult.isOk()).toBe(true);
+      const deleted = deleteResult.getValue();
+      expect(deleted.fileHash).toBe('abc123');
+      expect(deleted.hardwareId).toBe('hw-456');
     });
   });
 });

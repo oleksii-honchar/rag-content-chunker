@@ -18,6 +18,8 @@ export type FileTrackerStatus = ValuesType<typeof FILE_TRACKER_STATUS>;
 const fileTrackerSchema = z.object({
   filePath: z.string().min(1),
   status: z.enum(Object.values(FILE_TRACKER_STATUS)).nullish(),
+  fileHash: z.string().optional(),
+  hardwareId: z.string().optional(),
 });
 
 export type FileTrackerProps = z.infer<typeof fileTrackerSchema>;
@@ -85,10 +87,20 @@ export class FileTracker {
     return this.props.status ?? null;
   }
 
+  get fileHash(): string | null {
+    return this.props.fileHash ?? null;
+  }
+
+  get hardwareId(): string | null {
+    return this.props.hardwareId ?? null;
+  }
+
   toJson(): FileTrackerProps {
     return {
       filePath: this.props.filePath,
       status: this.props.status,
+      fileHash: this.props.fileHash,
+      hardwareId: this.props.hardwareId,
     };
   }
 }

@@ -24,10 +24,16 @@ model FileTracker {
 
   // One-to-many relation to individual memories created from this file
   memories  FileMemoryTracker[]
+  // SHA-256 hash of file content — nullable for backward compatibility
+  fileHash  String?
+  // Hardware ID of device that ingested this file — nullable for backward compatibility
+  hardwareId String?
 
   @@unique([filePath])
   @@index([filePath])
   @@index([sourceId, memoryBank])
+  @@index([fileHash])
+  @@index([hardwareId])
 }
 
 // Links a file to a specific Mnemosyne memory ID — enables cleanup on file deletion

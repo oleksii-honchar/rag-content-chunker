@@ -12,6 +12,8 @@ const ingestChunkParamsSchema = z.object({
   chunks: z.array(z.custom<ContentChunk>()),
   sourceId: z.string().min(1),
   metadata: z.record(z.string(), z.string()).optional(),
+  fileHash: z.string().optional(),
+  hardwareId: z.string().optional(),
 });
 
 export type IngestChunkParams = z.infer<typeof ingestChunkParamsSchema>;
@@ -71,6 +73,8 @@ export class IngestChunkUseCase extends BaseUseCase<IngestChunkParams, void> {
                 memory_id,
                 params.sourceId,
                 chunk.memoryBank,
+                params.fileHash,
+                params.hardwareId,
               );
             } catch (error) {
               this.logger.warn(

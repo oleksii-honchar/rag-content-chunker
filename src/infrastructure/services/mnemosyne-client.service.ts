@@ -239,12 +239,17 @@ export class MnemosyneClient implements OnApplicationBootstrap {
         } else {
           // Parse MCP response — result.content[0].text contains JSON from Mnemosyne
           const parsed = this.parseMcpResponse(response);
-          if (parsed.status === 'stored') {
+          const status = String(parsed.status ?? '');
+          if (status === 'stored') {
             const memoryId = String(parsed.memory_id ?? '');
             this.logger.debug(
               `Chunk remembered; id="${chunk.id}", memoryId="${memoryId}", attempt=${attempt}`,
             );
-            return Result.ok({ memory_id: memoryId, status: String(parsed.status) });
+            return Result.ok({ memory_id: memoryId, status });
+          } else if (status === 'deduplicated') {
+            const memoryId = String(parsed.memory_id ?? '');
+            this.logger.debug(`Chunk deduplicated; id="${chunk.id}", existingMemoryId="${memoryId}"`);
+            return Result.ok({ memory_id: memoryId, status });
           } else {
             const errMsg =
               typeof parsed.error === 'string'

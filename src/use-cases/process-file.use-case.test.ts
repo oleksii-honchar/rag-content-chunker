@@ -6,10 +6,12 @@ import { aContentChunk } from '../domain/content-chunk.entity.test-utils';
 import { FileAddedEvent, FileChangedEvent, FileDeletedEvent } from '../domain/events/file-events';
 import { aSourceConfig } from '../infrastructure/config/configuration.service.test-utils';
 import { aLogger } from '../infrastructure/logging/logger.test-utils';
+import { FileHasherService } from '../infrastructure/services/file-hasher.service';
 import { FileMemoryTrackerService } from '../infrastructure/services/file-memory-tracker.service';
 import { aFileMemoryTrackerService } from '../infrastructure/services/file-memory-tracker.service.test-utils';
 import { FileProcessingQueue } from '../infrastructure/services/file-processing-queue.service';
 import { aFileProcessingQueueService } from '../infrastructure/services/file-processing-queue.test-utils';
+import { HardwareIdDetectorService } from '../infrastructure/services/hardware-id-detector.service';
 import { MnemosyneClient } from '../infrastructure/services/mnemosyne-client.service';
 import { aMnemosyneClientService } from '../infrastructure/services/mnemosyne-client.test-utils';
 import { Result } from '../utils/result';
@@ -28,6 +30,8 @@ describe('ProcessFileUseCase', () => {
   let mockProcessingQueue: ReturnType<typeof aFileProcessingQueueService>;
   let mockFileMemoryTrackerService: ReturnType<typeof aFileMemoryTrackerService>;
   let mockMnemosyneClient: ReturnType<typeof aMnemosyneClientService>;
+  let mockFileHasherService: jest.Mocked<{ compute: jest.Mock }>;
+  let mockHardwareIdDetectorService: jest.Mocked<{ getHardwareId: jest.Mock }>;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -37,6 +41,8 @@ describe('ProcessFileUseCase', () => {
     mockProcessingQueue = aFileProcessingQueueService();
     mockFileMemoryTrackerService = aFileMemoryTrackerService();
     mockMnemosyneClient = aMnemosyneClientService();
+    mockFileHasherService = { compute: jest.fn().mockResolvedValue('test-hash-abc123') };
+    mockHardwareIdDetectorService = { getHardwareId: jest.fn().mockResolvedValue('test-hw-id') };
     const mockLogger = aLogger();
 
     useCase = new ProcessFileUseCase(
@@ -45,6 +51,8 @@ describe('ProcessFileUseCase', () => {
       mockProcessingQueue as unknown as FileProcessingQueue,
       mockFileMemoryTrackerService as unknown as FileMemoryTrackerService,
       mockMnemosyneClient as unknown as MnemosyneClient,
+      mockFileHasherService as unknown as FileHasherService,
+      mockHardwareIdDetectorService as unknown as HardwareIdDetectorService,
       mockLogger as unknown as never,
     );
   });
@@ -75,12 +83,16 @@ describe('ProcessFileUseCase', () => {
 
       expect(result.isOk()).toBe(true);
       expect(fs.readFile).toHaveBeenCalledWith(filePath, 'utf-8');
+      expect(mockFileHasherService.compute).toHaveBeenCalledWith(filePath);
+      expect(mockHardwareIdDetectorService.getHardwareId).toHaveBeenCalled();
       expect(mockChunkContentUseCase.execute).toHaveBeenCalledWith({
         content: fileContent,
         filePath,
         sourceId,
         memoryBank,
         sourceConfig,
+        fileHash: 'test-hash-abc123',
+        hardwareId: 'test-hw-id',
       });
       expect(mockIngestChunkUseCase.execute).toHaveBeenCalledWith({
         chunks,
@@ -89,6 +101,8 @@ describe('ProcessFileUseCase', () => {
           filePath,
           eventType: 'add',
         },
+        fileHash: 'test-hash-abc123',
+        hardwareId: 'test-hw-id',
       });
     });
 
@@ -212,6 +226,133 @@ describe('ProcessFileUseCase', () => {
       });
 
       expect(mockIngestChunkUseCase.execute).not.toHaveBeenCalled();
+    });
+
+    it('should continue without fileHash when hash computation fails', async () => {
+      const filePath = '/path/to/file.md';
+      const sourceId = 'test-source';
+      const memoryBank = 'test-memoryBank';
+      const fileContent = 'Test';
+      const sourceConfig = aSourceConfig({ id: sourceId, memoryBank });
+      const chunks = [aContentChunk()];
+
+      (fs.readFile as jest.Mock).mockResolvedValue(fileContent);
+      mockFileHasherService.compute.mockRejectedValue(new Error('Hash failed'));
+      mockChunkContentUseCase.execute.mockResolvedValue(Result.ok(chunks));
+      mockIngestChunkUseCase.execute.mockResolvedValue(Result.ok(undefined as unknown as void));
+      mockProcessingQueue.addToQueue.mockImplementation(task => task());
+
+      await useCase.execute({
+        filePath,
+        eventType: 'add',
+        sourceId,
+        memoryBank,
+        sourceConfig,
+      });
+
+      // Should still call chunking without fileHash
+      expect(mockChunkContentUseCase.execute).toHaveBeenCalledWith(
+        expect.objectContaining({
+          content: fileContent,
+          filePath,
+          fileHash: undefined,
+        }),
+      );
+    });
+
+    it('should continue without hardwareId when hardwareId detection fails', async () => {
+      const filePath = '/path/to/file.md';
+      const sourceId = 'test-source';
+      const memoryBank = 'test-memoryBank';
+      const fileContent = 'Test';
+      const sourceConfig = aSourceConfig({ id: sourceId, memoryBank });
+      const chunks = [aContentChunk()];
+
+      (fs.readFile as jest.Mock).mockResolvedValue(fileContent);
+      mockHardwareIdDetectorService.getHardwareId.mockRejectedValue(new Error('HW detection failed'));
+      mockChunkContentUseCase.execute.mockResolvedValue(Result.ok(chunks));
+      mockIngestChunkUseCase.execute.mockResolvedValue(Result.ok(undefined as unknown as void));
+      mockProcessingQueue.addToQueue.mockImplementation(task => task());
+
+      await useCase.execute({
+        filePath,
+        eventType: 'add',
+        sourceId,
+        memoryBank,
+        sourceConfig,
+      });
+
+      // Should still call chunking without hardwareId
+      expect(mockChunkContentUseCase.execute).toHaveBeenCalledWith(
+        expect.objectContaining({
+          content: fileContent,
+          filePath,
+          hardwareId: undefined,
+        }),
+      );
+    });
+
+    it('should continue without both when both hash and hardwareId fail', async () => {
+      const filePath = '/path/to/file.md';
+      const sourceId = 'test-source';
+      const memoryBank = 'test-memoryBank';
+      const fileContent = 'Test';
+      const sourceConfig = aSourceConfig({ id: sourceId, memoryBank });
+      const chunks = [aContentChunk()];
+
+      (fs.readFile as jest.Mock).mockResolvedValue(fileContent);
+      mockFileHasherService.compute.mockRejectedValue(new Error('Hash failed'));
+      mockHardwareIdDetectorService.getHardwareId.mockRejectedValue(new Error('HW failed'));
+      mockChunkContentUseCase.execute.mockResolvedValue(Result.ok(chunks));
+      mockIngestChunkUseCase.execute.mockResolvedValue(Result.ok(undefined as unknown as void));
+      mockProcessingQueue.addToQueue.mockImplementation(task => task());
+
+      const result = await useCase.execute({
+        filePath,
+        eventType: 'add',
+        sourceId,
+        memoryBank,
+        sourceConfig,
+      });
+
+      expect(result.isOk()).toBe(true);
+      expect(mockChunkContentUseCase.execute).toHaveBeenCalledWith(
+        expect.objectContaining({
+          content: fileContent,
+          filePath,
+          fileHash: undefined,
+          hardwareId: undefined,
+        }),
+      );
+    });
+
+    it('should pass fileHash and hardwareId to IngestChunkUseCase', async () => {
+      const filePath = '/path/to/file.md';
+      const sourceId = 'test-source';
+      const memoryBank = 'test-memoryBank';
+      const fileContent = 'Test';
+      const sourceConfig = aSourceConfig({ id: sourceId, memoryBank });
+      const chunks = [aContentChunk()];
+
+      (fs.readFile as jest.Mock).mockResolvedValue(fileContent);
+      mockChunkContentUseCase.execute.mockResolvedValue(Result.ok(chunks));
+      mockIngestChunkUseCase.execute.mockResolvedValue(Result.ok(undefined as unknown as void));
+      mockProcessingQueue.addToQueue.mockImplementation(task => task());
+
+      await useCase.execute({
+        filePath,
+        eventType: 'add',
+        sourceId,
+        memoryBank,
+        sourceConfig,
+      });
+
+      expect(mockIngestChunkUseCase.execute).toHaveBeenCalledWith(
+        expect.objectContaining({
+          fileHash: 'test-hash-abc123',
+          hardwareId: 'test-hw-id',
+        }),
+      );
     });
   });
 
@@ -379,6 +520,8 @@ describe('ProcessFileUseCase', () => {
         sourceId,
         memoryBank,
         sourceConfig,
+        fileHash: 'test-hash-abc123',
+        hardwareId: 'test-hw-id',
       });
       expect(mockIngestChunkUseCase.execute).toHaveBeenCalledWith({
         chunks,
@@ -387,6 +530,8 @@ describe('ProcessFileUseCase', () => {
           filePath,
           eventType: 'change',
         },
+        fileHash: 'test-hash-abc123',
+        hardwareId: 'test-hw-id',
       });
     });
 

@@ -17,6 +17,8 @@ export class FileMemoryTrackerService {
     memoryId: string,
     sourceId: string,
     memoryBank: string,
+    fileHash?: string,
+    hardwareId?: string,
   ): Promise<FileMemoryTracker> {
     // Create aggregate with pre-generated ID
     const newTracker = FileMemoryTracker.of({
@@ -48,6 +50,11 @@ export class FileMemoryTrackerService {
     const savedResult = await this.repository.upsert(updatedTracker);
     if (savedResult.isKo()) {
       throw new Error('Failed to persist FileMemoryTracker');
+    }
+
+    // Update FileTracker with fileHash/hardwareId if provided
+    if (fileHash !== undefined || hardwareId !== undefined) {
+      await this.repository.updateFileTrackerHash(filePath, fileHash, hardwareId);
     }
 
     return savedResult.getValue();

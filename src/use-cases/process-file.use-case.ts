@@ -12,8 +12,10 @@ import {
 import { WatchSourceConfig, watchSourceConfigSchema } from '../infrastructure/config/config-schemas';
 import { SOURCE_STRATEGIES } from '../infrastructure/config/source-strategies';
 import { BasePinoLogger } from '../infrastructure/logging/base-pino-logger';
+import { FileHasherService } from '../infrastructure/services/file-hasher.service';
 import { FileMemoryTrackerService } from '../infrastructure/services/file-memory-tracker.service';
 import { FileProcessingQueue } from '../infrastructure/services/file-processing-queue.service';
+import { HardwareIdDetectorService } from '../infrastructure/services/hardware-id-detector.service';
 import { MnemosyneClient } from '../infrastructure/services/mnemosyne-client.service';
 import { BaseUseCase } from '../utils/base-use-case';
 import { ErrorWithDetails } from '../utils/error-with-details';
@@ -56,6 +58,8 @@ export class ProcessFileUseCase extends BaseUseCase<ProcessFileParams, void> {
     private readonly processingQueue: FileProcessingQueue,
     private readonly fileMemoryTrackerService: FileMemoryTrackerService,
     private readonly mnemosyneClient: MnemosyneClient,
+    private readonly fileHasherService: FileHasherService,
+    private readonly hardwareIdDetectorService: HardwareIdDetectorService,
     logger: BasePinoLogger,
   ) {
     super(logger);
@@ -224,6 +228,26 @@ export class ProcessFileUseCase extends BaseUseCase<ProcessFileParams, void> {
       ]);
     }
 
+    // Compute file hash (non-fatal)
+    let fileHash: string | undefined;
+    try {
+      fileHash = await this.fileHasherService.compute(params.filePath);
+    } catch (error) {
+      this.logger.warn(
+        `Failed to compute file hash, continuing without it: path="${params.filePath}", error="${error instanceof Error ? error.message : String(error)}"`,
+      );
+    }
+
+    // Get hardware ID (non-fatal)
+    let hardwareId: string | undefined;
+    try {
+      hardwareId = await this.hardwareIdDetectorService.getHardwareId();
+    } catch (error) {
+      this.logger.warn(
+        `Failed to get hardware ID, continuing without it: error="${error instanceof Error ? error.message : String(error)}"`,
+      );
+    }
+
     // Chunk content
     const chunksResult = await this.chunkContentUseCase.execute({
       content,
@@ -231,6 +255,8 @@ export class ProcessFileUseCase extends BaseUseCase<ProcessFileParams, void> {
       sourceId: params.sourceId,
       memoryBank: params.memoryBank,
       sourceConfig: params.sourceConfig,
+      fileHash,
+      hardwareId,
     });
 
     if (chunksResult.isKo()) {
@@ -253,6 +279,8 @@ export class ProcessFileUseCase extends BaseUseCase<ProcessFileParams, void> {
         filePath: params.filePath,
         eventType: params.eventType,
       },
+      fileHash,
+      hardwareId,
     });
 
     if (ingestResult.isKo()) {

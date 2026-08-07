@@ -81,6 +81,62 @@ describe('FileMemoryTrackerService', () => {
       expect(result).toEqual(expect.objectContaining({ id: updatedTracker.id }));
       expect(result.memoryIds).toContain(memId);
     });
+
+    it('passes fileHash and hardwareId to repository upsert', async () => {
+      const memId = 'mem-1';
+      const baseTracker = aFileMemoryTracker();
+      const props = baseTracker.toJson();
+      const updatedTracker = aFileMemoryTracker({ ...props, memoryIds: [memId] });
+      (baseTracker as FileMemoryTracker & { remember: jest.Mock }).remember = jest
+        .fn()
+        .mockReturnValue(AggregateResult.ok(updatedTracker, []));
+
+      repository.findOrCreate.mockResolvedValue(AggregateResult.ok(baseTracker, []));
+
+      await service.trackMemory(
+        props.filePath,
+        memId,
+        props.sourceId,
+        props.memoryBank,
+        'sha256-abc',
+        'hw-123',
+      );
+
+      expect(repository.upsert).toHaveBeenCalledWith(updatedTracker);
+      expect(repository.updateFileTrackerHash).toHaveBeenCalledWith(props.filePath, 'sha256-abc', 'hw-123');
+    });
+
+    it('skips updateFileTrackerHash when fileHash and hardwareId are undefined', async () => {
+      const memId = 'mem-1';
+      const baseTracker = aFileMemoryTracker();
+      const props = baseTracker.toJson();
+      const updatedTracker = aFileMemoryTracker({ ...props, memoryIds: [memId] });
+      (baseTracker as FileMemoryTracker & { remember: jest.Mock }).remember = jest
+        .fn()
+        .mockReturnValue(AggregateResult.ok(updatedTracker, []));
+
+      repository.findOrCreate.mockResolvedValue(AggregateResult.ok(baseTracker, []));
+
+      await service.trackMemory(props.filePath, memId, props.sourceId, props.memoryBank);
+
+      expect(repository.updateFileTrackerHash).not.toHaveBeenCalled();
+    });
+
+    it('passes only fileHash when hardwareId is undefined', async () => {
+      const memId = 'mem-1';
+      const baseTracker = aFileMemoryTracker();
+      const props = baseTracker.toJson();
+      const updatedTracker = aFileMemoryTracker({ ...props, memoryIds: [memId] });
+      (baseTracker as FileMemoryTracker & { remember: jest.Mock }).remember = jest
+        .fn()
+        .mockReturnValue(AggregateResult.ok(updatedTracker, []));
+
+      repository.findOrCreate.mockResolvedValue(AggregateResult.ok(baseTracker, []));
+
+      await service.trackMemory(props.filePath, memId, props.sourceId, props.memoryBank, 'sha256-only');
+
+      expect(repository.updateFileTrackerHash).toHaveBeenCalledWith(props.filePath, 'sha256-only', undefined);
+    });
   });
 
   describe('forgetMemory', () => {

@@ -24,6 +24,8 @@ describe('FileTracker and FileMemoryTracker Schema Integration', () => {
         "filePath" TEXT NOT NULL,
         "sourceId" TEXT NOT NULL,
         "memoryBank" TEXT NOT NULL,
+        "fileHash" TEXT,
+        "hardwareId" TEXT,
         "createdAt" DATETIME NOT NULL DEFAULT (datetime('now')),
         "updatedAt" DATETIME NOT NULL DEFAULT (datetime('now')),
         PRIMARY KEY ("id"),
@@ -49,6 +51,12 @@ describe('FileTracker and FileMemoryTracker Schema Integration', () => {
     );
     await prisma.$executeRawUnsafe(
       `CREATE INDEX IF NOT EXISTS "FileTracker_sourceId_memoryBank_idx" ON "FileTracker" ("sourceId", "memoryBank")`,
+    );
+    await prisma.$executeRawUnsafe(
+      `CREATE INDEX IF NOT EXISTS "FileTracker_fileHash_idx" ON "FileTracker" ("fileHash")`,
+    );
+    await prisma.$executeRawUnsafe(
+      `CREATE INDEX IF NOT EXISTS "FileTracker_hardwareId_idx" ON "FileTracker" ("hardwareId")`,
     );
     await prisma.$executeRawUnsafe(
       `CREATE INDEX IF NOT EXISTS "FileMemoryTracker_fileTrackerId_idx" ON "FileMemoryTracker" ("fileTrackerId")`,

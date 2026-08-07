@@ -21,6 +21,8 @@ const chunkContentParamsSchema = z.object({
   overlapTokens: z.number().nonnegative().optional(),
   hardCapTokens: z.number().positive().optional(),
   sourceConfig: watchSourceConfigSchema.optional(),
+  fileHash: z.string().optional(),
+  hardwareId: z.string().optional(),
 });
 
 export type ChunkContentParams = z.infer<typeof chunkContentParamsSchema>;
@@ -102,17 +104,39 @@ export class ChunkContentUseCase extends BaseUseCase<ChunkContentParams, Content
       enhancementConfig,
     );
 
+    // Determine final chunks (enhanced if available, raw otherwise)
+    let finalChunks: ContentChunk[];
     if (enhancementResult.isOk()) {
       this.logger.info(
         `Chunks enhanced: path="${params.filePath}", enhanced=${enhancementResult.getValue().length}`,
       );
-      return enhancementResult;
+      finalChunks = enhancementResult.getValue();
+    } else {
+      // Fallback: log error and return raw chunks (resilient)
+      this.logger.error(
+        `Enhancement pipeline failed, returning raw chunks: path="${params.filePath}", error="${enhancementResult.getFormattedErrors()}"`,
+      );
+      finalChunks = chunks;
     }
 
-    // Fallback: log error and return raw chunks (resilient)
-    this.logger.error(
-      `Enhancement pipeline failed, returning raw chunks: path="${params.filePath}", error="${enhancementResult.getFormattedErrors()}"`,
-    );
-    return Result.ok(chunks);
+    // Inject fileHash and hardwareId into chunk metadata if available
+    if (params.fileHash || params.hardwareId) {
+      finalChunks = finalChunks.map(chunk => {
+        const existingMetadata = chunk.metadata ?? {};
+        const updatedMetadata: Record<string, string> = { ...existingMetadata };
+        if (params.fileHash) {
+          updatedMetadata.fileHash = params.fileHash;
+        }
+        if (params.hardwareId) {
+          updatedMetadata.hardwareId = params.hardwareId;
+        }
+
+        const updatedProps = chunk.toJson();
+        updatedProps.metadata = updatedMetadata;
+        return ContentChunk.of(updatedProps).getValue();
+      });
+    }
+
+    return Result.ok(finalChunks);
   }
 }

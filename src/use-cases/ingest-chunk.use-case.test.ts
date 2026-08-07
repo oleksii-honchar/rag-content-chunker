@@ -182,6 +182,8 @@ describe('IngestChunkUseCase', () => {
         'mem-abc',
         'watch-1',
         'agent-sessions',
+        undefined,
+        undefined,
       );
     });
 
@@ -206,6 +208,8 @@ describe('IngestChunkUseCase', () => {
         'mem-1',
         'watch-1',
         'vault',
+        undefined,
+        undefined,
       );
       expect(mockFileMemoryTrackerService.trackMemory).toHaveBeenNthCalledWith(
         2,
@@ -213,6 +217,8 @@ describe('IngestChunkUseCase', () => {
         'mem-2',
         'watch-1',
         'vault',
+        undefined,
+        undefined,
       );
     });
 
@@ -266,6 +272,8 @@ describe('IngestChunkUseCase', () => {
         'mem-1',
         'watch-1',
         'vault',
+        undefined,
+        undefined,
       );
       expect(mockFileMemoryTrackerService.trackMemory).toHaveBeenNthCalledWith(
         2,
@@ -273,6 +281,8 @@ describe('IngestChunkUseCase', () => {
         'mem-3',
         'watch-1',
         'vault',
+        undefined,
+        undefined,
       );
     });
 
@@ -335,6 +345,83 @@ describe('IngestChunkUseCase', () => {
       });
 
       expect(mockFileMemoryTrackerService.trackMemory).not.toHaveBeenCalled();
+    });
+
+    it('should pass fileHash and hardwareId to trackMemory when provided', async () => {
+      const chunk = aContentChunk({ chunkIndex: 0, memoryBank: 'vault' });
+      mockMnemosyneClientService.remember.mockResolvedValue(
+        Result.ok({ memory_id: 'mem-abc', status: 'stored' }),
+      );
+      mockFileMemoryTrackerService.trackMemory.mockResolvedValue(undefined);
+
+      const result = await useCase.execute({
+        chunks: [chunk],
+        sourceId: 'watch-1',
+        metadata: { filePath: '/home/user/docs/notes.md' },
+        fileHash: 'sha256-abc123',
+        hardwareId: 'hw-id-456',
+      });
+
+      expect(result.isOk()).toBe(true);
+      expect(mockFileMemoryTrackerService.trackMemory).toHaveBeenCalledTimes(1);
+      expect(mockFileMemoryTrackerService.trackMemory).toHaveBeenCalledWith(
+        '/home/user/docs/notes.md',
+        'mem-abc',
+        'watch-1',
+        'vault',
+        'sha256-abc123',
+        'hw-id-456',
+      );
+    });
+
+    it('should pass undefined fileHash and hardwareId when not provided', async () => {
+      const chunk = aContentChunk({ chunkIndex: 0, memoryBank: 'vault' });
+      mockMnemosyneClientService.remember.mockResolvedValue(
+        Result.ok({ memory_id: 'mem-abc', status: 'stored' }),
+      );
+      mockFileMemoryTrackerService.trackMemory.mockResolvedValue(undefined);
+
+      const result = await useCase.execute({
+        chunks: [chunk],
+        sourceId: 'watch-1',
+        metadata: { filePath: '/home/user/docs/notes.md' },
+      });
+
+      expect(result.isOk()).toBe(true);
+      expect(mockFileMemoryTrackerService.trackMemory).toHaveBeenCalledTimes(1);
+      expect(mockFileMemoryTrackerService.trackMemory).toHaveBeenCalledWith(
+        '/home/user/docs/notes.md',
+        'mem-abc',
+        'watch-1',
+        'vault',
+        undefined,
+        undefined,
+      );
+    });
+
+    it('should pass fileHash only when hardwareId is absent', async () => {
+      const chunk = aContentChunk({ chunkIndex: 0, memoryBank: 'vault' });
+      mockMnemosyneClientService.remember.mockResolvedValue(
+        Result.ok({ memory_id: 'mem-abc', status: 'stored' }),
+      );
+      mockFileMemoryTrackerService.trackMemory.mockResolvedValue(undefined);
+
+      const result = await useCase.execute({
+        chunks: [chunk],
+        sourceId: 'watch-1',
+        metadata: { filePath: '/home/user/docs/notes.md' },
+        fileHash: 'sha256-only',
+      });
+
+      expect(result.isOk()).toBe(true);
+      expect(mockFileMemoryTrackerService.trackMemory).toHaveBeenCalledWith(
+        '/home/user/docs/notes.md',
+        'mem-abc',
+        'watch-1',
+        'vault',
+        'sha256-only',
+        undefined,
+      );
     });
   });
 });
