@@ -2,7 +2,7 @@
 type: index
 title: "Architecture Decision Records"
 createdAt: "2026-07-31T07:30:00Z"
-updatedAt: "2026-08-07T18:50:00Z"
+updatedAt: "2026-08-07T19:01:00Z"
 tags: []
 ---
 
@@ -49,3 +49,9 @@ Curated list of architectural decisions for RAG Content Chunker.
 - [[0018-forget-after-ingest-on-file-update]] — Forget-after-ingest on file change: separate handlers, forget old memories after new content is safely ingested
 - [[0019-continue-on-forget-failure]] — Forget failures are non-fatal: continue on failure, retry on next change event
 - [[0020-no-tracker-api-changes]] — Existing FileMemoryTrackerService API is sufficient for update flow (no new methods needed)
+
+### File Hash Deduplication
+
+- [[0021-file-hash-deduplication-metadata]] — Use SHA-256 file hash in metadata for cross-device deduplication
+- [[0022-native-machine-id-hardware-detection]] — Use native-machine-id for hardware ID detection with fallback
+- [[0023-filetracker-schema-extension]] — Add fileHash and hardwareId fields to FileTracker schema

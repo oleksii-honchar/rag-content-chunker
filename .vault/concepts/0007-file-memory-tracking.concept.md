@@ -2,9 +2,9 @@
 type: concept
 title: "File→Memory Tracking"
 createdAt: "2026-08-01T12:00:00Z"
-updatedAt: "2026-08-07T18:50:00Z"
-tags: [file-tracking, mnemosyne, prisma]
-see_also: ["adrs/0010-file-memory-tracking-prisma-sqlite.adr.md", "adrs/0020-no-tracker-api-changes.adr.md", "concepts/0005-processing-model.concept.md", "memories/0006-change-handler-per-id-forget-memory.memory.md"]
+updatedAt: "2026-08-07T19:01:00Z"
+tags: [file-tracking, mnemosyne, prisma, file-hash, hardware-id]
+see_also: ["adrs/0010-file-memory-tracking-prisma-sqlite.adr.md", "adrs/0020-no-tracker-api-changes.adr.md", "adrs/0023-filetracker-schema-extension.adr.md", "concepts/0005-processing-model.concept.md", "concepts/0013-file-hash-deduplication.concept.md", "memories/0006-change-handler-per-id-forget-memory.memory.md"]
 ---
 
 # Concept: File→Memory Tracking
@@ -45,3 +45,10 @@ Without tracking, memories persist indefinitely even after source files are dele
 - `forgetMemory(filePath, memoryId)` — removes single memory ID (aggregate `forget()`)
 - `forgetMemories(filePath, memoryIds[])` — removes multiple memory IDs (aggregate `forgetMany()`) — used by handleChange to preserve new entries
 - `deleteByFilePath(filePath)` — removes entire tracker row — used only by handleDelete
+- `updateFileTrackerHash(filePath, fileHash, hardwareId)` — updates fileHash/hardwareId on FileTracker parent record after upsert
+
+**Deduplication support (fileHash + hardwareId):**
+- `FileTracker.fileHash` — nullable String, SHA-256 hash of file content, indexed for hash lookups
+- `FileTracker.hardwareId` — nullable String, device ID from `native-machine-id`, indexed for audit
+- Populated by `IngestChunkUseCase` → `FileMemoryTrackerService.trackMemory()` → `repository.updateFileTrackerHash()`
+- Enables local dedup checks before calling Mnemosyne (see `concepts/0013-file-hash-deduplication.concept.md`)
