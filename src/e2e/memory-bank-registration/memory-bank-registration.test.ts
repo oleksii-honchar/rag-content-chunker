@@ -15,16 +15,16 @@ const BOOTSTRAP_WAIT_MS = 5000; // Time for FileWatcherService.registerBanks() t
 // an earlier suite).
 const UNIQUE_BANK = `e2e-reg-${Date.now()}`;
 
-describe('[E2E] Memory Bank Registration — RAG Content Chunker registers memory banks on bootstrap', () => {
+describe('[E2E] Memory Bank Registration — racochu registers memory banks on bootstrap', () => {
   let app: INestApplication | null = null;
   let mcpSessionId: string | null = null;
 
-  // Step 1: BEFORE RAG Content Chunker starts — verify the unique bank is absent
+  // Step 1: BEFORE Racochu starts — verify the unique bank is absent
   beforeAll(async () => {
     console.log('[E2E-MemoryBankRegistration] Initializing MCP session before app bootstrap...');
     mcpSessionId = await initializeMcpSession();
 
-    // List memory banks BEFORE RAG Content Chunker starts
+    // List memory banks BEFORE Racochu starts
     console.log('[E2E-MemoryBankRegistration] Listing memory banks BEFORE app bootstrap...');
     const banksBefore = await listBanks(mcpSessionId);
     console.log(`[E2E-MemoryBankRegistration] Memory banks before bootstrap: ${JSON.stringify(banksBefore)}`);
@@ -97,8 +97,8 @@ describe('[E2E] Memory Bank Registration — RAG Content Chunker registers memor
     await fs.writeFile(uniqueConfigPath, yaml.dump(uniqueConfig), 'utf-8');
     console.log(`[E2E-MemoryBankRegistration] Dedicated config written: ${uniqueConfigPath}`);
 
-    // Start RAG Content Chunker with the dedicated config (unique bank)
-    console.log('[E2E-MemoryBankRegistration] Starting RAG Content Chunker app...');
+    // Start Racochu with the dedicated config (unique bank)
+    console.log('[E2E-MemoryBankRegistration] Starting racochu app...');
     app = await createTestApplication({
       overrides: [{ provide: 'CONFIG_FILE_PATH', useValue: uniqueConfigPath }],
     });

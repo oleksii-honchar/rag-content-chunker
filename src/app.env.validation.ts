@@ -2,7 +2,7 @@ import { plainToInstance } from 'class-transformer';
 import { IsOptional, IsString, validateSync } from 'class-validator';
 
 /**
- * Environment variables schema for rag-content-chunker.
+ * Environment variables schema for Racochu.
  * Mirrors subscriptions-api pattern: class-transformer + class-validator with validateSync.
  *
  * Used by ConfigModule.forRoot({ validate }) at bootstrap to fail fast on invalid env.

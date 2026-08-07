@@ -1,9 +1,9 @@
 {
-  "name": "rag-content-chunker",
+  "name": "racochu",
   "version": "1.0.0",
   "description": "DDD-based NestJS CLI server for semantic content chunking before Mnemosyne MCP ingestion",
   "bin": {
-    "rag-content-chunker": "dist/main.js"
+    "racochu": "dist/main.js"
   },
   "engines": {
     "node": ">=26.0.0",

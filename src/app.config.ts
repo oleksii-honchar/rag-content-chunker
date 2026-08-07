@@ -16,7 +16,7 @@ export const AppConfig = registerAs('app', () => {
   const envFile = process.env.ENV_FILE;
 
   return {
-    appConfigPath: envAppConfigPath ?? path.join(os.homedir(), '.config', 'rag-content-chunker.yaml'),
+    appConfigPath: envAppConfigPath ?? path.join(os.homedir(), '.config', 'racochu.yaml'),
     logVerbose: envLogVerbose === 'true' || envLogVerbose === '1',
     envFile: envFile ?? '.env',
   };

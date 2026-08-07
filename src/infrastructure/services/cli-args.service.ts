@@ -19,13 +19,13 @@ export interface ParsedCliArgs {
 @Injectable()
 export class CliArgsService {
   private static readonly HELP_TEXT = `
-rag-content-chunker — RAG content chunker for semantic search
+racochu — semantic content chunker for search
 
 Usage:
-  npx rag-content-chunker [options]
+  npx racochu [options]
 
 Options:
-  -c, --config <path>       Path to configuration file (default: ~/.config/rag-content-chunker.yaml)
+  -c, --config <path>       Path to configuration file (default: ~/.config/racochu.yaml)
   -v, --verbose             Enable verbose logging
   --help, -h                Show this help message
   --version, -V             Show version information
@@ -44,8 +44,7 @@ Options:
     // CLI args take precedence; otherwise fall back to env-based bootstrap config default
     // Note: before NestJS bootstrap we still read env directly here; after bootstrap
     // configuration.module.ts uses AppConfig from ConfigService.
-    const defaultConfig =
-      process.env.APP_CONFIG_PATH ?? path.join(os.homedir(), '.config', 'rag-content-chunker.yaml');
+    const defaultConfig = process.env.APP_CONFIG_PATH ?? path.join(os.homedir(), '.config', 'racochu.yaml');
 
     const result: ParsedCliArgs = {
       config: defaultConfig,
@@ -108,6 +107,6 @@ Options:
   }
 
   showVersion(): void {
-    process.stdout.write(`rag-content-chunker v${CliArgsService.VERSION}\n`);
+    process.stdout.write(`racochu v${CliArgsService.VERSION}\n`);
   }
 }

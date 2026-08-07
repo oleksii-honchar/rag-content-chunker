@@ -173,7 +173,7 @@ export const telemetryConfigSchema = z
   .transform(data => ({
     enabled: data.enabled ?? true,
     endpoint: data.endpoint ?? 'clickstack-otel-collector:4317',
-    service: data.service ?? 'rag-content-chunker',
+    service: data.service ?? 'racochu',
     metrics: {
       chunking: data.metrics?.chunking ?? true,
       ingestion: data.metrics?.ingestion ?? true,
@@ -252,7 +252,7 @@ export const configurationSchema = z
     telemetry: {
       enabled: data.telemetry?.enabled ?? true,
       endpoint: data.telemetry?.endpoint ?? 'clickstack-otel-collector:4317',
-      service: data.telemetry?.service ?? 'rag-content-chunker',
+      service: data.telemetry?.service ?? 'racochu',
       metrics: {
         chunking: data.telemetry?.metrics?.chunking ?? true,
         ingestion: data.telemetry?.metrics?.ingestion ?? true,

@@ -17,8 +17,8 @@ export class AppBootstrapService implements OnApplicationBootstrap {
   }
 
   private async printConfigSummary(): Promise<void> {
-    const logDir = path.join(os.homedir(), '.local', 'share', 'rag-content-chunker', 'logs');
-    const logFile = path.join(logDir, 'rag-content-chunker.log');
+    const logDir = path.join(os.homedir(), '.local', 'share', 'racochu', 'logs');
+    const logFile = path.join(logDir, 'racochu.log');
 
     this.logger.info('📋 Configuration Summary:');
     this.logger.info(`  - Config file: ${this.configFilePath}`);

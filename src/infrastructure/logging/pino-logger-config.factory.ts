@@ -6,8 +6,8 @@ import * as path from 'path';
 
 import pkg from '../../../package.json';
 
-const LOG_DIR = path.join(os.homedir(), '.local', 'share', 'rag-content-chunker', 'logs');
-const LOG_FILE = path.join(LOG_DIR, 'rag-content-chunker.log');
+const LOG_DIR = path.join(os.homedir(), '.local', 'share', 'racochu', 'logs');
+const LOG_FILE = path.join(LOG_DIR, 'racochu.log');
 
 function ensureLogDir(): void {
   if (!fs.existsSync(LOG_DIR)) {
@@ -71,7 +71,7 @@ export function pinoLoggerConfigFactory(configService: ConfigService): Params {
   });
 
   // File transport: JSON, line-delimited, with rotation
-  // symlink=true creates rag-content-chunker.log → current active file
+  // symlink=true creates racochu.log → current active file
   transports.push({
     target: 'pino-roll',
     options: {
@@ -79,7 +79,7 @@ export function pinoLoggerConfigFactory(configService: ConfigService): Params {
       period: '1d',
       size: '10m',
       keep: 3,
-      symlink: 'rag-content-chunker.log',
+      symlink: 'racochu.log',
       sync: false,
       mkdir: true,
     },

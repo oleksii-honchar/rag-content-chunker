@@ -139,7 +139,7 @@ export class MnemosyneClient implements OnApplicationBootstrap {
         protocolVersion: '2024-11-05',
         capabilities: {},
         clientInfo: {
-          name: 'rag-content-chunker',
+          name: 'racochu',
           version: '1.0.0',
         },
       },

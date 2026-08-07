@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This is a sample markdown document for testing the RAG content chunker.
+This is a sample markdown document for testing racochu.
 It demonstrates various markdown structures that the chunker should handle.
 
 ## Features
@@ -23,7 +23,7 @@ The chunker supports multiple strategies:
 
 ## Configuration
 
-Configure the chunker via `~/.config/rag-content-chunker.yaml`.
+Configure the chunker via `~/.config/racochu.yaml`.
 
 Example configuration:
 
@@ -35,7 +35,7 @@ watchSources:
 
 ## Getting Started
 
-Run `npx rag-content-chunker` to start the service.
+Run `npx racochu` to start the service.
 
 The service will:
 - Watch configured directories for file changes

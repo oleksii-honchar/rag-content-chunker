@@ -1,5 +1,5 @@
 app:
-  name: rag-content-chunker
+  name: racochu
   version: 1.0.0
   environment: development
 
@@ -35,6 +35,6 @@ logging:
     - stdout
     - file
   file:
-    path: /var/log/rag-content-chunker/app.log
+    path: /var/log/racochu/app.log
     maxSize: 100MB
     maxFiles: 5

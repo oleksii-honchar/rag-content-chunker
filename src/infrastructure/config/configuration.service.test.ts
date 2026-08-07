@@ -24,7 +24,7 @@ describe('ConfigurationService', () => {
 
   beforeEach(async () => {
     testDir = fsSync.mkdtempSync(path.join(os.tmpdir(), 'rag-config-test-'));
-    configPath = path.join(testDir, 'rag-content-chunker.yaml');
+    configPath = path.join(testDir, 'racochu.yaml');
   });
 
   afterEach(async () => {
@@ -304,7 +304,7 @@ describe('ConfigurationService', () => {
   describe('initializeDefaultConfig()', () => {
     it('creates config directory if it does not exist', async () => {
       const newDir = path.join(testDir, 'new-config-dir');
-      const newConfigPath = path.join(newDir, 'rag-content-chunker.yaml');
+      const newConfigPath = path.join(newDir, 'racochu.yaml');
 
       const module = await createModule(newConfigPath);
       service = module.get(ConfigurationService);

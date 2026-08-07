@@ -88,7 +88,7 @@ export const DEFAULT_CONFIG: Configuration = {
   telemetry: {
     enabled: true,
     endpoint: 'clickstack-otel-collector:4317',
-    service: 'rag-content-chunker',
+    service: 'racochu',
     metrics: {
       chunking: true,
       ingestion: true,
@@ -189,10 +189,10 @@ export class ConfigurationService implements OnApplicationBootstrap {
         lineWidth: 120,
       });
 
-      const header = `# ~/.config/rag-content-chunker.yaml
+      const header = `# ~/.config/racochu.yaml
 # Default configuration file - copy and customize as needed
 #
-# Documentation: https://github.com/olho/rag-content-chunker
+# Documentation: https://github.com/oleksii-honchar/racochu
 
 `;
 

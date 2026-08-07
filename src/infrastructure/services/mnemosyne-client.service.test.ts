@@ -130,7 +130,7 @@ describe('MnemosyneClient (Streamable HTTP)', () => {
       const initBody = JSON.parse(calls[0].req.write.mock.calls[0][0]);
       expect(initBody.method).toBe('initialize');
       expect(initBody.params.protocolVersion).toBe('2024-11-05');
-      expect(initBody.params.clientInfo.name).toBe('rag-content-chunker');
+      expect(initBody.params.clientInfo.name).toBe('racochu');
 
       const notifBody = JSON.parse(calls[1].req.write.mock.calls[0][0]);
       expect(notifBody.method).toBe('notifications/initialized');

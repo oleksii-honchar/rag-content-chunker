@@ -366,7 +366,7 @@ describe('config-schemas', () => {
       const input = {
         enabled: true,
         endpoint: 'clickstack-otel-collector:4317',
-        service: 'rag-content-chunker',
+        service: 'racochu',
         metrics: {
           chunking: true,
           ingestion: true,
@@ -384,7 +384,7 @@ describe('config-schemas', () => {
       if (result.success) {
         expect(result.data.enabled).toBe(true);
         expect(result.data.endpoint).toBe('clickstack-otel-collector:4317');
-        expect(result.data.service).toBe('rag-content-chunker');
+        expect(result.data.service).toBe('racochu');
         expect(result.data.metrics?.chunking).toBe(true);
       }
     });
@@ -439,7 +439,7 @@ describe('config-schemas', () => {
         telemetry: {
           enabled: true,
           endpoint: 'clickstack-otel-collector:4317',
-          service: 'rag-content-chunker',
+          service: 'racochu',
           metrics: {
             chunking: true,
             ingestion: true,

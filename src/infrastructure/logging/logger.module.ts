@@ -31,7 +31,7 @@ export class LoggerModule {
             const environment = configService.get<string>('nodeEnv') ?? process.env.NODE_ENV ?? 'development';
             const base = {
               ...(pinoHttpConfig?.base ?? {}),
-              service: 'rag-content-chunker',
+              service: 'racochu',
               environment,
             };
 

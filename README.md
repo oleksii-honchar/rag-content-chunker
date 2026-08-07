@@ -1,8 +1,10 @@
-# RAG Content Chunker
+# racochu
 
 File watcher that detects changes, semantically chunks content using Mastra RAG, and ingests chunks into Mnemosyne MCP for retrieval-augmented generation.
 
 DDD-based NestJS CLI server. No Effect library — uses Result pattern for error handling.
+
+Racochu = RAg COntent CHUnker 
 
 ## Quick Start
 
@@ -26,7 +28,7 @@ DDD-based NestJS CLI server. No Effect library — uses Result pattern for error
 
 ### Production
 
-1. Create `~/.config/rag-content-chunker.yaml` (see [Configuration](#configuration))
+1. Create `~/.config/racochu.yaml` (see [Configuration](#configuration))
 2. Run:
    ```bash
    npm install
@@ -35,7 +37,7 @@ DDD-based NestJS CLI server. No Effect library — uses Result pattern for error
    ```
    Or via npx:
    ```bash
-   npx rag-content-chunker
+   npx racochu
    ```
 
 ## Architecture
@@ -70,7 +72,7 @@ ProcessFileUseCase
 
 ## Configuration
 
-**File:** `~/.config/rag-content-chunker.yaml` (production) or `dev.yaml` (development via `APP_CONFIG_PATH` env var)
+**File:** `~/.config/racochu.yaml` (production) or `dev.yaml` (development via `APP_CONFIG_PATH` env var)
 
 **Env override:** `APP_CONFIG_PATH=/path/to/config.yaml`
 
@@ -215,7 +217,7 @@ Role detection order: extension → path patterns → content heuristics.
 
 ## Logs
 
-**Location:** `~/.local/share/rag-content-chunker/logs/`
+**Location:** `~/.local/share/racochu/logs/`
 
 Logs are structured JSON via Pino, rolled by size (5MB). Symlink `current.log` always points to the active log file.
 
@@ -238,7 +240,7 @@ Stale database. Clean up: `rm -rf data/e2e/mnemosyne.db && npm run mnemosyne:sta
 
 **Files not being watched:**
 
-- Check `~/.config/rag-content-chunker.yaml` watchSources path is correct
+- Check `~/.config/racochu.yaml` watchSources path is correct
 - Ensure path uses absolute path or `~/` expansion (no relative paths in production config)
 - Verify exclude patterns don't accidentally match your files (e.g., `**/.git/**` doesn't match `.git/FETCH_HEAD` at root)
 

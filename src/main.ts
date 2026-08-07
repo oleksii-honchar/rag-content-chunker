@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * CLI entry point for rag-content-chunker.
+ * CLI entry point for Racochu.
  * NestJS CLI server — no HTTP controllers; file events drive the system.
  */
 
@@ -66,7 +66,7 @@ async function bootstrap(): Promise<void> {
       ? 'process-only'
       : 'watch';
   logger.info(
-    `rag-content-chunker starting: mode="${mode}", verbose=${args.verbose}, config="${args.config}"${args.source ? `, source="${args.source}"` : ''}`,
+    `racochu starting: mode="${mode}", verbose=${args.verbose}, config="${args.config}"${args.source ? `, source="${args.source}"` : ''}`,
   );
 
   const sources = configurationService.getWatchSources();
@@ -138,6 +138,6 @@ async function bootstrap(): Promise<void> {
 }
 
 bootstrap().catch((error: unknown) => {
-  console.error('Failed to start rag-content-chunker:', error);
+  console.error('Failed to start racochu:', error);
   process.exit(1);
 });

@@ -1,7 +1,7 @@
 /**
  * Base use case class with observability support.
  * Follows DDD rules for use case structure and error handling.
- * Simplified for rag-content-chunker — no DEFAULT_PROPERTIES_TO_LOG complexity.
+ * Simplified for Racochu — no DEFAULT_PROPERTIES_TO_LOG complexity.
  */
 
 import { Result } from './result';

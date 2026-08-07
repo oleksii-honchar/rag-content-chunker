@@ -17,7 +17,7 @@ describe('CliArgsService', () => {
       const result = service.parse([]);
 
       expect(result).toEqual<ParsedCliArgs>({
-        config: expect.stringContaining('rag-content-chunker.yaml'),
+        config: expect.stringContaining('racochu.yaml'),
         verbose: false,
         help: false,
         version: false,
@@ -138,7 +138,7 @@ describe('CliArgsService', () => {
 
       expect(writeSpy).toHaveBeenCalledTimes(1);
       const output = writeSpy.mock.calls[0][0] as string;
-      expect(output).toContain('rag-content-chunker');
+      expect(output).toContain('racochu');
       expect(output).toContain('--config');
       expect(output).toContain('--verbose');
       expect(output).toContain('--help');
@@ -157,7 +157,7 @@ describe('CliArgsService', () => {
 
       expect(writeSpy).toHaveBeenCalledTimes(1);
       const output = writeSpy.mock.calls[0][0] as string;
-      expect(output).toBe(`rag-content-chunker v${packageJson.version}\n`);
+      expect(output).toBe(`racochu v${packageJson.version}\n`);
       writeSpy.mockRestore();
     });
   });
