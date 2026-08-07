@@ -44,7 +44,7 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
     "config": "5.0.0",
-    "js-yaml": "^5.2.3",
+    "js-yaml": "5.2.3",
     "native-machine-id": "^0.3.11",
     "nestjs-pino": "4.6.1",
     "pino": "10.3.1",
@@ -78,7 +78,7 @@
     "ts-node": "10.9.2",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.66.0"
+    "typescript-eslint": "8.66.0"
   },
   "overrides": {
     "@ai-sdk/ui-utils-v5": {
