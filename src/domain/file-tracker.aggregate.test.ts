@@ -1,15 +1,6 @@
 import { FILE_EVENTS, FileAddedEvent, FileChangedEvent, FileDeletedEvent } from './events/file-events';
 import { FILE_TRACKER_STATUS, FileTracker, FileTrackerProps } from './file-tracker.aggregate';
-
-function aFileTracker(overrides?: Partial<FileTrackerProps>): FileTrackerProps {
-  return {
-    filePath: '/test/file.txt',
-    status: undefined,
-    fileHash: undefined,
-    hardwareId: undefined,
-    ...overrides,
-  };
-}
+import { aFileTracker } from './file-tracker.aggregate.test-utils';
 
 describe('FileTracker', () => {
   describe('instance add', () => {
