@@ -5,19 +5,33 @@ import { WatchSourceConfig } from '../../infrastructure/config/config-schemas';
 import { BasePinoLogger } from '../../infrastructure/logging/base-pino-logger';
 import { generateId } from '../../utils/big-endian-id';
 import { Result } from '../../utils/result';
-import { splitFrontmatter } from '../../utils/strategy-utils';
+import { extractWikilinks, splitFrontmatter } from '../../utils/strategy-utils';
 import { BaseChunkingStrategy } from './base-chunking-strategy';
 import { MastraChunkingService } from './mastra-chunking.service';
 
+/** Typed frontmatter keys that map to explicit NoteMetadata fields. */
+const TYPED_KEYS = new Set(['aliases', 'tags', 'created', 'modified', 'source', 'status', 'type', 'base']);
+
 /**
  * Parses YAML frontmatter string into NoteMetadata.
- * All fields default to empty string / empty array on parse failure or missing values.
+ * Typed keys (aliases, tags, created, modified, source, status, type, base)
+ * go to their explicit fields. All remaining keys are collected into
+ * `properties` with lowercased keys and stringified values.
  */
 export function extractNoteMetadata(frontmatter: string): NoteMetadata {
   try {
     const parsed = yaml.load(frontmatter) as Record<string, unknown> | null;
     if (!parsed || typeof parsed !== 'object') {
       return emptyNoteMetadata();
+    }
+
+    const properties: Record<string, string> = {};
+
+    for (const [key, value] of Object.entries(parsed)) {
+      const lowerKey = key.toLowerCase();
+      if (TYPED_KEYS.has(lowerKey)) continue;
+
+      properties[lowerKey] = typeof value === 'string' ? value : JSON.stringify(value);
     }
 
     return {
@@ -28,6 +42,8 @@ export function extractNoteMetadata(frontmatter: string): NoteMetadata {
       source: typeof parsed.source === 'string' ? parsed.source : '',
       status: typeof parsed.status === 'string' ? parsed.status : '',
       type: typeof parsed.type === 'string' ? parsed.type : '',
+      base: typeof parsed.base === 'string' ? parsed.base : '',
+      properties,
     };
   } catch {
     return emptyNoteMetadata();
@@ -53,11 +69,13 @@ function emptyNoteMetadata(): NoteMetadata {
     source: '',
     status: '',
     type: '',
+    base: '',
+    properties: {},
   };
 }
 
 function formatNoteMetadata(metadata: NoteMetadata): Record<string, string> {
-  return {
+  const result: Record<string, string> = {
     'note.aliases': JSON.stringify(metadata.aliases),
     'note.tags': JSON.stringify(metadata.tags),
     'note.created': metadata.created,
@@ -65,7 +83,14 @@ function formatNoteMetadata(metadata: NoteMetadata): Record<string, string> {
     'note.source': metadata.source,
     'note.status': metadata.status,
     'note.type': metadata.type,
+    'note.base': metadata.base,
   };
+
+  for (const [key, value] of Object.entries(metadata.properties)) {
+    result[`note.properties.${key}`] = value;
+  }
+
+  return result;
 }
 
 /**
@@ -91,27 +116,34 @@ export class ObsidianChunkingStrategy implements BaseChunkingStrategy {
     // 1. Split frontmatter from body
     const { frontmatter, body } = splitFrontmatter(content);
 
-    // 2. Extract note metadata if frontmatter exists
+    // 2. Extract wikilinks from body (body-derived, independent of frontmatter)
+    const wikilinks = extractWikilinks(body);
+
+    // 3. Extract note metadata if frontmatter exists
     const noteMetadata = frontmatter ? extractNoteMetadata(frontmatter) : null;
 
-    // 3. Create frontmatter chunk if present
+    // 4. Create frontmatter chunk if present
     const chunks: ContentChunk[] = [];
     if (frontmatter !== null) {
       // noteMetadata is non-null here because frontmatter exists
       chunks.push(this.createFrontmatterChunk(frontmatter, filePath, sourceId, noteMetadata!));
     }
 
-    // 4. Chunk body with Mastra
+    // 5. Chunk body with Mastra
     const bodyChunksResult = await this.mastraChunkingService.chunkFile(body, filePath, sourceId);
     const bodyChunks = bodyChunksResult.isOk() ? bodyChunksResult.getValue() : [];
 
-    // 5. Enrich all chunks with note metadata and merge tags
+    // 6. Enrich all chunks with note metadata and merge tags
     const allChunks = [...chunks, ...bodyChunks];
     const enriched = noteMetadata
       ? allChunks.map(chunk => this.enrichWithNoteMetadata(chunk, noteMetadata))
       : allChunks;
 
-    return Result.ok(enriched);
+    // 7. Attach wikilinks to all chunks (only when non-empty)
+    const withWikilinks =
+      wikilinks.length > 0 ? enriched.map(chunk => this.attachWikilinks(chunk, wikilinks)) : enriched;
+
+    return Result.ok(withWikilinks);
   }
 
   private createFrontmatterChunk(
@@ -155,6 +187,19 @@ export class ObsidianChunkingStrategy implements BaseChunkingStrategy {
       ...chunk.toJson(),
       metadata: enrichedMeta,
       tags: mergedTags,
+    }).getValue();
+  }
+
+  private attachWikilinks(chunk: ContentChunk, wikilinks: string[]): ContentChunk {
+    const existingMeta = chunk.metadata ?? {};
+    const withWikilinks = {
+      ...existingMeta,
+      'note.wikilinks': JSON.stringify(wikilinks),
+    };
+
+    return ContentChunk.of({
+      ...chunk.toJson(),
+      metadata: withWikilinks,
     }).getValue();
   }
 }

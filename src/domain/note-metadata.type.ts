@@ -10,4 +10,8 @@ export interface NoteMetadata {
   source: string; // Note source
   status: string; // Note status
   type: string; // Note type
+  /** Raw frontmatter `base:` value */
+  base: string;
+  /** All remaining frontmatter keys, lowercased, stringified */
+  properties: Record<string, string>;
 }

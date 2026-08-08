@@ -6,14 +6,26 @@
 # Drop files into ./watch-folder-dev to trigger chunking.
 
 watchSources:
-  - id: dev-watch
-    path: ./watch-folder-dev
+  - id: tmp-general
+    path: ./tmp/general
+    strategy: content-aware
     exclude:
-      - '.git/**'
-      - '**/.git/**'
-      - 'node_modules/**'
-      - '**/node_modules/**'
-      - '**/.DS_Store'
+      - '**/Thumbs.db'
+      - '**/.env*'
+    debounceMs: 1000
+
+  - id: tmp-obsidian
+    path: ./tmp/obsidian
+    strategy: obsidian
+    exclude:
+      - '**/Thumbs.db'
+      - '**/.env*'
+    debounceMs: 1000
+
+  - id: tmp-agent-sessions
+    path: ./tmp/agent-sessions
+    strategy: agent-sessions
+    exclude:
       - '**/Thumbs.db'
       - '**/.env*'
     debounceMs: 1000
