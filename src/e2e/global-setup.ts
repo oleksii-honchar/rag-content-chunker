@@ -18,6 +18,11 @@ module.exports = async (): Promise<void> => {
   await fs.mkdir(watchDir, { recursive: true });
   console.log(`[E2E-GlobalSetup] Watch directory created: ${watchDir}`);
 
+  // Create obsidian watch directory for obsidian-chunking E2E test.
+  const obsidianWatchDir = path.join(e2eRoot, 'obsidian');
+  await fs.mkdir(obsidianWatchDir, { recursive: true });
+  console.log(`[E2E-GlobalSetup] Obsidian watch directory created: ${obsidianWatchDir}`);
+
   // Create a fresh Mnemosyne data dir per run inside the temp root.
   // The docker-compose volume binds to this dir (${E2E_DATA_DIR}), so every e2e
   // run starts with a clean mnemosyne.db + banks/ — no cross-run state pollution.
@@ -47,6 +52,15 @@ module.exports = async (): Promise<void> => {
         debounceMs: 500,
         memoryBank: 'e2e-test-ns',
         description: 'E2E test memory bank for memory bank registration verification',
+      },
+      {
+        id: 'e2e-obsidian-source',
+        path: obsidianWatchDir,
+        strategy: SOURCE_STRATEGIES.OBSIDIAN,
+        exclude: [],
+        debounceMs: 1000,
+        memoryBank: 'tmp-obsidian',
+        description: 'E2E obsidian watch source for obsidian-chunking strategy verification',
       },
     ],
     chunking: {
@@ -81,6 +95,7 @@ module.exports = async (): Promise<void> => {
   process.env.APP_CONFIG_PATH = dynamicConfigPath;
   process.env.E2E_TEMP_ROOT = e2eRoot;
   process.env.E2E_WATCH_DIR = watchDir;
+  process.env.E2E_OBSIDIAN_WATCH_DIR = obsidianWatchDir;
   process.env.E2E_DATA_DIR = e2eDataDir;
   process.env.NODE_ENV = 'test';
 

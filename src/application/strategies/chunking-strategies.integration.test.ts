@@ -451,7 +451,12 @@ describe('StrategyRouter with real content', () => {
       chunkFile: jest.fn().mockResolvedValue(okResult([createBodyChunk('content-aware body')])),
     } as unknown as jest.Mocked<MastraChunkingService>;
 
-    router = new StrategyRouter(mockAgentSessionStrategy, mockObsidianStrategy, mockMastraStrategy);
+    router = new StrategyRouter(
+      mockAgentSessionStrategy,
+      mockObsidianStrategy,
+      mockMastraStrategy,
+      createMockLogger(),
+    );
   });
 
   it('routes obsidian strategy for Obsidian notes', async () => {

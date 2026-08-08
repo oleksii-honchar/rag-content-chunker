@@ -296,6 +296,40 @@ describe('ChunkContentUseCase', () => {
     });
   });
 
+  describe('strategy guard', () => {
+    it('should return StrategySelectionError when strategyRouter returns undefined', async () => {
+      mockStrategyRouter.selectStrategy.mockReturnValue(undefined);
+
+      const result = await useCase.execute({
+        content: 'Test content',
+        filePath: '/path/to/file.ts',
+        sourceId: 'test-source',
+        memoryBank: 'test-memoryBank',
+        sourceConfig: defaultSourceConfig,
+      });
+
+      expect(result.isKo()).toBe(true);
+      expect(result.getErrors()[0].message).toBe('No chunking strategy selected for sourceId="test-source"');
+      expect((result.getErrors()[0] as any).code).toBe('StrategySelectionError');
+      expect(mockStrategy.chunkFile).not.toHaveBeenCalled();
+    });
+
+    it('should return StrategySelectionError when no sourceConfig and router returns undefined', async () => {
+      mockStrategyRouter.selectStrategy.mockReturnValue(undefined);
+
+      const result = await useCase.execute({
+        content: 'Test content',
+        filePath: '/path/to/file.ts',
+        sourceId: 'test-source',
+        memoryBank: 'test-memoryBank',
+      });
+
+      expect(result.isKo()).toBe(true);
+      expect(result.getErrors()[0].message).toBe('No chunking strategy selected for sourceId="test-source"');
+      expect((result.getErrors()[0] as any).code).toBe('StrategySelectionError');
+    });
+  });
+
   describe('error handling', () => {
     it('should return error when chunking fails', async () => {
       const content = 'Test content';

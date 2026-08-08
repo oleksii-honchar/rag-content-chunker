@@ -1,3 +1,4 @@
+import { Injectable } from '@nestjs/common';
 import * as yaml from 'js-yaml';
 import { ContentChunk, FILE_ROLES } from '../../domain/content-chunk.entity';
 import { NoteMetadata } from '../../domain/note-metadata.type';
@@ -101,6 +102,7 @@ function formatNoteMetadata(metadata: NoteMetadata): Record<string, string> {
  * 4. Chunks body via MastraChunkingService
  * 5. Enriches all chunks with note metadata and merges note tags into chunk tags
  */
+@Injectable()
 export class ObsidianChunkingStrategy implements BaseChunkingStrategy {
   constructor(
     private readonly mastraChunkingService: MastraChunkingService,

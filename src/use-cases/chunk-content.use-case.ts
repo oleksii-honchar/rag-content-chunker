@@ -69,6 +69,19 @@ export class ChunkContentUseCase extends BaseUseCase<ChunkContentParams, Content
           strategy: SOURCE_STRATEGIES.CONTENT_AWARE,
         });
 
+    // Guard: strategy must not be undefined
+    if (!strategy) {
+      this.logger.error(
+        `No chunking strategy selected for sourceId="${params.sourceId}", sourceConfig.strategy="${params.sourceConfig?.strategy}"`,
+      );
+      return Result.ko([
+        new ErrorWithDetails(
+          `No chunking strategy selected for sourceId="${params.sourceId}"`,
+          'StrategySelectionError',
+        ),
+      ]);
+    }
+
     const effectiveSourceConfig = params.sourceConfig ?? {
       id: params.sourceId,
       path: params.filePath,
