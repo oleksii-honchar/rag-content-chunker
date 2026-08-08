@@ -45,11 +45,14 @@ Execute Racochu Agentic Testing runbooks end-to-end in the chat session. This sk
 3. Read the requested runbook (or all if not specified)
 
 **Watch folder convention:**
-- Base tmp directory: `tmp/`
+- **Base tmp directory is relative to racochu repo root**, NOT to the skill location or agent-runbooks directory
+- Absolute path: `/Users/oleksii.honchar/www/olho/racochu/tmp/` (or `$RACOCHU_ROOT/tmp/`)
 - Per-source subdirectories:
   - `tmp/general/` — General markdown files (content-aware strategy)
   - `tmp/obsidian/` — Obsidian notes with frontmatter + wikilinks
   - `tmp/agent-sessions/` — Agent session markdown files
+
+**Critical path rule:** Always resolve `tmp/` from racochu repo root. If you're in `src/e2e/agent-runbooks/`, you must `cd` to repo root first, then use `tmp/`.
 
 ---
 
