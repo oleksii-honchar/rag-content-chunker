@@ -2,7 +2,7 @@
 type: index
 title: "Architecture Decision Records"
 createdAt: "2026-07-31T07:30:00Z"
-updatedAt: "2026-08-08T10:50:00Z"
+updatedAt: "2026-08-08T13:55:00Z"
 tags: []
 ---
 
@@ -60,3 +60,9 @@ Curated list of architectural decisions for RAG Content Chunker.
 
 - [[0024-custom-llm-provider-mastra-llm-parameter]] — Custom LLM via Mastra's llm parameter with @ai-sdk/openai (supersedes custom LiteLLM gateway)
 - [[0025-non-fatal-enrichment-graceful-degradation]] — Enrichment failures are non-fatal: chunks proceed without metadata, logged for awareness
+
+### Obsidian Frontmatter + Wikilinks
+
+- [[0026-generic-frontmatter-preservation]] — Generic frontmatter preservation with typed base field and properties map
+- [[0027-wikilink-extraction-graph-structure]] — Wikilink extraction for graph structure via pure regex utility
+- [[0028-document-level-graph-metadata]] — Document-level metadata (base, properties, wikilinks) attached to all chunks

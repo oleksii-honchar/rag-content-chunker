@@ -2,7 +2,7 @@
 type: index
 title: "Atomic Memories"
 createdAt: "2026-07-31T07:30:00Z"
-updatedAt: "2026-08-08T10:50:00Z"
+updatedAt: "2026-08-08T13:55:00Z"
 tags: []
 ---
 
@@ -33,3 +33,7 @@ Durable facts, gotchas, and operational learnings for RAG Content Chunker.
 
 - [[0009-mastra-extract-metadata-basellm-hardcoded]] — Mastra's extractMetadata() hardcodes OpenAI as baseLLM; custom LLM required via llm parameter
 - [[0010-custom-gateway-superseded-by-mastra-llm]] — Custom LiteLLMHttpClient + EnrichmentGatewayService replaced by Mastra's llm parameter approach
+
+### Obsidian
+
+- [[0011-typed-keys-casing-typed-key-leakage]] — TYPED_KEYS casing fix — capitalized keys leak into properties
