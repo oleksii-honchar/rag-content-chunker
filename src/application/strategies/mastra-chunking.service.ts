@@ -1,3 +1,4 @@
+import { LlmClientFactory } from '@/application/services/llm-client-factory';
 import { ContentChunk, FILE_ROLES, FileRole } from '@/domain/content-chunk.entity';
 import { ConfigurationService } from '@/infrastructure/config/configuration.service';
 import { BasePinoLogger } from '@/infrastructure/logging/base-pino-logger';
@@ -50,35 +51,27 @@ export class MastraChunkingService {
       // Apply chunking strategy with size config from enhancement.maxCharacters
       await this.applyChunking(document, strategy, fileRole);
 
-      // Extract metadata (only if enrichment is enabled and LLM is configured)
+      // Document-level enrichment via custom LLM
       let enrichedDoc = document;
       const enrichmentConfig = this.configService.getEnrichmentConfig();
-      
-      // DEBUG: Log enrichment configuration
-      this.logger.info(`[ENRICHMENT DEBUG] Config: enabled=${enrichmentConfig.enabled}, hasApiKey=${!!enrichmentConfig.apiKey}, hasLlmUrl=${!!enrichmentConfig.llmUrl}`);
-      
-      if (enrichmentConfig.enabled && (enrichmentConfig.apiKey || enrichmentConfig.llmUrl)) {
-        // DEBUG: Log guard condition evaluation
-        this.logger.info(`[ENRICHMENT DEBUG] Guard condition passed - attempting metadata extraction for: ${filePath}`);
-        
+
+      if (enrichmentConfig.enabled && enrichmentConfig.llmUrl && enrichmentConfig.apiKey) {
         try {
-          // DEBUG: Log before extractMetadata call
-          this.logger.info(`[ENRICHMENT DEBUG] Calling extractMetadata...`);
-          enrichedDoc = await document.extractMetadata({
-            title: true,
-            keywords: true,
+          const customLLM = LlmClientFactory.createCustomLlm(
+            enrichmentConfig as Parameters<typeof LlmClientFactory.createCustomLlm>[0],
+          );
+          if (customLLM) {
+            enrichedDoc = await document.extractMetadata({
+              title: { llm: customLLM },
+              keywords: { llm: customLLM },
+            });
+          }
+        } catch (error) {
+          // Non-fatal — log warning, continue without enrichment
+          this.logger.warn(`Enrichment failed — continuing without metadata; filePath=${filePath}`, {
+            error: error instanceof Error ? error.message : String(error),
           });
-          // DEBUG: Log after extractMetadata call
-          this.logger.info(`[ENRICHMENT DEBUG] extractMetadata completed successfully`);
-        } catch (metadataError) {
-          // DEBUG: Log error with full details
-          this.logger.error(`[ENRICHMENT DEBUG] Metadata extraction failed: ${metadataError instanceof Error ? metadataError.message : String(metadataError)}`);
-          this.logger.error(`[ENRICHMENT DEBUG] Full error: ${JSON.stringify(metadataError)}`);
-          // Graceful degradation: continue without LLM-enhanced metadata
         }
-      } else {
-        // DEBUG: Log why guard condition failed
-        this.logger.info(`[ENRICHMENT DEBUG] Guard condition FAILED - enrichment disabled=${!enrichmentConfig.enabled}, noApiKey=${!enrichmentConfig.apiKey}, noLlmUrl=${!enrichmentConfig.llmUrl}`);
       }
 
       // Get chunks from MDocument using getDocs()

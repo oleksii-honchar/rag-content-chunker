@@ -2,7 +2,7 @@
 type: index
 title: "Domain Concepts"
 createdAt: "2026-07-31T07:30:00Z"
-updatedAt: "2026-08-07T19:01:00Z"
+updatedAt: "2026-08-08T10:50:00Z"
 tags: []
 ---
 
@@ -22,6 +22,7 @@ Core domain terminology and mental models for RAG Content Chunker.
 
 - [[0003-enhancement-pipeline]] — Post-chunking enhancement stages (importance, tags, namespace)
 - [[0006-mastra-chunking-strategies]] — Mastra RAG strategy selection per file type
+- [[0014-llm-enrichment]] — LLM enrichment via Mastra extractMetadata() with custom LLM provider
 
 ### Mnemosyne Integration
 

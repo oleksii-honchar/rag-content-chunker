@@ -1,5 +1,6 @@
 import '@/utils/mastra-rag.test-utils';
 
+import { LlmClientFactory } from '../../application/services/llm-client-factory';
 import { FILE_ROLES } from '../../domain/content-chunk.entity';
 import { ConfigurationService } from '../../infrastructure/config/configuration.service';
 import { BasePinoLogger } from '../../infrastructure/logging/base-pino-logger';
@@ -8,6 +9,9 @@ import { MDocument } from '@mastra/rag';
 import { MastraChunkingService } from './mastra-chunking.service';
 
 const mockedMDocument = MDocument as jest.Mocked<typeof MDocument>;
+
+const mockCustomLlm = {} as never;
+const mockedLlmClientFactory = LlmClientFactory as jest.Mocked<typeof LlmClientFactory>;
 
 const createMockConfigService = (overrides?: {
   maxCharacters?: Record<string, number>;
@@ -28,8 +32,9 @@ const createMockConfigService = (overrides?: {
     getEnrichmentConfig: jest.fn().mockReturnValue({
       enabled: overrides?.enrichmentEnabled ?? true,
       apiKey: overrides?.enrichmentApiKey !== undefined ? overrides.enrichmentApiKey : 'test-key',
-      llmUrl: overrides?.enrichmentLlmUrl ?? undefined,
-      llmModel: undefined,
+      llmUrl:
+        overrides?.enrichmentLlmUrl !== undefined ? overrides.enrichmentLlmUrl : 'https://lite-llm.lan/v1',
+      llmModel: 'puma-qwopus3.5-9b',
       maxConcurrency: 1,
       timeoutMs: 15000,
       docMaxTokens: 16000,
@@ -54,9 +59,14 @@ describe('MastraChunkingService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.spyOn(LlmClientFactory, 'createCustomLlm').mockReturnValue(mockCustomLlm);
     configService = createMockConfigService();
     mockLogger = createMockLogger();
     service = new MastraChunkingService(configService, mockLogger);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   describe('determineStrategy', () => {
@@ -480,7 +490,14 @@ describe('MastraChunkingService', () => {
       expect(mockDoc.chunkSentence).toHaveBeenCalled();
     });
 
-    it('should call extractMetadata with title and keywords', async () => {
+    it('should call extractMetadata with custom LLM for title and keywords when enrichment is enabled', async () => {
+      configService = createMockConfigService({
+        enrichmentEnabled: true,
+        enrichmentApiKey: 'test-key',
+        enrichmentLlmUrl: 'https://lite-llm.lan/v1',
+      });
+      service = new MastraChunkingService(configService, mockLogger);
+
       const mockDoc = {
         extractMetadata: jest.fn().mockResolvedValue({
           getDocs: jest.fn().mockReturnValue([{ text: 'content', metadata: {} }]),
@@ -492,8 +509,8 @@ describe('MastraChunkingService', () => {
       await service.chunkFile('# Title', 'README.md', 'test-source');
 
       expect(mockDoc.extractMetadata).toHaveBeenCalledWith({
-        title: true,
-        keywords: true,
+        title: { llm: mockCustomLlm },
+        keywords: { llm: mockCustomLlm },
       });
     });
 
@@ -627,6 +644,13 @@ describe('MastraChunkingService', () => {
     });
 
     it('should gracefully continue when extractMetadata throws', async () => {
+      configService = createMockConfigService({
+        enrichmentEnabled: true,
+        enrichmentApiKey: 'test-key',
+        enrichmentLlmUrl: 'https://lite-llm.lan/v1',
+      });
+      service = new MastraChunkingService(configService, mockLogger);
+
       const mockDoc = {
         extractMetadata: jest.fn(() => {
           throw new Error('Metadata extraction failed');
@@ -682,8 +706,53 @@ describe('MastraChunkingService', () => {
     });
   });
 
-  describe('enrichment guard', () => {
-    it('should NOT call extractMetadata when enrichment is disabled', async () => {
+  describe('enrichment with custom LLM', () => {
+    it('should call LlmClientFactory.createCustomLlm when enrichment is enabled with llmUrl and apiKey', async () => {
+      configService = createMockConfigService({
+        enrichmentEnabled: true,
+        enrichmentApiKey: 'test-key',
+        enrichmentLlmUrl: 'https://lite-llm.lan/v1',
+      });
+      service = new MastraChunkingService(configService, mockLogger);
+
+      const mockDoc = {
+        extractMetadata: jest.fn().mockResolvedValue({
+          getDocs: jest.fn().mockReturnValue([{ text: 'content', metadata: {} }]),
+        }),
+        chunkMarkdown: jest.fn(),
+      };
+      mockedMDocument.fromMarkdown.mockReturnValue(mockDoc as never);
+
+      await service.chunkFile('# Title', 'README.md', 'test-source');
+
+      expect(LlmClientFactory.createCustomLlm).toHaveBeenCalled();
+    });
+
+    it('should pass custom LLM to extractMetadata for title and keywords', async () => {
+      configService = createMockConfigService({
+        enrichmentEnabled: true,
+        enrichmentApiKey: 'test-key',
+        enrichmentLlmUrl: 'https://lite-llm.lan/v1',
+      });
+      service = new MastraChunkingService(configService, mockLogger);
+
+      const mockDoc = {
+        extractMetadata: jest.fn().mockResolvedValue({
+          getDocs: jest.fn().mockReturnValue([{ text: 'content', metadata: {} }]),
+        }),
+        chunkMarkdown: jest.fn(),
+      };
+      mockedMDocument.fromMarkdown.mockReturnValue(mockDoc as never);
+
+      await service.chunkFile('# Title', 'README.md', 'test-source');
+
+      expect(mockDoc.extractMetadata).toHaveBeenCalledWith({
+        title: { llm: mockCustomLlm },
+        keywords: { llm: mockCustomLlm },
+      });
+    });
+
+    it('should NOT call LlmClientFactory when enrichment is disabled', async () => {
       configService = createMockConfigService({ enrichmentEnabled: false });
       service = new MastraChunkingService(configService, mockLogger);
 
@@ -697,10 +766,55 @@ describe('MastraChunkingService', () => {
 
       await service.chunkFile('# Title', 'README.md', 'test-source');
 
+      expect(LlmClientFactory.createCustomLlm).not.toHaveBeenCalled();
       expect(mockDoc.extractMetadata).not.toHaveBeenCalled();
     });
 
-    it('should NOT call extractMetadata when enrichment enabled but no apiKey and no llmUrl', async () => {
+    it('should NOT call LlmClientFactory when llmUrl is missing', async () => {
+      configService = createMockConfigService({
+        enrichmentEnabled: true,
+        enrichmentApiKey: 'test-key',
+        enrichmentLlmUrl: null,
+      });
+      service = new MastraChunkingService(configService, mockLogger);
+
+      const mockDoc = {
+        extractMetadata: jest.fn().mockResolvedValue({
+          getDocs: jest.fn().mockReturnValue([{ text: 'content', metadata: {} }]),
+        }),
+        chunkMarkdown: jest.fn(),
+      };
+      mockedMDocument.fromMarkdown.mockReturnValue(mockDoc as never);
+
+      await service.chunkFile('# Title', 'README.md', 'test-source');
+
+      expect(LlmClientFactory.createCustomLlm).not.toHaveBeenCalled();
+      expect(mockDoc.extractMetadata).not.toHaveBeenCalled();
+    });
+
+    it('should NOT call LlmClientFactory when apiKey is missing', async () => {
+      configService = createMockConfigService({
+        enrichmentEnabled: true,
+        enrichmentApiKey: null,
+        enrichmentLlmUrl: 'https://lite-llm.lan/v1',
+      });
+      service = new MastraChunkingService(configService, mockLogger);
+
+      const mockDoc = {
+        extractMetadata: jest.fn().mockResolvedValue({
+          getDocs: jest.fn().mockReturnValue([{ text: 'content', metadata: {} }]),
+        }),
+        chunkMarkdown: jest.fn(),
+      };
+      mockedMDocument.fromMarkdown.mockReturnValue(mockDoc as never);
+
+      await service.chunkFile('# Title', 'README.md', 'test-source');
+
+      expect(LlmClientFactory.createCustomLlm).not.toHaveBeenCalled();
+      expect(mockDoc.extractMetadata).not.toHaveBeenCalled();
+    });
+
+    it('should NOT call LlmClientFactory when both apiKey and llmUrl are missing', async () => {
       configService = createMockConfigService({
         enrichmentEnabled: true,
         enrichmentApiKey: null,
@@ -718,51 +832,16 @@ describe('MastraChunkingService', () => {
 
       await service.chunkFile('# Title', 'README.md', 'test-source');
 
+      expect(LlmClientFactory.createCustomLlm).not.toHaveBeenCalled();
       expect(mockDoc.extractMetadata).not.toHaveBeenCalled();
     });
 
-    it('should call extractMetadata when enrichment enabled with apiKey', async () => {
+    it('should catch extractMetadata error and log warning without throwing', async () => {
       configService = createMockConfigService({
         enrichmentEnabled: true,
         enrichmentApiKey: 'test-key',
+        enrichmentLlmUrl: 'https://lite-llm.lan/v1',
       });
-      service = new MastraChunkingService(configService, mockLogger);
-
-      const mockDoc = {
-        extractMetadata: jest.fn().mockResolvedValue({
-          getDocs: jest.fn().mockReturnValue([{ text: 'content', metadata: {} }]),
-        }),
-        chunkMarkdown: jest.fn(),
-      };
-      mockedMDocument.fromMarkdown.mockReturnValue(mockDoc as never);
-
-      await service.chunkFile('# Title', 'README.md', 'test-source');
-
-      expect(mockDoc.extractMetadata).toHaveBeenCalledWith({ title: true, keywords: true });
-    });
-
-    it('should call extractMetadata when enrichment enabled with llmUrl', async () => {
-      configService = createMockConfigService({
-        enrichmentEnabled: true,
-        enrichmentLlmUrl: 'https://example.com/v1',
-      });
-      service = new MastraChunkingService(configService, mockLogger);
-
-      const mockDoc = {
-        extractMetadata: jest.fn().mockResolvedValue({
-          getDocs: jest.fn().mockReturnValue([{ text: 'content', metadata: {} }]),
-        }),
-        chunkMarkdown: jest.fn(),
-      };
-      mockedMDocument.fromMarkdown.mockReturnValue(mockDoc as never);
-
-      await service.chunkFile('# Title', 'README.md', 'test-source');
-
-      expect(mockDoc.extractMetadata).toHaveBeenCalledWith({ title: true, keywords: true });
-    });
-
-    it('should continue without enrichment if extractMetadata throws', async () => {
-      configService = createMockConfigService({ enrichmentEnabled: true, enrichmentApiKey: 'key' });
       service = new MastraChunkingService(configService, mockLogger);
 
       const mockDoc = {
@@ -776,6 +855,58 @@ describe('MastraChunkingService', () => {
 
       expect(result.isOk()).toBe(true);
       expect(result.getValue()).toHaveLength(1);
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Enrichment failed'),
+        expect.objectContaining({ error: 'LLM unavailable' }),
+      );
+    });
+
+    it('should skip extractMetadata when LlmClientFactory returns null', async () => {
+      jest.spyOn(LlmClientFactory, 'createCustomLlm').mockReturnValue(null);
+      configService = createMockConfigService({
+        enrichmentEnabled: true,
+        enrichmentApiKey: 'test-key',
+        enrichmentLlmUrl: 'https://lite-llm.lan/v1',
+      });
+      service = new MastraChunkingService(configService, mockLogger);
+
+      const mockDoc = {
+        extractMetadata: jest.fn().mockResolvedValue({
+          getDocs: jest.fn().mockReturnValue([{ text: 'content', metadata: {} }]),
+        }),
+        chunkMarkdown: jest.fn(),
+      };
+      mockedMDocument.fromMarkdown.mockReturnValue(mockDoc as never);
+
+      await service.chunkFile('# Title', 'README.md', 'test-source');
+
+      expect(LlmClientFactory.createCustomLlm).toHaveBeenCalled();
+      expect(mockDoc.extractMetadata).not.toHaveBeenCalled();
+    });
+
+    it('should attach document-level metadata from enrichedDoc._metadata to chunks', async () => {
+      configService = createMockConfigService({
+        enrichmentEnabled: true,
+        enrichmentApiKey: 'test-key',
+        enrichmentLlmUrl: 'https://lite-llm.lan/v1',
+      });
+      service = new MastraChunkingService(configService, mockLogger);
+
+      const enrichedDoc = {
+        extractMetadata: jest.fn().mockResolvedValue({
+          getDocs: jest.fn().mockReturnValue([{ text: 'content', metadata: {} }]),
+          _metadata: { title: 'Enriched Title', keywords: 'enriched,keywords' },
+        }),
+        chunkMarkdown: jest.fn(),
+      };
+      mockedMDocument.fromMarkdown.mockReturnValue(enrichedDoc as never);
+
+      const result = await service.chunkFile('# Title', 'README.md', 'test-source');
+
+      expect(result.isOk()).toBe(true);
+      const chunk = result.getValue()[0];
+      expect(chunk.metadata?.mastraDocTitle).toBe('Enriched Title');
+      expect(chunk.metadata?.mastraDocKeywords).toBe('enriched,keywords');
     });
   });
 });

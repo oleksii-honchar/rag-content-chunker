@@ -2,7 +2,7 @@
 type: index
 title: "Atomic Memories"
 createdAt: "2026-07-31T07:30:00Z"
-updatedAt: "2026-08-07T19:01:00Z"
+updatedAt: "2026-08-08T10:50:00Z"
 tags: []
 ---
 
@@ -28,3 +28,8 @@ Durable facts, gotchas, and operational learnings for RAG Content Chunker.
 ### Hash Deduplication
 
 - [[0008-sha256-collision-negligible]] — SHA-256 collision probability is 2^-128, negligible for any practical workload
+
+### LLM Enrichment
+
+- [[0009-mastra-extract-metadata-basellm-hardcoded]] — Mastra's extractMetadata() hardcodes OpenAI as baseLLM; custom LLM required via llm parameter
+- [[0010-custom-gateway-superseded-by-mastra-llm]] — Custom LiteLLMHttpClient + EnrichmentGatewayService replaced by Mastra's llm parameter approach

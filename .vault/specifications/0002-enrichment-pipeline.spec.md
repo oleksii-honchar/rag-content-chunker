@@ -11,8 +11,11 @@ see_also: [
   "specifications/0001-enhancement-specification.spec.md",
   "concepts/0003-enhancement-pipeline.concept.md",
   "concepts/0006-mastra-chunking-strategies.concept.md",
+  "concepts/0014-llm-enrichment.concept.md",
   "adrs/0004-importance-scoring-algorithm.adr.md",
-  "adrs/0005-hybrid-tag-generation.adr.md"
+  "adrs/0005-hybrid-tag-generation.adr.md",
+  "adrs/0024-custom-llm-provider-mastra-llm-parameter.adr.md",
+  "adrs/0025-non-fatal-enrichment-graceful-degradation.adr.md"
 ]
 ---
 
@@ -138,10 +141,15 @@ interface EnrichedChunk {
 - [x] MnemosyneClient passes importance/tags via serverParams
 - [x] 35+ unit tests for enrichment services
 
-### Phase 3: LLM Enhancement (PROPOSED)
-- [ ] LLM-based tag refinement
-- [ ] LLM-based importance scoring refinement
-- [ ] Chunk summarization for oversized prose
+### Phase 3: LLM Enrichment (COMPLETED — 2026-08-08)
+- [x] LLM-based title extraction via Mastra extractMetadata() with custom LLM
+- [x] LLM-based keyword extraction via Mastra extractMetadata() with custom LLM
+- [x] Non-fatal error handling — enrichment failure doesn't block chunking
+- [x] Custom LLM via @ai-sdk/openai with custom baseURL (litellm)
+- [x] 712 tests passing (including 7 factory tests, 9 E2E tests)
+- [ ] LLM-based tag refinement (future)
+- [ ] LLM-based importance scoring refinement (future)
+- [ ] Chunk summarization for oversized prose (future)
 
 ## Success Criteria
 

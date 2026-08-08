@@ -2,7 +2,7 @@
 type: index
 title: "Architecture Decision Records"
 createdAt: "2026-07-31T07:30:00Z"
-updatedAt: "2026-08-07T19:01:00Z"
+updatedAt: "2026-08-08T10:50:00Z"
 tags: []
 ---
 
@@ -55,3 +55,8 @@ Curated list of architectural decisions for RAG Content Chunker.
 - [[0021-file-hash-deduplication-metadata]] — Use SHA-256 file hash in metadata for cross-device deduplication
 - [[0022-native-machine-id-hardware-detection]] — Use native-machine-id for hardware ID detection with fallback
 - [[0023-filetracker-schema-extension]] — Add fileHash and hardwareId fields to FileTracker schema
+
+### LLM Enrichment
+
+- [[0024-custom-llm-provider-mastra-llm-parameter]] — Custom LLM via Mastra's llm parameter with @ai-sdk/openai (supersedes custom LiteLLM gateway)
+- [[0025-non-fatal-enrichment-graceful-degradation]] — Enrichment failures are non-fatal: chunks proceed without metadata, logged for awareness
