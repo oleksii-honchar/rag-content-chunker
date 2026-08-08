@@ -371,6 +371,98 @@ describe('ConfigurationService', () => {
     });
   });
 
+  describe('env var resolution', () => {
+    const originalEnv = { ...process.env };
+
+    beforeEach(() => {
+      delete process.env.RACOCHU_TEST_API_KEY;
+      delete process.env.RACOCHU_TEST_URL;
+      delete process.env.NONEXISTENT_VAR;
+    });
+
+    afterAll(() => {
+      // Restore original env
+      Object.keys(process.env).forEach(key => {
+        if (!originalEnv.hasOwnProperty(key)) delete process.env[key];
+      });
+      Object.assign(process.env, originalEnv);
+    });
+
+    it('substitutes $ENV_VAR in string values', async () => {
+      process.env.RACOCHU_TEST_API_KEY = 'resolved-secret-key';
+      const validConfig = {
+        mcp: { apiKey: '$RACOCHU_TEST_API_KEY' },
+      };
+
+      await fs.writeFile(configPath, yaml.dump(validConfig));
+      await createModule();
+      await service.load();
+
+      expect(service.getMcpConfig().apiKey).toBe('resolved-secret-key');
+    });
+
+    it('substitutes multiple env vars in the same string', async () => {
+      process.env.RACOCHU_TEST_URL = 'http://localhost:3000';
+      const validConfig = {
+        mcp: { apiKey: 'Bearer $RACOCHU_TEST_URL' },
+      };
+
+      await fs.writeFile(configPath, yaml.dump(validConfig));
+      await createModule();
+      await service.load();
+
+      expect(service.getMcpConfig().apiKey).toBe('Bearer http://localhost:3000');
+    });
+
+    it('leaves $VAR as-is when env var is not set', async () => {
+      delete process.env.NONEXISTENT_VAR;
+      const validConfig = {
+        mcp: { apiKey: '$NONEXISTENT_VAR' },
+      };
+
+      await fs.writeFile(configPath, yaml.dump(validConfig));
+      await createModule();
+      await service.load();
+
+      expect(service.getMcpConfig().apiKey).toBe('$NONEXISTENT_VAR');
+    });
+
+    it('substitutes env vars in nested objects', async () => {
+      process.env.RACOCHU_TEST_API_KEY = 'nested-secret';
+      const validConfig = {
+        enrichment: { apiKey: '$RACOCHU_TEST_API_KEY' },
+        mcp: { apiKey: '$RACOCHU_TEST_API_KEY' },
+      };
+
+      await fs.writeFile(configPath, yaml.dump(validConfig));
+      await createModule();
+      await service.load();
+
+      expect(service.getEnrichmentConfig().apiKey).toBe('nested-secret');
+      expect(service.getMcpConfig().apiKey).toBe('nested-secret');
+    });
+
+    it('substitutes env vars in array elements', async () => {
+      process.env.RACOCHU_TEST_API_KEY = 'arr-secret';
+      const validConfig = {
+        watchSources: [
+          {
+            id: 'test',
+            path: '/tmp',
+            exclude: ['$RACOCHU_TEST_API_KEY'],
+          },
+        ],
+      };
+
+      await fs.writeFile(configPath, yaml.dump(validConfig));
+      await createModule();
+      await service.load();
+
+      const sources = service.getWatchSources();
+      expect(sources[0]?.exclude).toEqual(['arr-secret']);
+    });
+  });
+
   describe('config hot-reload', () => {
     it('reloads configuration when file changes', async () => {
       const initialConfig = {

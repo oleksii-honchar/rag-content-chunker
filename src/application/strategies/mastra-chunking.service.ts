@@ -53,18 +53,32 @@ export class MastraChunkingService {
       // Extract metadata (only if enrichment is enabled and LLM is configured)
       let enrichedDoc = document;
       const enrichmentConfig = this.configService.getEnrichmentConfig();
+      
+      // DEBUG: Log enrichment configuration
+      this.logger.info(`[ENRICHMENT DEBUG] Config: enabled=${enrichmentConfig.enabled}, hasApiKey=${!!enrichmentConfig.apiKey}, hasLlmUrl=${!!enrichmentConfig.llmUrl}`);
+      
       if (enrichmentConfig.enabled && (enrichmentConfig.apiKey || enrichmentConfig.llmUrl)) {
+        // DEBUG: Log guard condition evaluation
+        this.logger.info(`[ENRICHMENT DEBUG] Guard condition passed - attempting metadata extraction for: ${filePath}`);
+        
         try {
+          // DEBUG: Log before extractMetadata call
+          this.logger.info(`[ENRICHMENT DEBUG] Calling extractMetadata...`);
           enrichedDoc = await document.extractMetadata({
             title: true,
             keywords: true,
           });
+          // DEBUG: Log after extractMetadata call
+          this.logger.info(`[ENRICHMENT DEBUG] extractMetadata completed successfully`);
         } catch (metadataError) {
+          // DEBUG: Log error with full details
+          this.logger.error(`[ENRICHMENT DEBUG] Metadata extraction failed: ${metadataError instanceof Error ? metadataError.message : String(metadataError)}`);
+          this.logger.error(`[ENRICHMENT DEBUG] Full error: ${JSON.stringify(metadataError)}`);
           // Graceful degradation: continue without LLM-enhanced metadata
-          this.logger.debug(
-            `Metadata extraction failed (chunks still generated): ${metadataError instanceof Error ? metadataError.message : String(metadataError)}`,
-          );
         }
+      } else {
+        // DEBUG: Log why guard condition failed
+        this.logger.info(`[ENRICHMENT DEBUG] Guard condition FAILED - enrichment disabled=${!enrichmentConfig.enabled}, noApiKey=${!enrichmentConfig.apiKey}, noLlmUrl=${!enrichmentConfig.llmUrl}`);
       }
 
       // Get chunks from MDocument using getDocs()

@@ -30,10 +30,10 @@ chunking:
   hardCap: 600
 
 enrichment:
-  enabled: false
-  # llmUrl: https://lite-llm.lan/v1
-  # llmModel: qwen3.6-27b-chat-q6
-  # apiKey: your-api-key-here
+  enabled: true
+  llmUrl: https://lite-llm.lan/v1
+  llmModel: puma-qwopus3.5-9b
+  apiKey: $LLM_API_KEY
   maxConcurrency: 1
   timeoutMs: 15000
   docMaxTokens: 16000

@@ -7,6 +7,34 @@ import * as path from 'path';
 import { ErrorWithDetails } from '../../utils/error-with-details';
 import { Result } from '../../utils/result';
 import { BasePinoLogger } from '../logging/base-pino-logger';
+
+// Matches $VAR_NAME or $VAR_NAME patterns (alphanumeric + underscore, must start with letter/underscore)
+const ENV_VAR_PATTERN = /\$([A-Za-z_][A-Za-z0-9_]*)/g;
+
+/**
+ * Recursively substitutes $ENV_VAR references in string values with process.env values.
+ * Only string values are processed; objects and arrays are recursed into.
+ * If an env var is not set, the original $VAR_NAME is left as-is.
+ */
+export function resolveEnvVars(obj: unknown): unknown {
+  if (typeof obj === 'string') {
+    return obj.replace(ENV_VAR_PATTERN, (match, varName) => {
+      const envValue = process.env[varName];
+      return envValue !== undefined ? envValue : match;
+    });
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(resolveEnvVars);
+  }
+  if (obj !== null && typeof obj === 'object') {
+    const result: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(obj)) {
+      result[key] = resolveEnvVars(value);
+    }
+    return result;
+  }
+  return obj;
+}
 import {
   ChunkingConfig,
   Configuration,
@@ -114,14 +142,16 @@ export class ConfigurationService implements OnApplicationBootstrap {
     try {
       const content = await fs.readFile(this.configFilePath, 'utf-8');
       const parsed = yaml.load(content) as unknown;
+      // Resolve $ENV_VAR references in string values
+      const resolved = resolveEnvVars(parsed);
 
-      if (!parsed || typeof parsed !== 'object') {
+      if (!resolved || typeof resolved !== 'object') {
         return Result.ko([
           new ErrorWithDetails('YAML parsing failed: invalid configuration format', 'ConfigParseError'),
         ]);
       }
 
-      const result = configurationSchema.safeParse(parsed);
+      const result = configurationSchema.safeParse(resolved);
 
       if (!result.success) {
         const errors = result.error.issues
